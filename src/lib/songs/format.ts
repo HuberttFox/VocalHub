@@ -5,7 +5,5 @@ export function formatDuration(seconds: number): string {
 
 export function formatDate(value: string | null): string {
   if (!value) return "未知";
-  return new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" }).format(
-    new Date(value),
-  );
+  return new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeZone: "Asia/Shanghai" }).format(new Date(value));
 }
