@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "VocalHub",
+  "project_id": "8088b440-a92c-4e6c-bdb3-521beb2b5248"
+}
