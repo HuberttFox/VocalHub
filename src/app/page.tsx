@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const features = [
   "VocaDB 数据同步",
   "歌曲与作者搜索",
@@ -19,6 +21,14 @@ export default function Home() {
           面向中文用户的现代术曲发现平台，聚合 Vocaloid、Synthesizer V、UTAU
           等音乐资料，提供搜索、浏览、收藏和后续推荐能力。
         </p>
+        <div className="mt-8">
+          <Link
+            className="inline-flex rounded-xl bg-violet-500 px-6 py-3 font-medium text-white hover:bg-violet-400"
+            href="/songs"
+          >
+            浏览歌曲
+          </Link>
+        </div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => (
             <div

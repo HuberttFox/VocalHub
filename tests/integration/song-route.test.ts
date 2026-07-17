@@ -2,6 +2,7 @@ import "dotenv/config";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
+import { SyncStatus } from "@/generated/prisma/enums";
 import { GET } from "@/app/api/songs/[id]/route";
 import { normalizeVocaDbSong } from "@/lib/vocadb/normalize";
 import { syncVocaDbSong } from "@/lib/vocadb/sync-song";
@@ -45,6 +46,20 @@ describe("GET /api/songs/[id]", () => {
 
   it("returns 404 for an unknown local UUID", async () => {
     const response = await requestSong("11111111-1111-4111-8111-111111111111");
+    expect(response.status).toBe(404);
+  });
+
+  it("hides songs without a public snapshot", async () => {
+    const result = await syncVocaDbSong(
+      db,
+      normalizeVocaDbSong(vocaDbSongSchema.parse(vocaDbSongFixture)),
+    );
+    await db.song.update({
+      where: { id: result.id },
+      data: { syncStatus: SyncStatus.SOURCE_MISSING },
+    });
+
+    const response = await requestSong(result.id);
     expect(response.status).toBe(404);
   });
 

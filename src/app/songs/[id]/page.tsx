@@ -1,18 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { formatDate, formatDuration } from "@/lib/songs/format";
 import { getSongDetailById, isUuid } from "@/lib/songs/repository";
-
-function formatDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  return `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
-}
-
-function formatDate(value: string | null): string {
-  if (!value) return "未知";
-  return new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" }).format(
-    new Date(value),
-  );
-}
 
 export default async function SongPage({
   params,
@@ -34,8 +23,8 @@ export default async function SongPage({
   return (
     <main className="min-h-screen bg-[#0D1117] px-6 py-12 text-white">
       <article className="mx-auto max-w-5xl">
-        <Link className="text-sm text-violet-300 hover:text-violet-200" href="/">
-          VocalHub
+        <Link className="text-sm text-violet-300 hover:text-violet-200" href="/songs">
+          返回歌曲列表
         </Link>
 
         <header className="mt-10 border-b border-white/10 pb-10">

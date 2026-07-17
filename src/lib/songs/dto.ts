@@ -13,6 +13,39 @@ export type SongCreditDto = {
   } | null;
 };
 
+export type SongListItemDto = {
+  id: string;
+  title: string;
+  names: Array<{ language: string; value: string }>;
+  artistString: string;
+  credits: Array<{
+    name: string;
+    artistId: string | null;
+    isSupport: boolean;
+    isCustomName: boolean;
+  }>;
+  tags: Array<{ id: string; name: string }>;
+  songType: string;
+  publishDate: string | null;
+  durationSeconds: number;
+  favoritedTimes: number;
+  ratingScore: number;
+};
+
+export type SongListDto = {
+  items: SongListItemDto[];
+  query: {
+    q: string | null;
+    sort: "latest" | "popular";
+  };
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+};
+
 export type SongDetailDto = {
   id: string;
   vocadbId: number;

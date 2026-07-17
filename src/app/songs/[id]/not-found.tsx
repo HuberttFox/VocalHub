@@ -6,8 +6,8 @@ export default function SongNotFound() {
       <div className="text-center">
         <p className="text-sm uppercase tracking-[0.3em] text-violet-300">404</p>
         <h1 className="mt-4 text-4xl font-bold">没有找到这首歌曲</h1>
-        <Link className="mt-8 inline-block text-violet-300 hover:text-violet-200" href="/">
-          返回首页
+        <Link className="mt-8 inline-block text-violet-300 hover:text-violet-200" href="/songs">
+          返回歌曲列表
         </Link>
       </div>
     </main>

@@ -1,0 +1,1 @@
+{"id":"int-bff268c7b6005de7f3f799e6969ad978","kind":"field_change","created_at":"2026-07-17T11:59:32.899356624Z","actor":"hubert","issue_id":"VocalHub-qiz","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"歌曲 collection API、基础多字段搜索、公开可见性、/songs 页面、测试和 README 已完成并通过质量门。"}}

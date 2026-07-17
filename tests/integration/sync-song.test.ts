@@ -43,7 +43,7 @@ describe("syncVocaDbSong", () => {
     expect(await db.songPV.count()).toBe(input.pvs.length);
 
     const song = await db.song.findUniqueOrThrow({ where: { id: first.id } });
-    expect(song.lastSyncedAt.toISOString()).toBe("2026-01-02T00:00:00.000Z");
+    expect(song.lastSyncedAt?.toISOString()).toBe("2026-01-02T00:00:00.000Z");
   });
 
   it("updates fields and removes stale song relations", async () => {

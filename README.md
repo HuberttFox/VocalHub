@@ -95,7 +95,7 @@ VocalHub 希望解决中文术曲用户面临的几类问题：
 | 同步任务 | Node.js worker 或独立 cron worker |
 | 部署 | Vercel、Supabase、Upstash、Railway/Fly.io |
 
-当前仓库已接入 PostgreSQL、Prisma、VocaDB client、幂等同步 worker、本地歌曲 API 和详情页。Auth.js、Redis、搜索与定时增量同步尚未接入。
+当前仓库已接入 PostgreSQL、Prisma、VocaDB client、幂等同步 worker、本地歌曲列表/搜索 API、浏览页和详情页。Auth.js、Redis、作者页与定时增量同步尚未接入。
 
 ## 本地开发
 
@@ -133,7 +133,7 @@ npm run sync:vocadb -- --ids=121,1477,4904,25430
 npm run dev
 ```
 
-访问 [http://localhost:3000](http://localhost:3000)，或打开同步输出中的 `/songs/{localUuid}`。
+访问 [http://localhost:3000](http://localhost:3000)，或打开 `/songs` 浏览和搜索本地已同步歌曲；同步输出中的 `/songs/{localUuid}` 可直接进入详情页。
 
 常用命令：
 
@@ -214,11 +214,27 @@ MVP 不使用生成式 AI。先根据以下关系计算相关推荐：
 - 相近发布时间
 - VocaDB 评分或热门度
 
-## API 草案
+## 站内 API
 
 ```http
-GET /api/songs?page=1&tag=rock&vocal=miku
+GET /api/songs?q=miku&page=1&pageSize=24&sort=latest
 GET /api/songs/{id}
+```
+
+`GET /api/songs` 支持本地歌曲浏览与基础搜索：
+
+- `q`：可选，最长 100 字符；大小写不敏感地匹配主标题、默认标题、多语言别名、作者字符串、结构化或自定义 artist credit 和标签名。标签别名支持精确匹配。
+- `page`：默认 `1`，最大 `10000`。
+- `pageSize`：默认 `24`，最大 `50`。
+- `sort`：`latest`（默认）或 `popular`。
+- 搜索是 PostgreSQL substring 查询，不提供模糊匹配、分词、转写或相关度排序。
+- 只返回未被上游删除且存在成功同步快照的歌曲；临时刷新失败不会隐藏最后一次好数据。
+
+列表和详情中的歌曲 ID 都是本地 UUID，不接受 VocaDB 数字 ID。页面和 API 只读取 PostgreSQL，不在用户请求期间访问 VocaDB。跨歌曲、作者和标签的独立 `/api/search` 将在作者资源完成后再设计。
+
+后续 API 草案：
+
+```http
 GET /api/artists/{id}
 GET /api/artists/{id}/songs
 GET /api/search?q=miku
@@ -233,7 +249,7 @@ POST /api/me/playlists/{id}/songs
 DELETE /api/me/playlists/{id}/songs/{songId}
 ```
 
-站内 API 路径统一使用复数资源名，例如 `/api/songs/{id}`，避免 `/api/song/{id}` 与 `/api/songs` 混用。当前已实现的 `GET /api/songs/{id}` 使用本地 UUID，不接受 VocaDB 数字 ID；页面和 API 都只读取 PostgreSQL，不在用户请求期间访问 VocaDB。
+站内 API 路径统一使用复数资源名，例如 `/api/songs/{id}`，避免 `/api/song/{id}` 与 `/api/songs` 混用。
 
 ## VocaDB client 与同步边界
 
@@ -287,8 +303,8 @@ vocalhub/
 - [x] 建立歌曲、作者、声库角色、标签和 PV 数据模型。
 - [x] 实现小批量、幂等同步脚本。
 - [x] 实现歌曲详情 API 和页面。
+- [x] 实现歌曲列表与基础搜索 API 和页面。
 - [ ] 实现作者页面。
-- [ ] 实现基础搜索。
 
 ### Phase 2：用户功能
 
@@ -318,9 +334,9 @@ vocalhub/
 
 ## 下一步
 
-1. 设计歌曲列表与基础搜索 API。
-2. 实现作者详情和作品列表。
-3. 研究 VocaDB 增量游标与删除事件，避免依赖固定 ID。
+1. 实现作者详情和作品列表。
+2. 研究 VocaDB 增量游标与删除事件，避免依赖固定 ID。
+3. 用 5,000 到 20,000 首真实数据测量基础搜索性能，再决定是否引入 `pg_trgm` 搜索文档。
 4. 核实图片展示和缓存策略。
 5. 接入 Auth.js，再实现收藏与歌单。
 

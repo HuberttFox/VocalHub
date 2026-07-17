@@ -54,3 +54,4 @@ pyproject.toml
 .beads-credential-key
 .beads/proxieddb/
 .beads/issues.jsonl
+.beads/.auto-import-issues.jsonl
