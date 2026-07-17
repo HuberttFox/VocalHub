@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+  SOURCE_MISSING
+  SOURCE_DELETED
+}
+
+enum SyncRunStatus {
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+}
+
+model Song {
+  id                    String   @id @default(uuid()) @db.Uuid
+  vocadbId              Int      @unique
+  name                  String
+  defaultName           String
+  defaultNameLanguage   String
+  artistString          String
+  songType              String
+  sourceStatus          String
+  sourceDeleted         Boolean  @default(false)
+  sourceCreatedAt       DateTime
+  publishDate           DateTime?
+  durationSeconds       Int
+  favoritedTimes        Int
+  ratingScore           Int
+  originalVersionId     Int?
+  cultureCodes          String[]
+  coverUrlOriginal      String?
+  coverUrlThumb         String?
+  sourceVersion         Int
+  sourceUpdatedAt       DateTime?
+  lastSyncedAt          DateTime?
+  syncStatus            SyncStatus @default(PENDING)
+  lastSyncError         String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  names                 SongName[]
+  artistCredits         SongArtistCredit[]
+  tags                  SongTag[]
+  pvs                   SongPV[]
+
+  @@index([publishDate])
+  @@index([sourceStatus])
+  @@index([syncStatus])
+}
+
+model SongName {
+  id        String @id @default(uuid()) @db.Uuid
+  songId    String @db.Uuid
+  language  String
+  value     String
+  position  Int
+  song      Song   @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@unique([songId, position])
+}
+
+model Artist {
+  id              String   @id @default(uuid()) @db.Uuid
+  vocadbId        Int      @unique
+  name            String
+  artistType      String
+  sourceStatus    String
+  sourceVersion   Int
+  sourceDeleted   Boolean  @default(false)
+  sourceUpdatedAt DateTime?
+  lastSyncedAt    DateTime?
+  syncStatus      SyncStatus @default(PENDING)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  songCredits     SongArtistCredit[]
+}
+
+model SongArtistCredit {
+  id              String @id @default(uuid()) @db.Uuid
+  vocadbId        Int
+  songId          String @db.Uuid
+  artistId        String? @db.Uuid
+  name            String
+  categories      String[]
+  roles           String[]
+  effectiveRoles  String[]
+  isSupport       Boolean
+  isCustomName    Boolean
+  position        Int
+  song            Song @relation(fields: [songId], references: [id], onDelete: Cascade)
+  artist          Artist? @relation(fields: [artistId], references: [id], onDelete: SetNull)
+
+  @@unique([songId, vocadbId])
+  @@index([songId, position])
+}
+
+model Tag {
+  id              String @id @default(uuid()) @db.Uuid
+  vocadbId        Int    @unique
+  name            String
+  additionalNames String[]
+  categoryName    String?
+  urlSlug         String?
+  lastSyncedAt    DateTime?
+  songs           SongTag[]
+}
+
+model SongTag {
+  songId    String @db.Uuid
+  tagId     String @db.Uuid
+  count     Int
+  position  Int
+  song      Song @relation(fields: [songId], references: [id], onDelete: Cascade)
+  tag       Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([songId, tagId])
+  @@index([songId, position])
+}
+
+model SongPV {
+  id              String @id @default(uuid()) @db.Uuid
+  vocadbId        Int
+  songId          String @db.Uuid
+  externalId      String
+  service         String
+  pvType          String
+  url             String
+  name            String?
+  author          String?
+  thumbnailUrl    String?
+  publishDate     DateTime?
+  durationSeconds Int?
+  disabled        Boolean @default(false)
+  position        Int
+  lastSyncedAt    DateTime?
+  song            Song @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@unique([songId, vocadbId])
+  @@index([songId, position])
+}
+
+model SyncRun {
+  id             String @id @default(uuid()) @db.Uuid
+  status         SyncRunStatus @default(RUNNING)
+  startedAt      DateTime @default(now())
+  finishedAt     DateTime?
+  requestedCount Int
+  successCount   Int @default(0)
+  failureCount   Int @default(0)
+  items          SyncItem[]
+}
+
+model SyncItem {
+  id           String @id @default(uuid()) @db.Uuid
+  runId        String @db.Uuid
+  vocadbId     Int
+  status       SyncStatus @default(PENDING)
+  attemptCount Int @default(0)
+  errorCode    String?
+  errorMessage String?
+  startedAt    DateTime @default(now())
+  finishedAt   DateTime?
+  run          SyncRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, vocadbId])
+}

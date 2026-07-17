@@ -126,3 +126,30 @@ bd prime                # Refresh Beads context
 
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
+
+## Build & Test
+
+```bash
+npm install
+cp .env.example .env
+docker compose up -d postgres
+npm run db:generate
+npm run db:deploy
+npm run sync:vocadb
+npm run test:unit
+npm run test:integration
+npm run lint
+npm run build
+```
+
+## Architecture Overview
+
+VocaDB is accessed only by `worker/sync-vocadb.ts` through `src/lib/vocadb/`. Responses are validated and normalized, then persisted with Prisma to PostgreSQL. Next.js Route Handlers and Server Components read local data through `src/lib/songs/repository.ts`; they must not call VocaDB during user requests.
+
+## Conventions & Patterns
+
+- Public song IDs are local UUIDs; `vocadbId` is a unique source identifier, never the local primary key.
+- Keep `sourceUpdatedAt` nullable unless VocaDB supplies a trustworthy update timestamp; use `lastSyncedAt` for local fetch time.
+- Preserve custom artist credits even when no VocaDB Artist entity exists.
+- Store upstream enums and flags as strings/string arrays to tolerate new VocaDB values.
+- Add unit tests for VocaDB contracts/normalization and PostgreSQL integration tests for persistence changes.

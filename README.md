@@ -95,31 +95,66 @@ VocalHub 希望解决中文术曲用户面临的几类问题：
 | 同步任务 | Node.js worker 或独立 cron worker |
 | 部署 | Vercel、Supabase、Upstash、Railway/Fly.io |
 
-当前仓库只完成 Next.js、TypeScript、Tailwind CSS 和 ESLint 初始化。PostgreSQL、Prisma、Auth.js、Redis 尚未接入。
+当前仓库已接入 PostgreSQL、Prisma、VocaDB client、幂等同步 worker、本地歌曲 API 和详情页。Auth.js、Redis、搜索与定时增量同步尚未接入。
 
 ## 本地开发
 
 要求：
 
-- Node.js 20.9 或更高版本
+- Node.js 20.19 或更高版本
 - npm
+- Docker 与 Docker Compose
 
-安装依赖并启动开发服务器：
+安装依赖并启动本地数据库：
 
 ```bash
 npm install
+cp .env.example .env
+docker compose up -d postgres
+npm run db:generate
+npm run db:deploy
+```
+
+同步默认的少量 VocaDB 测试歌曲：
+
+```bash
+npm run sync:vocadb
+```
+
+也可指定 VocaDB 歌曲 ID：
+
+```bash
+npm run sync:vocadb -- --ids=121,1477,4904,25430
+```
+
+同步命令会输出本地 UUID 和详情路径。随后启动开发服务器：
+
+```bash
 npm run dev
 ```
 
-访问 [http://localhost:3000](http://localhost:3000)。
+访问 [http://localhost:3000](http://localhost:3000)，或打开同步输出中的 `/songs/{localUuid}`。
 
 常用命令：
 
 ```bash
 npm run dev
 npm run lint
+npm run test:unit
+npm run test:integration
 npm run build
 npm start
+```
+
+集成测试使用隔离数据库。先创建并迁移测试库，再运行：
+
+```bash
+docker compose --profile test up -d postgres-test
+DATABASE_URL=postgresql://vocalhub:vocalhub@localhost:5433/vocalhub_test \
+DIRECT_URL=postgresql://vocalhub:vocalhub@localhost:5433/vocalhub_test \
+  npm run db:deploy
+TEST_DATABASE_URL=postgresql://vocalhub:vocalhub@localhost:5433/vocalhub_test \
+  npm run test:integration
 ```
 
 ## 数据模型草案
@@ -198,7 +233,19 @@ POST /api/me/playlists/{id}/songs
 DELETE /api/me/playlists/{id}/songs/{songId}
 ```
 
-站内 API 路径统一使用复数资源名，例如 `/api/songs/{id}`，避免 `/api/song/{id}` 与 `/api/songs` 混用。
+站内 API 路径统一使用复数资源名，例如 `/api/songs/{id}`，避免 `/api/song/{id}` 与 `/api/songs` 混用。当前已实现的 `GET /api/songs/{id}` 使用本地 UUID，不接受 VocaDB 数字 ID；页面和 API 都只读取 PostgreSQL，不在用户请求期间访问 VocaDB。
+
+## VocaDB client 与同步边界
+
+- client 固定请求歌曲详情及 `Artists,Names,PVs,Tags,MainPicture,CultureCodes` 字段。
+- 请求包含可识别 `User-Agent`、10 秒超时和最多 3 次有界重试。
+- 网络错误、超时、429 和 5xx 可重试；404、其他 4xx、无效 JSON 和契约错误不重试。
+- 响应先通过 Zod 校验，再清洗和写入数据库。已请求的关系字段缺失时拒绝写入，避免错误清空已有关系。
+- 每首歌曲使用独立事务并按 `vocadbId` upsert。重复同步保留本地 UUID，不创建重复关系。
+- `sourceUpdatedAt` 只表示可信的上游更新时间。VocaDB 详情未提供该值时保持 `null`，本地抓取时间保存为 `lastSyncedAt`。
+- 上游枚举按字符串存储，artist credit 支持没有 Artist 实体的自定义署名。
+- PV 仅向页面暴露 HTTP/HTTPS 外链。
+- VocaDB 元数据需要保留来源署名。图片、歌词等第三方内容不应视为自动获得相同授权；当前详情页不复制或代理封面图片。
 
 ## 目录结构
 
@@ -223,7 +270,7 @@ vocalhub/
 └── README.md
 ```
 
-`prisma/`、`worker/` 和大部分业务目录会随开发阶段创建。
+`prisma/`、`worker/`、歌曲 API 和详情页已经创建；作者页、搜索、认证及其他业务目录会随后续阶段增加。
 
 ## 开发路线
 
@@ -231,16 +278,17 @@ vocalhub/
 
 - [x] 初始化 Next.js、React、TypeScript 和 Tailwind CSS。
 - [x] 建立基础首页。
-- [ ] 接入 PostgreSQL 和 Prisma。
-- [ ] 定义环境变量和本地数据库运行方式。
+- [x] 接入 PostgreSQL 和 Prisma。
+- [x] 定义环境变量和本地数据库运行方式。
 
 ### Phase 1：VocaDB 数据闭环
 
-- 调研并封装 VocaDB API client。
-- 建立歌曲、作者、声库角色、标签和 PV 数据模型。
-- 实现小批量、幂等同步脚本。
-- 实现首页、歌曲详情和作者页面。
-- 实现基础搜索。
+- [x] 调研并封装 VocaDB API client。
+- [x] 建立歌曲、作者、声库角色、标签和 PV 数据模型。
+- [x] 实现小批量、幂等同步脚本。
+- [x] 实现歌曲详情 API 和页面。
+- [ ] 实现作者页面。
+- [ ] 实现基础搜索。
 
 ### Phase 2：用户功能
 
@@ -270,11 +318,11 @@ vocalhub/
 
 ## 下一步
 
-1. 调研 VocaDB API 响应结构、鉴权、限流和授权要求。
-2. 接入 PostgreSQL 与 Prisma。
-3. 定义核心 schema 和同步游标。
-4. 实现最小 VocaDB API client。
-5. 同步少量测试数据并完成歌曲详情页。
+1. 设计歌曲列表与基础搜索 API。
+2. 实现作者详情和作品列表。
+3. 研究 VocaDB 增量游标与删除事件，避免依赖固定 ID。
+4. 核实图片展示和缓存策略。
+5. 接入 Auth.js，再实现收藏与歌单。
 
 ## 结论
 
