@@ -1,15 +1,4 @@
 import Link from "next/link";
-
-export default function SongNotFound() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0D1117] px-6 text-white">
-      <div className="text-center">
-        <p className="text-sm uppercase tracking-[0.3em] text-violet-300">404</p>
-        <h1 className="mt-4 text-4xl font-bold">没有找到这首歌曲</h1>
-        <Link className="mt-8 inline-block text-violet-300 hover:text-violet-200" href="/songs">
-          返回歌曲列表
-        </Link>
-      </div>
-    </main>
-  );
-}
+import { ErrorState } from "@/components/empty-state";
+import { PageContainer } from "@/components/page-container";
+export default function SongNotFound() { return <main id="main-content"><PageContainer className="py-20"><ErrorState code="404" title="没有找到这首歌曲" description="歌曲可能不存在、尚未完成同步，或已从公开目录移除。" action={<Link className="button-secondary" href="/songs">返回歌曲目录</Link>} /></PageContainer></main>; }

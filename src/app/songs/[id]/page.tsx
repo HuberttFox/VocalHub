@@ -1,125 +1,48 @@
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { formatDate, formatDuration } from "@/lib/songs/format";
+import { cache } from "react";
+import { notFound } from "next/navigation";
+import { PageContainer } from "@/components/page-container";
+import { SongMeta } from "@/components/song-meta";
+import { TagList } from "@/components/tag-list";
+import { formatDate } from "@/lib/songs/format";
 import { getSongDetailById, isUuid } from "@/lib/songs/repository";
 
-export default async function SongPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+const loadSong = cache(getSongDetailById);
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
+  const song = isUuid(id) ? await loadSong(id) : null;
+  return song ? { title: song.title, description: `${song.artistString} · ${song.songType}` } : { title: "歌曲未找到" };
+}
 
-  if (!isUuid(id)) {
-    notFound();
-  }
-
-  const song = await getSongDetailById(id);
-
-  if (!song) {
-    notFound();
-  }
+export default async function SongPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!isUuid(id)) notFound();
+  const song = await loadSong(id);
+  if (!song) notFound();
+  const names = song.names.filter((name) => name.value !== song.title);
 
   return (
-    <main className="min-h-screen bg-[#0D1117] px-6 py-12 text-white">
-      <article className="mx-auto max-w-5xl">
-        <Link className="text-sm text-violet-300 hover:text-violet-200" href="/songs">
-          返回歌曲列表
-        </Link>
+    <main id="main-content">
+      <PageContainer className="py-12 sm:py-16">
+        <nav aria-label="面包屑" className="text-sm text-[var(--text-muted)]"><Link className="hover:text-white" href="/songs">歌曲目录</Link><span aria-hidden="true"> / </span><span>{song.title}</span></nav>
+        <article>
+          <header className="mt-10 grid gap-8 border-b border-[var(--border-subtle)] pb-12 lg:grid-cols-[minmax(0,1fr)_16rem]">
+            <div><p className="eyebrow">{song.songType}</p><h1 className="mt-4 text-5xl font-bold tracking-[-0.055em] sm:text-7xl">{song.title}</h1><p className="mt-5 text-xl text-[var(--text-secondary)]">{song.artistString}</p><SongMeta publishDate={song.publishDate} durationSeconds={song.durationSeconds} favoritedTimes={song.favoritedTimes} /></div>
+            <aside className="surface flex min-h-48 items-center justify-center p-8" aria-label="歌曲资料占位"><div className="text-center"><span className="text-6xl text-[var(--accent-soft)]" aria-hidden="true">♪</span><p className="mt-4 text-sm text-[var(--text-muted)]">封面展示等待媒体授权策略确认</p></div></aside>
+          </header>
 
-        <header className="mt-10 border-b border-white/10 pb-10">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-            {song.songType}
-          </p>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-6xl">
-            {song.title}
-          </h1>
-          <p className="mt-4 text-xl text-slate-300">{song.artistString}</p>
-          <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-400">
-            <span>{formatDate(song.publishDate)}</span>
-            <span>{formatDuration(song.durationSeconds)}</span>
-            <span>{song.favoritedTimes} 次收藏</span>
+          <div className="grid gap-12 py-12 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="space-y-12">
+              {names.length > 0 && <section><h2 className="text-2xl font-semibold">多语言标题</h2><dl className="mt-5 grid gap-3 sm:grid-cols-2">{names.map((name, index) => <div className="surface p-4" key={`${name.language}-${index}`}><dt className="eyebrow text-[0.65rem]">{name.language}</dt><dd className="mt-2 text-[var(--text-secondary)]">{name.value}</dd></div>)}</dl></section>}
+              {song.credits.length > 0 && <section><h2 className="text-2xl font-semibold">创作者与声库角色</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{song.credits.map((credit, index) => <div className="surface p-5" key={`${credit.name}-${index}`}><p className="font-medium">{credit.artist ? <Link className="text-[var(--accent-soft)] hover:text-white" href={`/artists/${credit.artist.id}`}>{credit.name}</Link> : credit.name}</p><p className="mt-2 text-sm text-[var(--text-muted)]">{credit.effectiveRoles.join(" · ") || credit.categories.join(" · ") || "未分类"}{credit.isSupport ? " · 支援" : ""}</p></div>)}</div></section>}
+              {song.pvs.length > 0 && <section><h2 className="text-2xl font-semibold">播放入口</h2><div className="mt-5 grid gap-3">{song.pvs.map((pv) => <a className="surface flex min-h-16 items-center justify-between gap-4 p-4 hover:border-[var(--border-strong)]" href={pv.url} key={pv.id} rel="noopener noreferrer" target="_blank"><span>{pv.name || pv.service}</span><span className="text-sm text-[var(--text-muted)]">{pv.service} · 外部链接 ↗</span></a>)}</div></section>}
+            </div>
+            <aside><section><h2 className="text-lg font-semibold">标签</h2><TagList tags={song.tags} /></section><section className="surface mt-8 p-5 text-sm text-[var(--text-secondary)]"><p className="eyebrow">Source</p><p className="mt-3">资料来自 <a className="text-[var(--accent-soft)] hover:text-white" href={song.source.url} rel="noopener noreferrer" target="_blank">VocaDB #{song.vocadbId} ↗</a></p>{song.source.lastSyncedAt && <p className="mt-2 text-[var(--text-muted)]">同步于 {formatDate(song.source.lastSyncedAt)}</p>}</section></aside>
           </div>
-        </header>
-
-        {song.names.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-xl font-semibold">多语言标题</h2>
-            <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-              {song.names.map((name, index) => (
-                <div className="rounded-xl bg-white/[0.04] p-4" key={`${name.language}-${index}`}>
-                  <dt className="text-xs uppercase text-slate-500">{name.language}</dt>
-                  <dd className="mt-1 text-slate-200">{name.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        )}
-
-        {song.credits.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-xl font-semibold">创作者与声库角色</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {song.credits.map((credit, index) => (
-                <div className="rounded-xl border border-white/10 p-4" key={`${credit.name}-${index}`}>
-                  <p className="font-medium">{credit.name}</p>
-                  <p className="mt-1 text-sm text-slate-400">
-                    {credit.effectiveRoles.join(" · ") || credit.categories.join(" · ") || "未分类"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {song.tags.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-xl font-semibold">标签</h2>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {song.tags.map((tag) => (
-                <span className="rounded-full bg-violet-500/15 px-3 py-1.5 text-sm text-violet-200" key={tag.id}>
-                  {tag.name}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {song.pvs.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-xl font-semibold">播放入口</h2>
-            <div className="mt-4 grid gap-3">
-              {song.pvs.map((pv) => (
-                <a
-                  className="flex items-center justify-between rounded-xl border border-white/10 p-4 hover:border-violet-400/50"
-                  href={pv.url}
-                  key={pv.id}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <span>{pv.name || pv.service}</span>
-                  <span className="text-sm text-slate-400">{pv.service}</span>
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <footer className="mt-14 border-t border-white/10 pt-6 text-sm text-slate-400">
-          数据来源：
-          <a
-            className="ml-1 text-violet-300 hover:text-violet-200"
-            href={song.source.url}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            VocaDB #{song.vocadbId}
-          </a>
-          {song.source.lastSyncedAt && (
-            <span className="ml-3">同步于 {formatDate(song.source.lastSyncedAt)}</span>
-          )}
-        </footer>
-      </article>
+        </article>
+      </PageContainer>
     </main>
   );
 }

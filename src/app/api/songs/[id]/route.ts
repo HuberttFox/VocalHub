@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/http/error-response";
 import { getSongDetailById, isUuid } from "@/lib/songs/repository";
 
 export const runtime = "nodejs";
-
-function errorResponse(code: string, message: string, status: number) {
-  return NextResponse.json({ error: { code, message } }, { status });
-}
 
 export async function GET(
   _request: Request,

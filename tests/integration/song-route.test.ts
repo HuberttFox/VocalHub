@@ -79,5 +79,42 @@ describe("GET /api/songs/[id]", () => {
       source: { provider: "VocaDB" },
     });
     expect(payload).not.toHaveProperty("syncStatus");
+    expect(payload.credits[0].artist).toMatchObject({ name: "Producer" });
+    expect(payload.pvs).toHaveLength(1);
+  });
+
+  it("keeps hidden and custom artist credits as text only", async () => {
+    const result = await syncVocaDbSong(
+      db,
+      normalizeVocaDbSong(vocaDbSongSchema.parse(vocaDbSongFixture)),
+    );
+    await db.artist.update({
+      where: { vocadbId: 100 },
+      data: { sourceDeleted: true },
+    });
+
+    const response = await requestSong(result.id);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.credits).toEqual([
+      expect.objectContaining({ name: "Producer", artist: null }),
+      expect.objectContaining({ name: "Custom chorus", artist: null }),
+    ]);
+    expect(await db.artist.count()).toBe(1);
+  });
+
+  it("excludes disabled playback entries", async () => {
+    const fixture = {
+      ...vocaDbSongFixture,
+      pvs: vocaDbSongFixture.pvs.map((pv) => ({ ...pv, disabled: true })),
+    };
+    const result = await syncVocaDbSong(
+      db,
+      normalizeVocaDbSong(vocaDbSongSchema.parse(fixture)),
+    );
+
+    const response = await requestSong(result.id);
+    expect((await response.json()).pvs).toEqual([]);
   });
 });

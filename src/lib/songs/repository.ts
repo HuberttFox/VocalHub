@@ -1,26 +1,45 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { SyncStatus } from "@/generated/prisma/enums";
+import { isUuid, UUID_PATTERN } from "@/lib/catalog/id";
+import { PUBLIC_SONG_WHERE } from "@/lib/catalog/visibility";
 import { getDb } from "@/lib/db";
-import type { SongDetailDto, SongListDto } from "@/lib/songs/dto";
+import type { SongDetailDto, SongListDto, SongListItemDto } from "@/lib/songs/dto";
 import type { SongListQuery } from "@/lib/songs/list-query";
 
-export const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export { isUuid, UUID_PATTERN };
 
-const PUBLIC_SONG_WHERE = {
-  sourceDeleted: false,
-  lastSyncedAt: { not: null },
-  syncStatus: { in: [SyncStatus.SYNCED, SyncStatus.FAILED] },
-} satisfies Prisma.SongWhereInput;
+export const SONG_LIST_SELECT = {
+  id: true,
+  name: true,
+  artistString: true,
+  songType: true,
+  publishDate: true,
+  durationSeconds: true,
+  favoritedTimes: true,
+  ratingScore: true,
+  names: {
+    orderBy: { position: "asc" },
+    select: { language: true, value: true },
+  },
+  artistCredits: {
+    orderBy: { position: "asc" },
+    select: {
+      name: true,
+      artistId: true,
+      isSupport: true,
+      isCustomName: true,
+    },
+  },
+  tags: {
+    orderBy: { position: "asc" },
+    select: { tag: { select: { id: true, name: true } } },
+  },
+} satisfies Prisma.SongSelect;
 
-export function isUuid(value: string): boolean {
-  return UUID_PATTERN.test(value);
-}
+type SongListRow = Prisma.SongGetPayload<{ select: typeof SONG_LIST_SELECT }>;
 
 export async function listSongs(query: SongListQuery): Promise<SongListDto> {
   const db = getDb();
   const where = buildSongListWhere(query.q);
-  const orderBy = buildSongListOrder(query.sort);
   const skip = (query.page - 1) * query.pageSize;
 
   const [totalItems, songs] = await db.$transaction(
@@ -28,55 +47,17 @@ export async function listSongs(query: SongListQuery): Promise<SongListDto> {
       db.song.count({ where }),
       db.song.findMany({
         where,
-        orderBy,
+        orderBy: buildSongListOrder(query.sort),
         skip,
         take: query.pageSize,
-        select: {
-          id: true,
-          name: true,
-          artistString: true,
-          songType: true,
-          publishDate: true,
-          durationSeconds: true,
-          favoritedTimes: true,
-          ratingScore: true,
-          names: {
-            orderBy: { position: "asc" },
-            select: { language: true, value: true },
-          },
-          artistCredits: {
-            orderBy: { position: "asc" },
-            select: {
-              name: true,
-              artistId: true,
-              isSupport: true,
-              isCustomName: true,
-            },
-          },
-          tags: {
-            orderBy: { position: "asc" },
-            select: { tag: { select: { id: true, name: true } } },
-          },
-        },
+        select: SONG_LIST_SELECT,
       }),
     ],
     { isolationLevel: "RepeatableRead" },
   );
 
   return {
-    items: songs.map((song) => ({
-      id: song.id,
-      title: song.name,
-      names: song.names,
-      artistString: song.artistString,
-      credits: song.artistCredits,
-      tags: song.tags.map(({ tag }) => tag),
-      songType: song.songType,
-      publishDate: song.publishDate?.toISOString() ?? null,
-      durationSeconds: song.durationSeconds,
-      favoritedTimes: song.favoritedTimes,
-      ratingScore: song.ratingScore,
-    })),
+    items: songs.map(mapSongListItem),
     query: { q: query.q ?? null, sort: query.sort },
     pagination: {
       page: query.page,
@@ -90,9 +71,7 @@ export async function listSongs(query: SongListQuery): Promise<SongListDto> {
 export async function getSongDetailById(
   id: string,
 ): Promise<SongDetailDto | null> {
-  if (!isUuid(id)) {
-    return null;
-  }
+  if (!isUuid(id)) return null;
 
   const song = await getDb().song.findFirst({
     where: { id, ...PUBLIC_SONG_WHERE },
@@ -106,13 +85,11 @@ export async function getSongDetailById(
         orderBy: { position: "asc" },
         include: { tag: true },
       },
-      pvs: { orderBy: { position: "asc" } },
+      pvs: { where: { disabled: false }, orderBy: { position: "asc" } },
     },
   });
 
-  if (!song) {
-    return null;
-  }
+  if (!song) return null;
 
   return {
     id: song.id,
@@ -129,14 +106,15 @@ export async function getSongDetailById(
       effectiveRoles: credit.effectiveRoles,
       isSupport: credit.isSupport,
       isCustomName: credit.isCustomName,
-      artist: credit.artist
-        ? {
-            id: credit.artist.id,
-            vocadbId: credit.artist.vocadbId,
-            name: credit.artist.name,
-            artistType: credit.artist.artistType,
-          }
-        : null,
+      artist:
+        credit.artist && isPublicArtistSnapshot(credit.artist)
+          ? {
+              id: credit.artist.id,
+              vocadbId: credit.artist.vocadbId,
+              name: credit.artist.name,
+              artistType: credit.artist.artistType,
+            }
+          : null,
     })),
     tags: song.tags.map(({ count, tag }) => ({
       id: tag.id,
@@ -175,10 +153,43 @@ export async function getSongDetailById(
   };
 }
 
-function buildSongListWhere(query: string | undefined): Prisma.SongWhereInput {
-  if (!query) {
-    return PUBLIC_SONG_WHERE;
+export function mapSongListItem(song: SongListRow): SongListItemDto {
+  return {
+    id: song.id,
+    title: song.name,
+    names: song.names,
+    artistString: song.artistString,
+    credits: song.artistCredits,
+    tags: song.tags.map(({ tag }) => tag),
+    songType: song.songType,
+    publishDate: song.publishDate?.toISOString() ?? null,
+    durationSeconds: song.durationSeconds,
+    favoritedTimes: song.favoritedTimes,
+    ratingScore: song.ratingScore,
+  };
+}
+
+export function buildSongListOrder(
+  sort: SongListQuery["sort"],
+): Prisma.SongOrderByWithRelationInput[] {
+  if (sort === "popular") {
+    return [
+      { favoritedTimes: "desc" },
+      { ratingScore: "desc" },
+      { publishDate: { sort: "desc", nulls: "last" } },
+      { id: "asc" },
+    ];
   }
+
+  return [
+    { publishDate: { sort: "desc", nulls: "last" } },
+    { sourceCreatedAt: "desc" },
+    { id: "asc" },
+  ];
+}
+
+function buildSongListWhere(query: string | undefined): Prisma.SongWhereInput {
+  if (!query) return PUBLIC_SONG_WHERE;
 
   const contains = {
     contains: escapeLikePattern(query),
@@ -220,23 +231,16 @@ function buildSongListWhere(query: string | undefined): Prisma.SongWhereInput {
   };
 }
 
-function buildSongListOrder(
-  sort: SongListQuery["sort"],
-): Prisma.SongOrderByWithRelationInput[] {
-  if (sort === "popular") {
-    return [
-      { favoritedTimes: "desc" },
-      { ratingScore: "desc" },
-      { publishDate: { sort: "desc", nulls: "last" } },
-      { id: "asc" },
-    ];
-  }
-
-  return [
-    { publishDate: { sort: "desc", nulls: "last" } },
-    { sourceCreatedAt: "desc" },
-    { id: "asc" },
-  ];
+function isPublicArtistSnapshot(artist: {
+  sourceDeleted: boolean;
+  lastSyncedAt: Date | null;
+  syncStatus: string;
+}): boolean {
+  return (
+    !artist.sourceDeleted &&
+    artist.lastSyncedAt !== null &&
+    (artist.syncStatus === "SYNCED" || artist.syncStatus === "FAILED")
+  );
 }
 
 function escapeLikePattern(value: string): string {
