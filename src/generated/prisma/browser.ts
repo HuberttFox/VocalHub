@@ -62,3 +62,8 @@ export type SyncRun = Prisma.SyncRunModel
  * 
  */
 export type SyncItem = Prisma.SyncItemModel
+/**
+ * Model VocaDbSongSyncState
+ * 
+ */
+export type VocaDbSongSyncState = Prisma.VocaDbSongSyncStateModel

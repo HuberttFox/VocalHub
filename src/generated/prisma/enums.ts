@@ -28,3 +28,13 @@ export const SyncRunStatus = {
 } as const
 
 export type SyncRunStatus = (typeof SyncRunStatus)[keyof typeof SyncRunStatus]
+
+
+export const SyncRunMode = {
+  IDS: 'IDS',
+  SEED: 'SEED',
+  INCREMENTAL: 'INCREMENTAL',
+  RECONCILE: 'RECONCILE'
+} as const
+
+export type SyncRunMode = (typeof SyncRunMode)[keyof typeof SyncRunMode]

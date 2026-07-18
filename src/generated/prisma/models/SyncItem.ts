@@ -45,6 +45,7 @@ export type SyncItemMinAggregateOutputType = {
   errorCode: string | null
   errorMessage: string | null
   startedAt: Date | null
+  lastAttemptAt: Date | null
   finishedAt: Date | null
 }
 
@@ -57,6 +58,7 @@ export type SyncItemMaxAggregateOutputType = {
   errorCode: string | null
   errorMessage: string | null
   startedAt: Date | null
+  lastAttemptAt: Date | null
   finishedAt: Date | null
 }
 
@@ -69,6 +71,7 @@ export type SyncItemCountAggregateOutputType = {
   errorCode: number
   errorMessage: number
   startedAt: number
+  lastAttemptAt: number
   finishedAt: number
   _all: number
 }
@@ -93,6 +96,7 @@ export type SyncItemMinAggregateInputType = {
   errorCode?: true
   errorMessage?: true
   startedAt?: true
+  lastAttemptAt?: true
   finishedAt?: true
 }
 
@@ -105,6 +109,7 @@ export type SyncItemMaxAggregateInputType = {
   errorCode?: true
   errorMessage?: true
   startedAt?: true
+  lastAttemptAt?: true
   finishedAt?: true
 }
 
@@ -117,6 +122,7 @@ export type SyncItemCountAggregateInputType = {
   errorCode?: true
   errorMessage?: true
   startedAt?: true
+  lastAttemptAt?: true
   finishedAt?: true
   _all?: true
 }
@@ -215,7 +221,8 @@ export type SyncItemGroupByOutputType = {
   attemptCount: number
   errorCode: string | null
   errorMessage: string | null
-  startedAt: Date
+  startedAt: Date | null
+  lastAttemptAt: Date | null
   finishedAt: Date | null
   _count: SyncItemCountAggregateOutputType | null
   _avg: SyncItemAvgAggregateOutputType | null
@@ -250,7 +257,8 @@ export type SyncItemWhereInput = {
   attemptCount?: Prisma.IntFilter<"SyncItem"> | number
   errorCode?: Prisma.StringNullableFilter<"SyncItem"> | string | null
   errorMessage?: Prisma.StringNullableFilter<"SyncItem"> | string | null
-  startedAt?: Prisma.DateTimeFilter<"SyncItem"> | Date | string
+  startedAt?: Prisma.DateTimeNullableFilter<"SyncItem"> | Date | string | null
+  lastAttemptAt?: Prisma.DateTimeNullableFilter<"SyncItem"> | Date | string | null
   finishedAt?: Prisma.DateTimeNullableFilter<"SyncItem"> | Date | string | null
   run?: Prisma.XOR<Prisma.SyncRunScalarRelationFilter, Prisma.SyncRunWhereInput>
 }
@@ -263,7 +271,8 @@ export type SyncItemOrderByWithRelationInput = {
   attemptCount?: Prisma.SortOrder
   errorCode?: Prisma.SortOrderInput | Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
-  startedAt?: Prisma.SortOrder
+  startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastAttemptAt?: Prisma.SortOrderInput | Prisma.SortOrder
   finishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   run?: Prisma.SyncRunOrderByWithRelationInput
 }
@@ -280,7 +289,8 @@ export type SyncItemWhereUniqueInput = Prisma.AtLeast<{
   attemptCount?: Prisma.IntFilter<"SyncItem"> | number
   errorCode?: Prisma.StringNullableFilter<"SyncItem"> | string | null
   errorMessage?: Prisma.StringNullableFilter<"SyncItem"> | string | null
-  startedAt?: Prisma.DateTimeFilter<"SyncItem"> | Date | string
+  startedAt?: Prisma.DateTimeNullableFilter<"SyncItem"> | Date | string | null
+  lastAttemptAt?: Prisma.DateTimeNullableFilter<"SyncItem"> | Date | string | null
   finishedAt?: Prisma.DateTimeNullableFilter<"SyncItem"> | Date | string | null
   run?: Prisma.XOR<Prisma.SyncRunScalarRelationFilter, Prisma.SyncRunWhereInput>
 }, "id" | "runId_vocadbId">
@@ -293,7 +303,8 @@ export type SyncItemOrderByWithAggregationInput = {
   attemptCount?: Prisma.SortOrder
   errorCode?: Prisma.SortOrderInput | Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
-  startedAt?: Prisma.SortOrder
+  startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastAttemptAt?: Prisma.SortOrderInput | Prisma.SortOrder
   finishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.SyncItemCountOrderByAggregateInput
   _avg?: Prisma.SyncItemAvgOrderByAggregateInput
@@ -313,7 +324,8 @@ export type SyncItemScalarWhereWithAggregatesInput = {
   attemptCount?: Prisma.IntWithAggregatesFilter<"SyncItem"> | number
   errorCode?: Prisma.StringNullableWithAggregatesFilter<"SyncItem"> | string | null
   errorMessage?: Prisma.StringNullableWithAggregatesFilter<"SyncItem"> | string | null
-  startedAt?: Prisma.DateTimeWithAggregatesFilter<"SyncItem"> | Date | string
+  startedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SyncItem"> | Date | string | null
+  lastAttemptAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SyncItem"> | Date | string | null
   finishedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SyncItem"> | Date | string | null
 }
 
@@ -324,7 +336,8 @@ export type SyncItemCreateInput = {
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
-  startedAt?: Date | string
+  startedAt?: Date | string | null
+  lastAttemptAt?: Date | string | null
   finishedAt?: Date | string | null
   run: Prisma.SyncRunCreateNestedOneWithoutItemsInput
 }
@@ -337,7 +350,8 @@ export type SyncItemUncheckedCreateInput = {
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
-  startedAt?: Date | string
+  startedAt?: Date | string | null
+  lastAttemptAt?: Date | string | null
   finishedAt?: Date | string | null
 }
 
@@ -348,7 +362,8 @@ export type SyncItemUpdateInput = {
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   run?: Prisma.SyncRunUpdateOneRequiredWithoutItemsNestedInput
 }
@@ -361,7 +376,8 @@ export type SyncItemUncheckedUpdateInput = {
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -373,7 +389,8 @@ export type SyncItemCreateManyInput = {
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
-  startedAt?: Date | string
+  startedAt?: Date | string | null
+  lastAttemptAt?: Date | string | null
   finishedAt?: Date | string | null
 }
 
@@ -384,7 +401,8 @@ export type SyncItemUpdateManyMutationInput = {
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -396,7 +414,8 @@ export type SyncItemUncheckedUpdateManyInput = {
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -424,6 +443,7 @@ export type SyncItemCountOrderByAggregateInput = {
   errorCode?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  lastAttemptAt?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
 }
 
@@ -441,6 +461,7 @@ export type SyncItemMaxOrderByAggregateInput = {
   errorCode?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  lastAttemptAt?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
 }
 
@@ -453,6 +474,7 @@ export type SyncItemMinOrderByAggregateInput = {
   errorCode?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  lastAttemptAt?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
 }
 
@@ -510,7 +532,8 @@ export type SyncItemCreateWithoutRunInput = {
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
-  startedAt?: Date | string
+  startedAt?: Date | string | null
+  lastAttemptAt?: Date | string | null
   finishedAt?: Date | string | null
 }
 
@@ -521,7 +544,8 @@ export type SyncItemUncheckedCreateWithoutRunInput = {
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
-  startedAt?: Date | string
+  startedAt?: Date | string | null
+  lastAttemptAt?: Date | string | null
   finishedAt?: Date | string | null
 }
 
@@ -562,7 +586,8 @@ export type SyncItemScalarWhereInput = {
   attemptCount?: Prisma.IntFilter<"SyncItem"> | number
   errorCode?: Prisma.StringNullableFilter<"SyncItem"> | string | null
   errorMessage?: Prisma.StringNullableFilter<"SyncItem"> | string | null
-  startedAt?: Prisma.DateTimeFilter<"SyncItem"> | Date | string
+  startedAt?: Prisma.DateTimeNullableFilter<"SyncItem"> | Date | string | null
+  lastAttemptAt?: Prisma.DateTimeNullableFilter<"SyncItem"> | Date | string | null
   finishedAt?: Prisma.DateTimeNullableFilter<"SyncItem"> | Date | string | null
 }
 
@@ -573,7 +598,8 @@ export type SyncItemCreateManyRunInput = {
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
-  startedAt?: Date | string
+  startedAt?: Date | string | null
+  lastAttemptAt?: Date | string | null
   finishedAt?: Date | string | null
 }
 
@@ -584,7 +610,8 @@ export type SyncItemUpdateWithoutRunInput = {
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -595,7 +622,8 @@ export type SyncItemUncheckedUpdateWithoutRunInput = {
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -606,7 +634,8 @@ export type SyncItemUncheckedUpdateManyWithoutRunInput = {
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -621,6 +650,7 @@ export type SyncItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   errorCode?: boolean
   errorMessage?: boolean
   startedAt?: boolean
+  lastAttemptAt?: boolean
   finishedAt?: boolean
   run?: boolean | Prisma.SyncRunDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["syncItem"]>
@@ -634,6 +664,7 @@ export type SyncItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   errorCode?: boolean
   errorMessage?: boolean
   startedAt?: boolean
+  lastAttemptAt?: boolean
   finishedAt?: boolean
   run?: boolean | Prisma.SyncRunDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["syncItem"]>
@@ -647,6 +678,7 @@ export type SyncItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   errorCode?: boolean
   errorMessage?: boolean
   startedAt?: boolean
+  lastAttemptAt?: boolean
   finishedAt?: boolean
   run?: boolean | Prisma.SyncRunDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["syncItem"]>
@@ -660,10 +692,11 @@ export type SyncItemSelectScalar = {
   errorCode?: boolean
   errorMessage?: boolean
   startedAt?: boolean
+  lastAttemptAt?: boolean
   finishedAt?: boolean
 }
 
-export type SyncItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "runId" | "vocadbId" | "status" | "attemptCount" | "errorCode" | "errorMessage" | "startedAt" | "finishedAt", ExtArgs["result"]["syncItem"]>
+export type SyncItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "runId" | "vocadbId" | "status" | "attemptCount" | "errorCode" | "errorMessage" | "startedAt" | "lastAttemptAt" | "finishedAt", ExtArgs["result"]["syncItem"]>
 export type SyncItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   run?: boolean | Prisma.SyncRunDefaultArgs<ExtArgs>
 }
@@ -687,7 +720,8 @@ export type $SyncItemPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     attemptCount: number
     errorCode: string | null
     errorMessage: string | null
-    startedAt: Date
+    startedAt: Date | null
+    lastAttemptAt: Date | null
     finishedAt: Date | null
   }, ExtArgs["result"]["syncItem"]>
   composites: {}
@@ -1121,6 +1155,7 @@ export interface SyncItemFieldRefs {
   readonly errorCode: Prisma.FieldRef<"SyncItem", 'String'>
   readonly errorMessage: Prisma.FieldRef<"SyncItem", 'String'>
   readonly startedAt: Prisma.FieldRef<"SyncItem", 'DateTime'>
+  readonly lastAttemptAt: Prisma.FieldRef<"SyncItem", 'DateTime'>
   readonly finishedAt: Prisma.FieldRef<"SyncItem", 'DateTime'>
 }
     

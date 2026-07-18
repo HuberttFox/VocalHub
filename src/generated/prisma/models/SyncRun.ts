@@ -27,12 +27,18 @@ export type AggregateSyncRun = {
 }
 
 export type SyncRunAvgAggregateOutputType = {
+  sequence: number | null
+  expectedStateVersion: number | null
+  sourceIdCount: number | null
   requestedCount: number | null
   successCount: number | null
   failureCount: number | null
 }
 
 export type SyncRunSumAggregateOutputType = {
+  sequence: bigint | null
+  expectedStateVersion: number | null
+  sourceIdCount: number | null
   requestedCount: number | null
   successCount: number | null
   failureCount: number | null
@@ -40,43 +46,82 @@ export type SyncRunSumAggregateOutputType = {
 
 export type SyncRunMinAggregateOutputType = {
   id: string | null
+  sequence: bigint | null
+  mode: $Enums.SyncRunMode | null
   status: $Enums.SyncRunStatus | null
   startedAt: Date | null
+  discoveryCompletedAt: Date | null
   finishedAt: Date | null
+  activityWindowStart: Date | null
+  activityWindowEnd: Date | null
+  baselineAt: Date | null
+  expectedStateVersion: number | null
+  sourceIdCount: number | null
+  sourceIdDigest: string | null
   requestedCount: number | null
   successCount: number | null
   failureCount: number | null
+  errorCode: string | null
+  errorMessage: string | null
 }
 
 export type SyncRunMaxAggregateOutputType = {
   id: string | null
+  sequence: bigint | null
+  mode: $Enums.SyncRunMode | null
   status: $Enums.SyncRunStatus | null
   startedAt: Date | null
+  discoveryCompletedAt: Date | null
   finishedAt: Date | null
+  activityWindowStart: Date | null
+  activityWindowEnd: Date | null
+  baselineAt: Date | null
+  expectedStateVersion: number | null
+  sourceIdCount: number | null
+  sourceIdDigest: string | null
   requestedCount: number | null
   successCount: number | null
   failureCount: number | null
+  errorCode: string | null
+  errorMessage: string | null
 }
 
 export type SyncRunCountAggregateOutputType = {
   id: number
+  sequence: number
+  mode: number
   status: number
   startedAt: number
+  discoveryCompletedAt: number
   finishedAt: number
+  activityWindowStart: number
+  activityWindowEnd: number
+  baselineAt: number
+  expectedStateVersion: number
+  sourceIdCount: number
+  sourceIdDigest: number
   requestedCount: number
   successCount: number
   failureCount: number
+  errorCode: number
+  errorMessage: number
   _all: number
 }
 
 
 export type SyncRunAvgAggregateInputType = {
+  sequence?: true
+  expectedStateVersion?: true
+  sourceIdCount?: true
   requestedCount?: true
   successCount?: true
   failureCount?: true
 }
 
 export type SyncRunSumAggregateInputType = {
+  sequence?: true
+  expectedStateVersion?: true
+  sourceIdCount?: true
   requestedCount?: true
   successCount?: true
   failureCount?: true
@@ -84,32 +129,65 @@ export type SyncRunSumAggregateInputType = {
 
 export type SyncRunMinAggregateInputType = {
   id?: true
+  sequence?: true
+  mode?: true
   status?: true
   startedAt?: true
+  discoveryCompletedAt?: true
   finishedAt?: true
+  activityWindowStart?: true
+  activityWindowEnd?: true
+  baselineAt?: true
+  expectedStateVersion?: true
+  sourceIdCount?: true
+  sourceIdDigest?: true
   requestedCount?: true
   successCount?: true
   failureCount?: true
+  errorCode?: true
+  errorMessage?: true
 }
 
 export type SyncRunMaxAggregateInputType = {
   id?: true
+  sequence?: true
+  mode?: true
   status?: true
   startedAt?: true
+  discoveryCompletedAt?: true
   finishedAt?: true
+  activityWindowStart?: true
+  activityWindowEnd?: true
+  baselineAt?: true
+  expectedStateVersion?: true
+  sourceIdCount?: true
+  sourceIdDigest?: true
   requestedCount?: true
   successCount?: true
   failureCount?: true
+  errorCode?: true
+  errorMessage?: true
 }
 
 export type SyncRunCountAggregateInputType = {
   id?: true
+  sequence?: true
+  mode?: true
   status?: true
   startedAt?: true
+  discoveryCompletedAt?: true
   finishedAt?: true
+  activityWindowStart?: true
+  activityWindowEnd?: true
+  baselineAt?: true
+  expectedStateVersion?: true
+  sourceIdCount?: true
+  sourceIdDigest?: true
   requestedCount?: true
   successCount?: true
   failureCount?: true
+  errorCode?: true
+  errorMessage?: true
   _all?: true
 }
 
@@ -201,12 +279,23 @@ export type SyncRunGroupByArgs<ExtArgs extends runtime.Types.Extensions.Internal
 
 export type SyncRunGroupByOutputType = {
   id: string
+  sequence: bigint
+  mode: $Enums.SyncRunMode
   status: $Enums.SyncRunStatus
   startedAt: Date
+  discoveryCompletedAt: Date | null
   finishedAt: Date | null
+  activityWindowStart: Date | null
+  activityWindowEnd: Date | null
+  baselineAt: Date | null
+  expectedStateVersion: number | null
+  sourceIdCount: number | null
+  sourceIdDigest: string | null
   requestedCount: number
   successCount: number
   failureCount: number
+  errorCode: string | null
+  errorMessage: string | null
   _count: SyncRunCountAggregateOutputType | null
   _avg: SyncRunAvgAggregateOutputType | null
   _sum: SyncRunSumAggregateOutputType | null
@@ -234,48 +323,92 @@ export type SyncRunWhereInput = {
   OR?: Prisma.SyncRunWhereInput[]
   NOT?: Prisma.SyncRunWhereInput | Prisma.SyncRunWhereInput[]
   id?: Prisma.UuidFilter<"SyncRun"> | string
+  sequence?: Prisma.BigIntFilter<"SyncRun"> | bigint | number
+  mode?: Prisma.EnumSyncRunModeFilter<"SyncRun"> | $Enums.SyncRunMode
   status?: Prisma.EnumSyncRunStatusFilter<"SyncRun"> | $Enums.SyncRunStatus
   startedAt?: Prisma.DateTimeFilter<"SyncRun"> | Date | string
+  discoveryCompletedAt?: Prisma.DateTimeNullableFilter<"SyncRun"> | Date | string | null
   finishedAt?: Prisma.DateTimeNullableFilter<"SyncRun"> | Date | string | null
+  activityWindowStart?: Prisma.DateTimeNullableFilter<"SyncRun"> | Date | string | null
+  activityWindowEnd?: Prisma.DateTimeNullableFilter<"SyncRun"> | Date | string | null
+  baselineAt?: Prisma.DateTimeNullableFilter<"SyncRun"> | Date | string | null
+  expectedStateVersion?: Prisma.IntNullableFilter<"SyncRun"> | number | null
+  sourceIdCount?: Prisma.IntNullableFilter<"SyncRun"> | number | null
+  sourceIdDigest?: Prisma.StringNullableFilter<"SyncRun"> | string | null
   requestedCount?: Prisma.IntFilter<"SyncRun"> | number
   successCount?: Prisma.IntFilter<"SyncRun"> | number
   failureCount?: Prisma.IntFilter<"SyncRun"> | number
+  errorCode?: Prisma.StringNullableFilter<"SyncRun"> | string | null
+  errorMessage?: Prisma.StringNullableFilter<"SyncRun"> | string | null
   items?: Prisma.SyncItemListRelationFilter
 }
 
 export type SyncRunOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  sequence?: Prisma.SortOrder
+  mode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  discoveryCompletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   finishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  activityWindowStart?: Prisma.SortOrderInput | Prisma.SortOrder
+  activityWindowEnd?: Prisma.SortOrderInput | Prisma.SortOrder
+  baselineAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  expectedStateVersion?: Prisma.SortOrderInput | Prisma.SortOrder
+  sourceIdCount?: Prisma.SortOrderInput | Prisma.SortOrder
+  sourceIdDigest?: Prisma.SortOrderInput | Prisma.SortOrder
   requestedCount?: Prisma.SortOrder
   successCount?: Prisma.SortOrder
   failureCount?: Prisma.SortOrder
+  errorCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
   items?: Prisma.SyncItemOrderByRelationAggregateInput
 }
 
 export type SyncRunWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  sequence?: bigint | number
   AND?: Prisma.SyncRunWhereInput | Prisma.SyncRunWhereInput[]
   OR?: Prisma.SyncRunWhereInput[]
   NOT?: Prisma.SyncRunWhereInput | Prisma.SyncRunWhereInput[]
+  mode?: Prisma.EnumSyncRunModeFilter<"SyncRun"> | $Enums.SyncRunMode
   status?: Prisma.EnumSyncRunStatusFilter<"SyncRun"> | $Enums.SyncRunStatus
   startedAt?: Prisma.DateTimeFilter<"SyncRun"> | Date | string
+  discoveryCompletedAt?: Prisma.DateTimeNullableFilter<"SyncRun"> | Date | string | null
   finishedAt?: Prisma.DateTimeNullableFilter<"SyncRun"> | Date | string | null
+  activityWindowStart?: Prisma.DateTimeNullableFilter<"SyncRun"> | Date | string | null
+  activityWindowEnd?: Prisma.DateTimeNullableFilter<"SyncRun"> | Date | string | null
+  baselineAt?: Prisma.DateTimeNullableFilter<"SyncRun"> | Date | string | null
+  expectedStateVersion?: Prisma.IntNullableFilter<"SyncRun"> | number | null
+  sourceIdCount?: Prisma.IntNullableFilter<"SyncRun"> | number | null
+  sourceIdDigest?: Prisma.StringNullableFilter<"SyncRun"> | string | null
   requestedCount?: Prisma.IntFilter<"SyncRun"> | number
   successCount?: Prisma.IntFilter<"SyncRun"> | number
   failureCount?: Prisma.IntFilter<"SyncRun"> | number
+  errorCode?: Prisma.StringNullableFilter<"SyncRun"> | string | null
+  errorMessage?: Prisma.StringNullableFilter<"SyncRun"> | string | null
   items?: Prisma.SyncItemListRelationFilter
-}, "id">
+}, "id" | "sequence">
 
 export type SyncRunOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  sequence?: Prisma.SortOrder
+  mode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  discoveryCompletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   finishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  activityWindowStart?: Prisma.SortOrderInput | Prisma.SortOrder
+  activityWindowEnd?: Prisma.SortOrderInput | Prisma.SortOrder
+  baselineAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  expectedStateVersion?: Prisma.SortOrderInput | Prisma.SortOrder
+  sourceIdCount?: Prisma.SortOrderInput | Prisma.SortOrder
+  sourceIdDigest?: Prisma.SortOrderInput | Prisma.SortOrder
   requestedCount?: Prisma.SortOrder
   successCount?: Prisma.SortOrder
   failureCount?: Prisma.SortOrder
+  errorCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.SyncRunCountOrderByAggregateInput
   _avg?: Prisma.SyncRunAvgOrderByAggregateInput
   _max?: Prisma.SyncRunMaxOrderByAggregateInput
@@ -288,99 +421,201 @@ export type SyncRunScalarWhereWithAggregatesInput = {
   OR?: Prisma.SyncRunScalarWhereWithAggregatesInput[]
   NOT?: Prisma.SyncRunScalarWhereWithAggregatesInput | Prisma.SyncRunScalarWhereWithAggregatesInput[]
   id?: Prisma.UuidWithAggregatesFilter<"SyncRun"> | string
+  sequence?: Prisma.BigIntWithAggregatesFilter<"SyncRun"> | bigint | number
+  mode?: Prisma.EnumSyncRunModeWithAggregatesFilter<"SyncRun"> | $Enums.SyncRunMode
   status?: Prisma.EnumSyncRunStatusWithAggregatesFilter<"SyncRun"> | $Enums.SyncRunStatus
   startedAt?: Prisma.DateTimeWithAggregatesFilter<"SyncRun"> | Date | string
+  discoveryCompletedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SyncRun"> | Date | string | null
   finishedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SyncRun"> | Date | string | null
+  activityWindowStart?: Prisma.DateTimeNullableWithAggregatesFilter<"SyncRun"> | Date | string | null
+  activityWindowEnd?: Prisma.DateTimeNullableWithAggregatesFilter<"SyncRun"> | Date | string | null
+  baselineAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SyncRun"> | Date | string | null
+  expectedStateVersion?: Prisma.IntNullableWithAggregatesFilter<"SyncRun"> | number | null
+  sourceIdCount?: Prisma.IntNullableWithAggregatesFilter<"SyncRun"> | number | null
+  sourceIdDigest?: Prisma.StringNullableWithAggregatesFilter<"SyncRun"> | string | null
   requestedCount?: Prisma.IntWithAggregatesFilter<"SyncRun"> | number
   successCount?: Prisma.IntWithAggregatesFilter<"SyncRun"> | number
   failureCount?: Prisma.IntWithAggregatesFilter<"SyncRun"> | number
+  errorCode?: Prisma.StringNullableWithAggregatesFilter<"SyncRun"> | string | null
+  errorMessage?: Prisma.StringNullableWithAggregatesFilter<"SyncRun"> | string | null
 }
 
 export type SyncRunCreateInput = {
   id?: string
+  sequence?: bigint | number
+  mode?: $Enums.SyncRunMode
   status?: $Enums.SyncRunStatus
   startedAt?: Date | string
+  discoveryCompletedAt?: Date | string | null
   finishedAt?: Date | string | null
-  requestedCount: number
+  activityWindowStart?: Date | string | null
+  activityWindowEnd?: Date | string | null
+  baselineAt?: Date | string | null
+  expectedStateVersion?: number | null
+  sourceIdCount?: number | null
+  sourceIdDigest?: string | null
+  requestedCount?: number
   successCount?: number
   failureCount?: number
+  errorCode?: string | null
+  errorMessage?: string | null
   items?: Prisma.SyncItemCreateNestedManyWithoutRunInput
 }
 
 export type SyncRunUncheckedCreateInput = {
   id?: string
+  sequence?: bigint | number
+  mode?: $Enums.SyncRunMode
   status?: $Enums.SyncRunStatus
   startedAt?: Date | string
+  discoveryCompletedAt?: Date | string | null
   finishedAt?: Date | string | null
-  requestedCount: number
+  activityWindowStart?: Date | string | null
+  activityWindowEnd?: Date | string | null
+  baselineAt?: Date | string | null
+  expectedStateVersion?: number | null
+  sourceIdCount?: number | null
+  sourceIdDigest?: string | null
+  requestedCount?: number
   successCount?: number
   failureCount?: number
+  errorCode?: string | null
+  errorMessage?: string | null
   items?: Prisma.SyncItemUncheckedCreateNestedManyWithoutRunInput
 }
 
 export type SyncRunUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  sequence?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  mode?: Prisma.EnumSyncRunModeFieldUpdateOperationsInput | $Enums.SyncRunMode
   status?: Prisma.EnumSyncRunStatusFieldUpdateOperationsInput | $Enums.SyncRunStatus
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  discoveryCompletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  baselineAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expectedStateVersion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdDigest?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedCount?: Prisma.IntFieldUpdateOperationsInput | number
   successCount?: Prisma.IntFieldUpdateOperationsInput | number
   failureCount?: Prisma.IntFieldUpdateOperationsInput | number
+  errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   items?: Prisma.SyncItemUpdateManyWithoutRunNestedInput
 }
 
 export type SyncRunUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  sequence?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  mode?: Prisma.EnumSyncRunModeFieldUpdateOperationsInput | $Enums.SyncRunMode
   status?: Prisma.EnumSyncRunStatusFieldUpdateOperationsInput | $Enums.SyncRunStatus
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  discoveryCompletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  baselineAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expectedStateVersion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdDigest?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedCount?: Prisma.IntFieldUpdateOperationsInput | number
   successCount?: Prisma.IntFieldUpdateOperationsInput | number
   failureCount?: Prisma.IntFieldUpdateOperationsInput | number
+  errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   items?: Prisma.SyncItemUncheckedUpdateManyWithoutRunNestedInput
 }
 
 export type SyncRunCreateManyInput = {
   id?: string
+  sequence?: bigint | number
+  mode?: $Enums.SyncRunMode
   status?: $Enums.SyncRunStatus
   startedAt?: Date | string
+  discoveryCompletedAt?: Date | string | null
   finishedAt?: Date | string | null
-  requestedCount: number
+  activityWindowStart?: Date | string | null
+  activityWindowEnd?: Date | string | null
+  baselineAt?: Date | string | null
+  expectedStateVersion?: number | null
+  sourceIdCount?: number | null
+  sourceIdDigest?: string | null
+  requestedCount?: number
   successCount?: number
   failureCount?: number
+  errorCode?: string | null
+  errorMessage?: string | null
 }
 
 export type SyncRunUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  sequence?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  mode?: Prisma.EnumSyncRunModeFieldUpdateOperationsInput | $Enums.SyncRunMode
   status?: Prisma.EnumSyncRunStatusFieldUpdateOperationsInput | $Enums.SyncRunStatus
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  discoveryCompletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  baselineAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expectedStateVersion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdDigest?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedCount?: Prisma.IntFieldUpdateOperationsInput | number
   successCount?: Prisma.IntFieldUpdateOperationsInput | number
   failureCount?: Prisma.IntFieldUpdateOperationsInput | number
+  errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SyncRunUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  sequence?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  mode?: Prisma.EnumSyncRunModeFieldUpdateOperationsInput | $Enums.SyncRunMode
   status?: Prisma.EnumSyncRunStatusFieldUpdateOperationsInput | $Enums.SyncRunStatus
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  discoveryCompletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  baselineAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expectedStateVersion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdDigest?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedCount?: Prisma.IntFieldUpdateOperationsInput | number
   successCount?: Prisma.IntFieldUpdateOperationsInput | number
   failureCount?: Prisma.IntFieldUpdateOperationsInput | number
+  errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SyncRunCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  sequence?: Prisma.SortOrder
+  mode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  discoveryCompletedAt?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
+  activityWindowStart?: Prisma.SortOrder
+  activityWindowEnd?: Prisma.SortOrder
+  baselineAt?: Prisma.SortOrder
+  expectedStateVersion?: Prisma.SortOrder
+  sourceIdCount?: Prisma.SortOrder
+  sourceIdDigest?: Prisma.SortOrder
   requestedCount?: Prisma.SortOrder
   successCount?: Prisma.SortOrder
   failureCount?: Prisma.SortOrder
+  errorCode?: Prisma.SortOrder
+  errorMessage?: Prisma.SortOrder
 }
 
 export type SyncRunAvgOrderByAggregateInput = {
+  sequence?: Prisma.SortOrder
+  expectedStateVersion?: Prisma.SortOrder
+  sourceIdCount?: Prisma.SortOrder
   requestedCount?: Prisma.SortOrder
   successCount?: Prisma.SortOrder
   failureCount?: Prisma.SortOrder
@@ -388,25 +623,50 @@ export type SyncRunAvgOrderByAggregateInput = {
 
 export type SyncRunMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  sequence?: Prisma.SortOrder
+  mode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  discoveryCompletedAt?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
+  activityWindowStart?: Prisma.SortOrder
+  activityWindowEnd?: Prisma.SortOrder
+  baselineAt?: Prisma.SortOrder
+  expectedStateVersion?: Prisma.SortOrder
+  sourceIdCount?: Prisma.SortOrder
+  sourceIdDigest?: Prisma.SortOrder
   requestedCount?: Prisma.SortOrder
   successCount?: Prisma.SortOrder
   failureCount?: Prisma.SortOrder
+  errorCode?: Prisma.SortOrder
+  errorMessage?: Prisma.SortOrder
 }
 
 export type SyncRunMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  sequence?: Prisma.SortOrder
+  mode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
+  discoveryCompletedAt?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
+  activityWindowStart?: Prisma.SortOrder
+  activityWindowEnd?: Prisma.SortOrder
+  baselineAt?: Prisma.SortOrder
+  expectedStateVersion?: Prisma.SortOrder
+  sourceIdCount?: Prisma.SortOrder
+  sourceIdDigest?: Prisma.SortOrder
   requestedCount?: Prisma.SortOrder
   successCount?: Prisma.SortOrder
   failureCount?: Prisma.SortOrder
+  errorCode?: Prisma.SortOrder
+  errorMessage?: Prisma.SortOrder
 }
 
 export type SyncRunSumOrderByAggregateInput = {
+  sequence?: Prisma.SortOrder
+  expectedStateVersion?: Prisma.SortOrder
+  sourceIdCount?: Prisma.SortOrder
   requestedCount?: Prisma.SortOrder
   successCount?: Prisma.SortOrder
   failureCount?: Prisma.SortOrder
@@ -415,6 +675,18 @@ export type SyncRunSumOrderByAggregateInput = {
 export type SyncRunScalarRelationFilter = {
   is?: Prisma.SyncRunWhereInput
   isNot?: Prisma.SyncRunWhereInput
+}
+
+export type BigIntFieldUpdateOperationsInput = {
+  set?: bigint | number
+  increment?: bigint | number
+  decrement?: bigint | number
+  multiply?: bigint | number
+  divide?: bigint | number
+}
+
+export type EnumSyncRunModeFieldUpdateOperationsInput = {
+  set?: $Enums.SyncRunMode
 }
 
 export type EnumSyncRunStatusFieldUpdateOperationsInput = {
@@ -437,22 +709,44 @@ export type SyncRunUpdateOneRequiredWithoutItemsNestedInput = {
 
 export type SyncRunCreateWithoutItemsInput = {
   id?: string
+  sequence?: bigint | number
+  mode?: $Enums.SyncRunMode
   status?: $Enums.SyncRunStatus
   startedAt?: Date | string
+  discoveryCompletedAt?: Date | string | null
   finishedAt?: Date | string | null
-  requestedCount: number
+  activityWindowStart?: Date | string | null
+  activityWindowEnd?: Date | string | null
+  baselineAt?: Date | string | null
+  expectedStateVersion?: number | null
+  sourceIdCount?: number | null
+  sourceIdDigest?: string | null
+  requestedCount?: number
   successCount?: number
   failureCount?: number
+  errorCode?: string | null
+  errorMessage?: string | null
 }
 
 export type SyncRunUncheckedCreateWithoutItemsInput = {
   id?: string
+  sequence?: bigint | number
+  mode?: $Enums.SyncRunMode
   status?: $Enums.SyncRunStatus
   startedAt?: Date | string
+  discoveryCompletedAt?: Date | string | null
   finishedAt?: Date | string | null
-  requestedCount: number
+  activityWindowStart?: Date | string | null
+  activityWindowEnd?: Date | string | null
+  baselineAt?: Date | string | null
+  expectedStateVersion?: number | null
+  sourceIdCount?: number | null
+  sourceIdDigest?: string | null
+  requestedCount?: number
   successCount?: number
   failureCount?: number
+  errorCode?: string | null
+  errorMessage?: string | null
 }
 
 export type SyncRunCreateOrConnectWithoutItemsInput = {
@@ -473,22 +767,44 @@ export type SyncRunUpdateToOneWithWhereWithoutItemsInput = {
 
 export type SyncRunUpdateWithoutItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  sequence?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  mode?: Prisma.EnumSyncRunModeFieldUpdateOperationsInput | $Enums.SyncRunMode
   status?: Prisma.EnumSyncRunStatusFieldUpdateOperationsInput | $Enums.SyncRunStatus
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  discoveryCompletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  baselineAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expectedStateVersion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdDigest?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedCount?: Prisma.IntFieldUpdateOperationsInput | number
   successCount?: Prisma.IntFieldUpdateOperationsInput | number
   failureCount?: Prisma.IntFieldUpdateOperationsInput | number
+  errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SyncRunUncheckedUpdateWithoutItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  sequence?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  mode?: Prisma.EnumSyncRunModeFieldUpdateOperationsInput | $Enums.SyncRunMode
   status?: Prisma.EnumSyncRunStatusFieldUpdateOperationsInput | $Enums.SyncRunStatus
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  discoveryCompletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activityWindowEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  baselineAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  expectedStateVersion?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sourceIdDigest?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedCount?: Prisma.IntFieldUpdateOperationsInput | number
   successCount?: Prisma.IntFieldUpdateOperationsInput | number
   failureCount?: Prisma.IntFieldUpdateOperationsInput | number
+  errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -524,47 +840,91 @@ export type SyncRunCountOutputTypeCountItemsArgs<ExtArgs extends runtime.Types.E
 
 export type SyncRunSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  sequence?: boolean
+  mode?: boolean
   status?: boolean
   startedAt?: boolean
+  discoveryCompletedAt?: boolean
   finishedAt?: boolean
+  activityWindowStart?: boolean
+  activityWindowEnd?: boolean
+  baselineAt?: boolean
+  expectedStateVersion?: boolean
+  sourceIdCount?: boolean
+  sourceIdDigest?: boolean
   requestedCount?: boolean
   successCount?: boolean
   failureCount?: boolean
+  errorCode?: boolean
+  errorMessage?: boolean
   items?: boolean | Prisma.SyncRun$itemsArgs<ExtArgs>
   _count?: boolean | Prisma.SyncRunCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["syncRun"]>
 
 export type SyncRunSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  sequence?: boolean
+  mode?: boolean
   status?: boolean
   startedAt?: boolean
+  discoveryCompletedAt?: boolean
   finishedAt?: boolean
+  activityWindowStart?: boolean
+  activityWindowEnd?: boolean
+  baselineAt?: boolean
+  expectedStateVersion?: boolean
+  sourceIdCount?: boolean
+  sourceIdDigest?: boolean
   requestedCount?: boolean
   successCount?: boolean
   failureCount?: boolean
+  errorCode?: boolean
+  errorMessage?: boolean
 }, ExtArgs["result"]["syncRun"]>
 
 export type SyncRunSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  sequence?: boolean
+  mode?: boolean
   status?: boolean
   startedAt?: boolean
+  discoveryCompletedAt?: boolean
   finishedAt?: boolean
+  activityWindowStart?: boolean
+  activityWindowEnd?: boolean
+  baselineAt?: boolean
+  expectedStateVersion?: boolean
+  sourceIdCount?: boolean
+  sourceIdDigest?: boolean
   requestedCount?: boolean
   successCount?: boolean
   failureCount?: boolean
+  errorCode?: boolean
+  errorMessage?: boolean
 }, ExtArgs["result"]["syncRun"]>
 
 export type SyncRunSelectScalar = {
   id?: boolean
+  sequence?: boolean
+  mode?: boolean
   status?: boolean
   startedAt?: boolean
+  discoveryCompletedAt?: boolean
   finishedAt?: boolean
+  activityWindowStart?: boolean
+  activityWindowEnd?: boolean
+  baselineAt?: boolean
+  expectedStateVersion?: boolean
+  sourceIdCount?: boolean
+  sourceIdDigest?: boolean
   requestedCount?: boolean
   successCount?: boolean
   failureCount?: boolean
+  errorCode?: boolean
+  errorMessage?: boolean
 }
 
-export type SyncRunOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "status" | "startedAt" | "finishedAt" | "requestedCount" | "successCount" | "failureCount", ExtArgs["result"]["syncRun"]>
+export type SyncRunOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "sequence" | "mode" | "status" | "startedAt" | "discoveryCompletedAt" | "finishedAt" | "activityWindowStart" | "activityWindowEnd" | "baselineAt" | "expectedStateVersion" | "sourceIdCount" | "sourceIdDigest" | "requestedCount" | "successCount" | "failureCount" | "errorCode" | "errorMessage", ExtArgs["result"]["syncRun"]>
 export type SyncRunInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   items?: boolean | Prisma.SyncRun$itemsArgs<ExtArgs>
   _count?: boolean | Prisma.SyncRunCountOutputTypeDefaultArgs<ExtArgs>
@@ -579,12 +939,23 @@ export type $SyncRunPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    sequence: bigint
+    mode: $Enums.SyncRunMode
     status: $Enums.SyncRunStatus
     startedAt: Date
+    discoveryCompletedAt: Date | null
     finishedAt: Date | null
+    activityWindowStart: Date | null
+    activityWindowEnd: Date | null
+    baselineAt: Date | null
+    expectedStateVersion: number | null
+    sourceIdCount: number | null
+    sourceIdDigest: string | null
     requestedCount: number
     successCount: number
     failureCount: number
+    errorCode: string | null
+    errorMessage: string | null
   }, ExtArgs["result"]["syncRun"]>
   composites: {}
 }
@@ -1010,12 +1381,23 @@ export interface Prisma__SyncRunClient<T, Null = never, ExtArgs extends runtime.
  */
 export interface SyncRunFieldRefs {
   readonly id: Prisma.FieldRef<"SyncRun", 'String'>
+  readonly sequence: Prisma.FieldRef<"SyncRun", 'BigInt'>
+  readonly mode: Prisma.FieldRef<"SyncRun", 'SyncRunMode'>
   readonly status: Prisma.FieldRef<"SyncRun", 'SyncRunStatus'>
   readonly startedAt: Prisma.FieldRef<"SyncRun", 'DateTime'>
+  readonly discoveryCompletedAt: Prisma.FieldRef<"SyncRun", 'DateTime'>
   readonly finishedAt: Prisma.FieldRef<"SyncRun", 'DateTime'>
+  readonly activityWindowStart: Prisma.FieldRef<"SyncRun", 'DateTime'>
+  readonly activityWindowEnd: Prisma.FieldRef<"SyncRun", 'DateTime'>
+  readonly baselineAt: Prisma.FieldRef<"SyncRun", 'DateTime'>
+  readonly expectedStateVersion: Prisma.FieldRef<"SyncRun", 'Int'>
+  readonly sourceIdCount: Prisma.FieldRef<"SyncRun", 'Int'>
+  readonly sourceIdDigest: Prisma.FieldRef<"SyncRun", 'String'>
   readonly requestedCount: Prisma.FieldRef<"SyncRun", 'Int'>
   readonly successCount: Prisma.FieldRef<"SyncRun", 'Int'>
   readonly failureCount: Prisma.FieldRef<"SyncRun", 'Int'>
+  readonly errorCode: Prisma.FieldRef<"SyncRun", 'String'>
+  readonly errorMessage: Prisma.FieldRef<"SyncRun", 'String'>
 }
     
 
@@ -1239,7 +1621,7 @@ export type SyncRunCreateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   /**
    * The data needed to create a SyncRun.
    */
-  data: Prisma.XOR<Prisma.SyncRunCreateInput, Prisma.SyncRunUncheckedCreateInput>
+  data?: Prisma.XOR<Prisma.SyncRunCreateInput, Prisma.SyncRunUncheckedCreateInput>
 }
 
 /**
