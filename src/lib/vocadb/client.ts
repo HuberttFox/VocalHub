@@ -27,6 +27,7 @@ export const VOCADB_MAX_ATTEMPTS = 3;
 export const VOCADB_ACTIVITY_MAX_RESULTS = 500;
 
 const RETRY_JITTER_RATIO = 0.25;
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
 let processCooldownUntil = 0;
 
 export type VocaDbClientOptions = {
@@ -207,8 +208,13 @@ export class VocaDbClient {
   }
 
   private async waitForCooldown(): Promise<void> {
-    const remaining = processCooldownUntil - this.now();
-    if (remaining > 0) await this.sleep(remaining);
+    while (processCooldownUntil > this.now()) {
+      const remaining = Math.min(
+        processCooldownUntil - this.now(),
+        MAX_TIMER_DELAY_MS,
+      );
+      await this.sleep(remaining);
+    }
   }
 
   private retryDelay(attempt: number): number {
@@ -249,12 +255,14 @@ export function parseRetryAfter(
   const trimmed = value.trim();
   if (/^\d+$/.test(trimmed)) {
     const seconds = Number(trimmed);
-    return Number.isSafeInteger(seconds) ? seconds * 1_000 : undefined;
+    return Number.isSafeInteger(seconds)
+      ? Math.min(seconds * 1_000, MAX_TIMER_DELAY_MS)
+      : undefined;
   }
 
   const timestamp = Date.parse(trimmed);
   if (Number.isNaN(timestamp)) return undefined;
-  return Math.max(0, timestamp - now);
+  return Math.min(Math.max(0, timestamp - now), MAX_TIMER_DELAY_MS);
 }
 
 function classifyRequestError(error: unknown, timeoutMs: number): VocaDbError {

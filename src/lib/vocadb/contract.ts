@@ -110,44 +110,15 @@ const vocaDbActivityEntryCandidateSchema = z.object({
   editEvent: z.string().min(1),
   entry: z.object({
     id: positiveSafeInteger,
+    entryType: z.literal("Song"),
   }),
 });
 
-const vocaDbActivityEntrySchema = z
-  .unknown()
-  .transform((value, context) => {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-      return null;
-    }
-
-    const candidate = value as Record<string, unknown>;
-    const entry = candidate.entry;
-    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
-      return null;
-    }
-
-    const entryType = (entry as Record<string, unknown>).entryType;
-    if (entryType !== undefined && entryType !== "Song") {
-      return null;
-    }
-
-    const parsed = vocaDbActivityEntryCandidateSchema.safeParse(candidate);
-    if (!parsed.success) {
-      context.addIssue({
-        code: "custom",
-        message: "Malformed VocaDB song activity entry",
-      });
-      return z.NEVER;
-    }
-
-    return parsed.data;
-  });
-
 export const vocaDbActivityEntriesResponseSchema = z
   .object({
-    items: z.array(vocaDbActivityEntrySchema),
+    items: z.array(vocaDbActivityEntryCandidateSchema),
   })
-  .transform(({ items }) => items.filter((item) => item !== null));
+  .transform(({ items }) => items);
 
 export type VocaDbActivityEntry = z.infer<
   typeof vocaDbActivityEntryCandidateSchema

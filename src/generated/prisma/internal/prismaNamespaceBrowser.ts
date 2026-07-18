@@ -229,6 +229,7 @@ export const SyncItemScalarFieldEnum = {
   runId: 'runId',
   vocadbId: 'vocadbId',
   status: 'status',
+  sourcePresent: 'sourcePresent',
   attemptCount: 'attemptCount',
   errorCode: 'errorCode',
   errorMessage: 'errorMessage',

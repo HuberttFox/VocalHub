@@ -20,7 +20,15 @@ ALTER COLUMN "requestedCount" SET DEFAULT 0;
 ALTER TABLE "SyncItem"
 ALTER COLUMN "startedAt" DROP NOT NULL,
 ALTER COLUMN "startedAt" DROP DEFAULT,
+ADD COLUMN "sourcePresent" BOOLEAN,
 ADD COLUMN "lastAttemptAt" TIMESTAMP(3);
+
+-- Existing runs already have their finite ID manifest.
+UPDATE "SyncRun"
+SET "discoveryCompletedAt" = COALESCE("finishedAt", "startedAt")
+WHERE "mode" = 'IDS' AND EXISTS (
+  SELECT 1 FROM "SyncItem" WHERE "SyncItem"."runId" = "SyncRun"."id"
+);
 
 -- CreateTable
 CREATE TABLE "VocaDbSongSyncState" (

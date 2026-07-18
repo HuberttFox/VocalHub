@@ -1,160 +1,86 @@
 import "dotenv/config";
+import pg from "pg";
+import { SyncRunMode } from "../src/generated/prisma/enums";
 import { getDb } from "../src/lib/db";
-import { SyncRunStatus, SyncStatus } from "../src/generated/prisma/enums";
 import { VocaDbClient } from "../src/lib/vocadb/client";
-import { VocaDbError } from "../src/lib/vocadb/errors";
-import { normalizeVocaDbSong } from "../src/lib/vocadb/normalize";
+import { parseSyncArgs } from "../src/lib/vocadb/sync-cli";
 import {
-  markSongSyncFailure,
-  syncVocaDbSong,
-} from "../src/lib/vocadb/sync-song";
+  DEFAULT_ACTIVITY_OVERLAP_MS,
+  DEFAULT_SETTLEMENT_LAG_MS,
+  runVocaDbSongSync,
+  type SyncRunRequest,
+} from "../src/lib/vocadb/sync-runner";
 
-const DEFAULT_SONG_IDS = [121, 1477, 4904, 25430];
-const CONCURRENCY = 2;
-
-function parseSongIds(args: string[]): number[] {
-  const idsArgument = args.find((argument) => argument.startsWith("--ids="));
-  if (!idsArgument) return DEFAULT_SONG_IDS;
-
-  const ids = idsArgument
-    .slice("--ids=".length)
-    .split(",")
-    .map((value) => Number(value.trim()));
-
-  if (
-    ids.length === 0 ||
-    ids.some((id) => !Number.isSafeInteger(id) || id <= 0)
-  ) {
-    throw new Error("--ids must contain comma-separated positive integers");
-  }
-
-  return [...new Set(ids)];
-}
-
-function safeError(error: unknown): {
-  code: string;
-  message: string;
-  status: typeof SyncStatus.FAILED | typeof SyncStatus.SOURCE_MISSING;
-} {
-  if (error instanceof VocaDbError) {
-    return {
-      code: error.code,
-      message: error.message.slice(0, 500),
-      status:
-        error.code === "NOT_FOUND"
-          ? SyncStatus.SOURCE_MISSING
-          : SyncStatus.FAILED,
-    };
-  }
-
-  return {
-    code: "UNEXPECTED_ERROR",
-    message: error instanceof Error ? error.message.slice(0, 500) : "Unknown error",
-    status: SyncStatus.FAILED,
-  };
-}
+const ADVISORY_LOCK_KEY = 8_621_427_941;
 
 async function main() {
-  const ids = parseSongIds(process.argv.slice(2));
-  const db = getDb();
-  const client = new VocaDbClient({
-    baseUrl: process.env.VOCADB_BASE_URL,
-    userAgent: process.env.VOCADB_USER_AGENT,
-    timeoutMs: process.env.VOCADB_TIMEOUT_MS
-      ? Number(process.env.VOCADB_TIMEOUT_MS)
-      : undefined,
-  });
+  const request = toRunnerRequest(parseSyncArgs(process.argv.slice(2)));
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("DATABASE_URL is required");
 
-  const run = await db.syncRun.create({
-    data: {
-      requestedCount: ids.length,
-      items: {
-        create: ids.map((vocadbId) => ({ vocadbId })),
-      },
-    },
-  });
-
-  let successCount = 0;
-  let failureCount = 0;
-
-  for (let offset = 0; offset < ids.length; offset += CONCURRENCY) {
-    const batch = ids.slice(offset, offset + CONCURRENCY);
-
-    await Promise.all(
-      batch.map(async (vocadbId) => {
-        try {
-          const source = await client.getSong(vocadbId);
-          const result = await syncVocaDbSong(
-            db,
-            normalizeVocaDbSong(source),
-          );
-
-          await db.syncItem.update({
-            where: {
-              runId_vocadbId: { runId: run.id, vocadbId },
-            },
-            data: {
-              status: result.status,
-              attemptCount: 1,
-              finishedAt: new Date(),
-            },
-          });
-
-          successCount += 1;
-          console.log(
-            `VocaDB ${vocadbId}: ${result.status} /songs/${result.id}`,
-          );
-        } catch (error) {
-          const details = safeError(error);
-          failureCount += 1;
-
-          await markSongSyncFailure(
-            db,
-            vocadbId,
-            details.status,
-            details.message,
-          );
-          await db.syncItem.update({
-            where: {
-              runId_vocadbId: { runId: run.id, vocadbId },
-            },
-            data: {
-              status: details.status,
-              attemptCount: 1,
-              errorCode: details.code,
-              errorMessage: details.message,
-              finishedAt: new Date(),
-            },
-          });
-
-          console.error(`VocaDB ${vocadbId}: ${details.code} ${details.message}`);
-        }
-      }),
+  const lockClient = new pg.Client({ connectionString });
+  await lockClient.connect();
+  try {
+    const lock = await lockClient.query<{ locked: boolean }>(
+      "SELECT pg_try_advisory_lock($1) AS locked",
+      [ADVISORY_LOCK_KEY],
     );
+    if (!lock.rows[0]?.locked) {
+      throw new Error("Another VocaDB sync worker holds the advisory lock");
+    }
+
+    const db = getDb();
+    try {
+      const result = await runVocaDbSongSync(request, {
+        db,
+        client: new VocaDbClient({
+          baseUrl: process.env.VOCADB_BASE_URL,
+          userAgent: process.env.VOCADB_USER_AGENT,
+          timeoutMs: parseOptionalNumber(
+            process.env.VOCADB_TIMEOUT_MS,
+            "VOCADB_TIMEOUT_MS",
+          ),
+        }),
+        activityOverlapMs: parseOptionalNumber(
+          process.env.VOCADB_ACTIVITY_OVERLAP_MS,
+          "VOCADB_ACTIVITY_OVERLAP_MS",
+        ) ?? DEFAULT_ACTIVITY_OVERLAP_MS,
+        settlementLagMs: parseOptionalNumber(
+          process.env.VOCADB_SETTLEMENT_LAG_MS,
+          "VOCADB_SETTLEMENT_LAG_MS",
+        ) ?? DEFAULT_SETTLEMENT_LAG_MS,
+      });
+
+      console.log(
+        `Sync run ${result.runId}: ${result.status} (${result.successCount} succeeded, ${result.failureCount} failed)`,
+      );
+      if (result.failureCount > 0) process.exitCode = 1;
+    } finally {
+      await db.$disconnect();
+    }
+  } finally {
+    await lockClient.end();
   }
+}
 
-  const status =
-    failureCount === 0
-      ? SyncRunStatus.SUCCEEDED
-      : successCount === 0
-        ? SyncRunStatus.FAILED
-        : SyncRunStatus.PARTIAL;
-
-  await db.syncRun.update({
-    where: { id: run.id },
-    data: {
-      status,
-      successCount,
-      failureCount,
-      finishedAt: new Date(),
-    },
-  });
-
-  await db.$disconnect();
-
-  if (failureCount > 0) {
-    process.exitCode = 1;
+function toRunnerRequest(request: ReturnType<typeof parseSyncArgs>): SyncRunRequest {
+  if (request.mode === "RESUME") return { mode: "RESUME" };
+  if (request.mode === SyncRunMode.IDS) {
+    return { mode: SyncRunMode.IDS, ids: request.ids };
   }
+  return { mode: request.mode };
+}
+
+function parseOptionalNumber(
+  value: string | undefined,
+  name: string,
+): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${name} must be a non-negative number`);
+  }
+  return parsed;
 }
 
 main().catch((error) => {

@@ -41,6 +41,7 @@ export type SyncItemMinAggregateOutputType = {
   runId: string | null
   vocadbId: number | null
   status: $Enums.SyncStatus | null
+  sourcePresent: boolean | null
   attemptCount: number | null
   errorCode: string | null
   errorMessage: string | null
@@ -54,6 +55,7 @@ export type SyncItemMaxAggregateOutputType = {
   runId: string | null
   vocadbId: number | null
   status: $Enums.SyncStatus | null
+  sourcePresent: boolean | null
   attemptCount: number | null
   errorCode: string | null
   errorMessage: string | null
@@ -67,6 +69,7 @@ export type SyncItemCountAggregateOutputType = {
   runId: number
   vocadbId: number
   status: number
+  sourcePresent: number
   attemptCount: number
   errorCode: number
   errorMessage: number
@@ -92,6 +95,7 @@ export type SyncItemMinAggregateInputType = {
   runId?: true
   vocadbId?: true
   status?: true
+  sourcePresent?: true
   attemptCount?: true
   errorCode?: true
   errorMessage?: true
@@ -105,6 +109,7 @@ export type SyncItemMaxAggregateInputType = {
   runId?: true
   vocadbId?: true
   status?: true
+  sourcePresent?: true
   attemptCount?: true
   errorCode?: true
   errorMessage?: true
@@ -118,6 +123,7 @@ export type SyncItemCountAggregateInputType = {
   runId?: true
   vocadbId?: true
   status?: true
+  sourcePresent?: true
   attemptCount?: true
   errorCode?: true
   errorMessage?: true
@@ -218,6 +224,7 @@ export type SyncItemGroupByOutputType = {
   runId: string
   vocadbId: number
   status: $Enums.SyncStatus
+  sourcePresent: boolean | null
   attemptCount: number
   errorCode: string | null
   errorMessage: string | null
@@ -254,6 +261,7 @@ export type SyncItemWhereInput = {
   runId?: Prisma.UuidFilter<"SyncItem"> | string
   vocadbId?: Prisma.IntFilter<"SyncItem"> | number
   status?: Prisma.EnumSyncStatusFilter<"SyncItem"> | $Enums.SyncStatus
+  sourcePresent?: Prisma.BoolNullableFilter<"SyncItem"> | boolean | null
   attemptCount?: Prisma.IntFilter<"SyncItem"> | number
   errorCode?: Prisma.StringNullableFilter<"SyncItem"> | string | null
   errorMessage?: Prisma.StringNullableFilter<"SyncItem"> | string | null
@@ -268,6 +276,7 @@ export type SyncItemOrderByWithRelationInput = {
   runId?: Prisma.SortOrder
   vocadbId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  sourcePresent?: Prisma.SortOrderInput | Prisma.SortOrder
   attemptCount?: Prisma.SortOrder
   errorCode?: Prisma.SortOrderInput | Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -286,6 +295,7 @@ export type SyncItemWhereUniqueInput = Prisma.AtLeast<{
   runId?: Prisma.UuidFilter<"SyncItem"> | string
   vocadbId?: Prisma.IntFilter<"SyncItem"> | number
   status?: Prisma.EnumSyncStatusFilter<"SyncItem"> | $Enums.SyncStatus
+  sourcePresent?: Prisma.BoolNullableFilter<"SyncItem"> | boolean | null
   attemptCount?: Prisma.IntFilter<"SyncItem"> | number
   errorCode?: Prisma.StringNullableFilter<"SyncItem"> | string | null
   errorMessage?: Prisma.StringNullableFilter<"SyncItem"> | string | null
@@ -300,6 +310,7 @@ export type SyncItemOrderByWithAggregationInput = {
   runId?: Prisma.SortOrder
   vocadbId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  sourcePresent?: Prisma.SortOrderInput | Prisma.SortOrder
   attemptCount?: Prisma.SortOrder
   errorCode?: Prisma.SortOrderInput | Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -321,6 +332,7 @@ export type SyncItemScalarWhereWithAggregatesInput = {
   runId?: Prisma.UuidWithAggregatesFilter<"SyncItem"> | string
   vocadbId?: Prisma.IntWithAggregatesFilter<"SyncItem"> | number
   status?: Prisma.EnumSyncStatusWithAggregatesFilter<"SyncItem"> | $Enums.SyncStatus
+  sourcePresent?: Prisma.BoolNullableWithAggregatesFilter<"SyncItem"> | boolean | null
   attemptCount?: Prisma.IntWithAggregatesFilter<"SyncItem"> | number
   errorCode?: Prisma.StringNullableWithAggregatesFilter<"SyncItem"> | string | null
   errorMessage?: Prisma.StringNullableWithAggregatesFilter<"SyncItem"> | string | null
@@ -333,6 +345,7 @@ export type SyncItemCreateInput = {
   id?: string
   vocadbId: number
   status?: $Enums.SyncStatus
+  sourcePresent?: boolean | null
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
@@ -347,6 +360,7 @@ export type SyncItemUncheckedCreateInput = {
   runId: string
   vocadbId: number
   status?: $Enums.SyncStatus
+  sourcePresent?: boolean | null
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
@@ -359,6 +373,7 @@ export type SyncItemUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  sourcePresent?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -373,6 +388,7 @@ export type SyncItemUncheckedUpdateInput = {
   runId?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  sourcePresent?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -386,6 +402,7 @@ export type SyncItemCreateManyInput = {
   runId: string
   vocadbId: number
   status?: $Enums.SyncStatus
+  sourcePresent?: boolean | null
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
@@ -398,6 +415,7 @@ export type SyncItemUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  sourcePresent?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -411,6 +429,7 @@ export type SyncItemUncheckedUpdateManyInput = {
   runId?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  sourcePresent?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -439,6 +458,7 @@ export type SyncItemCountOrderByAggregateInput = {
   runId?: Prisma.SortOrder
   vocadbId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  sourcePresent?: Prisma.SortOrder
   attemptCount?: Prisma.SortOrder
   errorCode?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
@@ -457,6 +477,7 @@ export type SyncItemMaxOrderByAggregateInput = {
   runId?: Prisma.SortOrder
   vocadbId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  sourcePresent?: Prisma.SortOrder
   attemptCount?: Prisma.SortOrder
   errorCode?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
@@ -470,6 +491,7 @@ export type SyncItemMinOrderByAggregateInput = {
   runId?: Prisma.SortOrder
   vocadbId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  sourcePresent?: Prisma.SortOrder
   attemptCount?: Prisma.SortOrder
   errorCode?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
@@ -525,10 +547,15 @@ export type SyncItemUncheckedUpdateManyWithoutRunNestedInput = {
   deleteMany?: Prisma.SyncItemScalarWhereInput | Prisma.SyncItemScalarWhereInput[]
 }
 
+export type NullableBoolFieldUpdateOperationsInput = {
+  set?: boolean | null
+}
+
 export type SyncItemCreateWithoutRunInput = {
   id?: string
   vocadbId: number
   status?: $Enums.SyncStatus
+  sourcePresent?: boolean | null
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
@@ -541,6 +568,7 @@ export type SyncItemUncheckedCreateWithoutRunInput = {
   id?: string
   vocadbId: number
   status?: $Enums.SyncStatus
+  sourcePresent?: boolean | null
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
@@ -583,6 +611,7 @@ export type SyncItemScalarWhereInput = {
   runId?: Prisma.UuidFilter<"SyncItem"> | string
   vocadbId?: Prisma.IntFilter<"SyncItem"> | number
   status?: Prisma.EnumSyncStatusFilter<"SyncItem"> | $Enums.SyncStatus
+  sourcePresent?: Prisma.BoolNullableFilter<"SyncItem"> | boolean | null
   attemptCount?: Prisma.IntFilter<"SyncItem"> | number
   errorCode?: Prisma.StringNullableFilter<"SyncItem"> | string | null
   errorMessage?: Prisma.StringNullableFilter<"SyncItem"> | string | null
@@ -595,6 +624,7 @@ export type SyncItemCreateManyRunInput = {
   id?: string
   vocadbId: number
   status?: $Enums.SyncStatus
+  sourcePresent?: boolean | null
   attemptCount?: number
   errorCode?: string | null
   errorMessage?: string | null
@@ -607,6 +637,7 @@ export type SyncItemUpdateWithoutRunInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  sourcePresent?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -619,6 +650,7 @@ export type SyncItemUncheckedUpdateWithoutRunInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  sourcePresent?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -631,6 +663,7 @@ export type SyncItemUncheckedUpdateManyWithoutRunInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  sourcePresent?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   attemptCount?: Prisma.IntFieldUpdateOperationsInput | number
   errorCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -646,6 +679,7 @@ export type SyncItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   runId?: boolean
   vocadbId?: boolean
   status?: boolean
+  sourcePresent?: boolean
   attemptCount?: boolean
   errorCode?: boolean
   errorMessage?: boolean
@@ -660,6 +694,7 @@ export type SyncItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   runId?: boolean
   vocadbId?: boolean
   status?: boolean
+  sourcePresent?: boolean
   attemptCount?: boolean
   errorCode?: boolean
   errorMessage?: boolean
@@ -674,6 +709,7 @@ export type SyncItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   runId?: boolean
   vocadbId?: boolean
   status?: boolean
+  sourcePresent?: boolean
   attemptCount?: boolean
   errorCode?: boolean
   errorMessage?: boolean
@@ -688,6 +724,7 @@ export type SyncItemSelectScalar = {
   runId?: boolean
   vocadbId?: boolean
   status?: boolean
+  sourcePresent?: boolean
   attemptCount?: boolean
   errorCode?: boolean
   errorMessage?: boolean
@@ -696,7 +733,7 @@ export type SyncItemSelectScalar = {
   finishedAt?: boolean
 }
 
-export type SyncItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "runId" | "vocadbId" | "status" | "attemptCount" | "errorCode" | "errorMessage" | "startedAt" | "lastAttemptAt" | "finishedAt", ExtArgs["result"]["syncItem"]>
+export type SyncItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "runId" | "vocadbId" | "status" | "sourcePresent" | "attemptCount" | "errorCode" | "errorMessage" | "startedAt" | "lastAttemptAt" | "finishedAt", ExtArgs["result"]["syncItem"]>
 export type SyncItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   run?: boolean | Prisma.SyncRunDefaultArgs<ExtArgs>
 }
@@ -717,6 +754,7 @@ export type $SyncItemPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     runId: string
     vocadbId: number
     status: $Enums.SyncStatus
+    sourcePresent: boolean | null
     attemptCount: number
     errorCode: string | null
     errorMessage: string | null
@@ -1151,6 +1189,7 @@ export interface SyncItemFieldRefs {
   readonly runId: Prisma.FieldRef<"SyncItem", 'String'>
   readonly vocadbId: Prisma.FieldRef<"SyncItem", 'Int'>
   readonly status: Prisma.FieldRef<"SyncItem", 'SyncStatus'>
+  readonly sourcePresent: Prisma.FieldRef<"SyncItem", 'Boolean'>
   readonly attemptCount: Prisma.FieldRef<"SyncItem", 'Int'>
   readonly errorCode: Prisma.FieldRef<"SyncItem", 'String'>
   readonly errorMessage: Prisma.FieldRef<"SyncItem", 'String'>

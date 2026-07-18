@@ -62,6 +62,8 @@ describe("VocaDbClient", () => {
   });
 
   it.each([
+    [408, VocaDbHttpError, 3],
+    [425, VocaDbHttpError, 3],
     [429, VocaDbRateLimitError, 3],
     [503, VocaDbHttpError, 3],
     [400, VocaDbHttpError, 1],
@@ -197,14 +199,8 @@ describe("VocaDbClient", () => {
           editEvent: "Updated",
           entry: { id: 17, entryType: "Song", name: "Song" },
         },
-        {
-          createDate: "2026-07-17T13:00:00Z",
-          editEvent: "Updated",
-          entry: { id: 2, entryType: "Artist" },
-        },
-        { unrelated: true },
       ],
-      totalCount: 3,
+      totalCount: 1,
     };
     const fetchMock = vi
       .fn<typeof fetch>()
@@ -220,7 +216,7 @@ describe("VocaDbClient", () => {
       {
         createDate: "2026-07-17T12:00:00Z",
         editEvent: "Updated",
-        entry: { id: 17 },
+        entry: { id: 17, entryType: "Song" },
       },
     ]);
 
@@ -249,8 +245,14 @@ describe("VocaDbClient", () => {
     {
       createDate: "2026-07-17T12:00:00Z",
       editEvent: "Updated",
-      entry: { id: 0, entryType: "Song" },
+      entry: { id: 17 },
     },
+    {
+      createDate: "2026-07-17T12:00:00Z",
+      editEvent: "Updated",
+      entry: { id: 17, entryType: "Artist" },
+    },
+    { unrelated: true },
   ])("rejects a malformed song activity candidate", async (candidate) => {
     const client = new VocaDbClient({
       fetch: vi

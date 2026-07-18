@@ -54,13 +54,13 @@ export class VocaDbRateLimitError extends VocaDbError {
 
 export class VocaDbHttpError extends VocaDbError {
   constructor(status: number) {
-    const serverError = status >= 500;
+    const retryable = status === 408 || status === 425 || status >= 500;
     super(
-      serverError ? "SERVER_ERROR" : "CLIENT_ERROR",
+      status >= 500 ? "SERVER_ERROR" : "CLIENT_ERROR",
       `VocaDB returned HTTP ${status}`,
       {
         status,
-        retryable: serverError,
+        retryable,
       },
     );
   }
