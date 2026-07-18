@@ -49,6 +49,31 @@ describe("normalizeVocaDbSong", () => {
     );
   });
 
+  it("keeps HTTP(S) media and nulls unsafe image URLs", () => {
+    const fixture = makeVocaDbSongFixture();
+    const payload = {
+      ...fixture,
+      mainPicture: {
+        urlOriginal: "javascript:alert(1)",
+        urlThumb: "https://example.test/cover-thumb.jpg",
+      },
+      pvs: [
+        {
+          ...fixture.pvs[0],
+          thumbUrl: "data:image/png;base64,unsafe",
+        },
+      ],
+    };
+    const normalized = normalizeVocaDbSong(vocaDbSongSchema.parse(payload));
+
+    expect(normalized.coverUrlOriginal).toBeNull();
+    expect(normalized.coverUrlThumb).toBe(
+      "https://example.test/cover-thumb.jpg",
+    );
+    expect(normalized.pvs).toHaveLength(1);
+    expect(normalized.pvs[0].thumbnailUrl).toBeNull();
+  });
+
   it("keeps only HTTP(S) PV URLs and compacts positions", () => {
     const fixture = makeVocaDbSongFixture();
     const payload = {
