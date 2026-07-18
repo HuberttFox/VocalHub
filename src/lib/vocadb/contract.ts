@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const nonNegativeInteger = z.number().int().nonnegative();
 const positiveInteger = z.number().int().positive();
+const positiveSafeInteger = z.number().int().positive().safe();
 const vocaDbDateSchema = z.string().min(1).refine((value) => {
   const hasZone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(value);
   return !Number.isNaN(Date.parse(hasZone ? value : `${value}Z`));
@@ -98,6 +99,59 @@ export const vocaDbSongSchema = z.object({
 export type VocaDbSong = z.infer<typeof vocaDbSongSchema>;
 export type VocaDbArtistCredit = z.infer<typeof vocaDbArtistCreditSchema>;
 export type VocaDbPv = z.infer<typeof vocaDbPvSchema>;
+
+export const vocaDbSongIdsSchema = z
+  .array(positiveSafeInteger)
+  .nonempty()
+  .transform((ids) => [...new Set(ids)].sort((left, right) => left - right));
+
+const vocaDbActivityEntryCandidateSchema = z.object({
+  createDate: vocaDbDateSchema,
+  editEvent: z.string().min(1),
+  entry: z.object({
+    id: positiveSafeInteger,
+  }),
+});
+
+const vocaDbActivityEntrySchema = z
+  .unknown()
+  .transform((value, context) => {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      return null;
+    }
+
+    const candidate = value as Record<string, unknown>;
+    const entry = candidate.entry;
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      return null;
+    }
+
+    const entryType = (entry as Record<string, unknown>).entryType;
+    if (entryType !== undefined && entryType !== "Song") {
+      return null;
+    }
+
+    const parsed = vocaDbActivityEntryCandidateSchema.safeParse(candidate);
+    if (!parsed.success) {
+      context.addIssue({
+        code: "custom",
+        message: "Malformed VocaDB song activity entry",
+      });
+      return z.NEVER;
+    }
+
+    return parsed.data;
+  });
+
+export const vocaDbActivityEntriesResponseSchema = z
+  .object({
+    items: z.array(vocaDbActivityEntrySchema),
+  })
+  .transform(({ items }) => items.filter((item) => item !== null));
+
+export type VocaDbActivityEntry = z.infer<
+  typeof vocaDbActivityEntryCandidateSchema
+>;
 
 // Acronym-preserving aliases for callers that use the VocaDB spelling.
 export const vocaDBSongSchema = vocaDbSongSchema;

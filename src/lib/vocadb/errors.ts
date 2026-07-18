@@ -41,11 +41,14 @@ export class VocaDbNotFoundError extends VocaDbError {
 }
 
 export class VocaDbRateLimitError extends VocaDbError {
-  constructor(status = 429) {
+  readonly retryAfterMs: number | undefined;
+
+  constructor(status = 429, retryAfterMs?: number) {
     super("RATE_LIMITED", "VocaDB rate limit was exceeded", {
       status,
       retryable: true,
     });
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
