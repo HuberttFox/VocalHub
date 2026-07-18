@@ -25,6 +25,8 @@ export type SongListItemDto = {
     isCustomName: boolean;
   }>;
   tags: Array<{ id: string; name: string }>;
+  coverUrlOriginal: string | null;
+  coverUrlThumb: string | null;
   songType: string;
   publishDate: string | null;
   durationSeconds: number;
@@ -54,6 +56,8 @@ export type SongDetailDto = {
   defaultNameLanguage: string;
   names: Array<{ language: string; value: string }>;
   artistString: string;
+  coverUrlOriginal: string | null;
+  coverUrlThumb: string | null;
   credits: SongCreditDto[];
   tags: Array<{
     id: string;
@@ -71,6 +75,7 @@ export type SongDetailDto = {
     service: string;
     pvType: string;
     url: string;
+    thumbnailUrl: string | null;
     name: string | null;
     author: string | null;
     publishDate: string | null;

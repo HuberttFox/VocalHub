@@ -83,6 +83,8 @@ describe("artist APIs", () => {
     });
     expect(payload).not.toHaveProperty("syncStatus");
     expect(payload).not.toHaveProperty("biography");
+    expect(payload).not.toHaveProperty("avatar");
+    expect(payload).not.toHaveProperty("avatarUrl");
   });
 
   it("returns paginated works and target credit context", async () => {
@@ -93,6 +95,8 @@ describe("artist APIs", () => {
     expect(response.status).toBe(200);
     expect(payload.items[0]).toMatchObject({
       id: song.id,
+      coverUrlOriginal: "https://example.test/cover.jpg",
+      coverUrlThumb: "https://example.test/cover-thumb.jpg",
       artistCredits: [
         { name: "Producer", effectiveRoles: ["Composer", "Arranger"] },
       ],

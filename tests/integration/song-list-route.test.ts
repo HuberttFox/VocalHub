@@ -105,6 +105,35 @@ describe("GET /api/songs", () => {
     expect(payload.items.map((item: { id: string }) => item.id)).not.toContain(deleted.id);
   });
 
+  it("returns cover URLs and nulls when no cover exists", async () => {
+    const covered = await seedSong();
+    const uncovered = await seedSong({
+      id: 124,
+      name: "No cover",
+      defaultName: "No cover",
+      mainPicture: null,
+    });
+
+    const response = await requestSongs();
+    const payload = await response.json();
+    const coveredItem = payload.items.find(
+      (item: { id: string }) => item.id === covered.id,
+    );
+    const uncoveredItem = payload.items.find(
+      (item: { id: string }) => item.id === uncovered.id,
+    );
+
+    expect(response.status).toBe(200);
+    expect(coveredItem).toMatchObject({
+      coverUrlOriginal: "https://example.test/cover.jpg",
+      coverUrlThumb: "https://example.test/cover-thumb.jpg",
+    });
+    expect(uncoveredItem).toMatchObject({
+      coverUrlOriginal: null,
+      coverUrlThumb: null,
+    });
+  });
+
   it("paginates and supports popular sorting", async () => {
     const low = await seedSong({
       id: 124,

@@ -76,11 +76,17 @@ describe("GET /api/songs/[id]", () => {
       id: result.id,
       vocadbId: vocaDbSongFixture.id,
       title: vocaDbSongFixture.name,
+      coverUrlOriginal: "https://example.test/cover.jpg",
+      coverUrlThumb: "https://example.test/cover-thumb.jpg",
       source: { provider: "VocaDB" },
     });
     expect(payload).not.toHaveProperty("syncStatus");
     expect(payload.credits[0].artist).toMatchObject({ name: "Producer" });
-    expect(payload.pvs).toHaveLength(1);
+    expect(payload.pvs).toEqual([
+      expect.objectContaining({
+        thumbnailUrl: "https://example.test/video-thumb.jpg",
+      }),
+    ]);
   });
 
   it("keeps hidden and custom artist credits as text only", async () => {
@@ -104,10 +110,22 @@ describe("GET /api/songs/[id]", () => {
     expect(await db.artist.count()).toBe(1);
   });
 
-  it("excludes disabled playback entries", async () => {
+  it("excludes disabled playback entries and their thumbnails", async () => {
+    const disabledUrl = "https://example.test/disabled-video";
+    const disabledThumbnail = "https://example.test/disabled-thumb.jpg";
     const fixture = {
       ...vocaDbSongFixture,
-      pvs: vocaDbSongFixture.pvs.map((pv) => ({ ...pv, disabled: true })),
+      pvs: [
+        ...vocaDbSongFixture.pvs,
+        {
+          ...vocaDbSongFixture.pvs[0],
+          id: 201,
+          pvId: "disabled-video",
+          url: disabledUrl,
+          thumbUrl: disabledThumbnail,
+          disabled: true,
+        },
+      ],
     };
     const result = await syncVocaDbSong(
       db,
@@ -115,6 +133,14 @@ describe("GET /api/songs/[id]", () => {
     );
 
     const response = await requestSong(result.id);
-    expect((await response.json()).pvs).toEqual([]);
+    const body = await response.text();
+    const payload = JSON.parse(body);
+
+    expect(payload.pvs).toHaveLength(1);
+    expect(payload.pvs[0].thumbnailUrl).toBe(
+      "https://example.test/video-thumb.jpg",
+    );
+    expect(body).not.toContain(disabledUrl);
+    expect(body).not.toContain(disabledThumbnail);
   });
 });
