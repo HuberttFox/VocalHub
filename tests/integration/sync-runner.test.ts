@@ -3,7 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { SyncRunMode, SyncStatus } from "@/generated/prisma/enums";
-import { VocaDbNotFoundError } from "@/lib/vocadb/errors";
+import { VocaDbCancellationError, VocaDbNotFoundError } from "@/lib/vocadb/errors";
 import { vocaDbSongSchema } from "@/lib/vocadb/contract";
 import {
   runVocaDbSongSync,
@@ -115,6 +115,134 @@ describe("durable VocaDB sync runner", () => {
     expect(fetched).toEqual([2]);
   });
 
+  it("auto mode resumes a running manifest before its scheduled target", async () => {
+    const run = await db.syncRun.create({
+      data: {
+        mode: SyncRunMode.IDS,
+        discoveryCompletedAt: new Date("2026-07-18T01:00:00Z"),
+        errorCode: "CANCELLED",
+        errorMessage: "interrupted",
+        items: { create: [{ vocadbId: 1 }] },
+      },
+    });
+
+    const result = await runVocaDbSongSync(
+      { mode: "AUTO", target: SyncRunMode.SEED },
+      {
+        db,
+        client: {
+          getSongIds: async () => {
+            throw new Error("scheduled discovery should not run");
+          },
+          getSongActivityEntries: async () => [],
+          getSong: async (id: number) => source(id),
+        },
+        logger: quietLogger,
+      },
+    );
+
+    expect(result.runId).toBe(run.id);
+    expect(await db.syncRun.count()).toBe(1);
+    expect(
+      await db.syncRun.findUniqueOrThrow({ where: { id: run.id } }),
+    ).toMatchObject({
+      status: "SUCCEEDED",
+      errorCode: null,
+      errorMessage: null,
+    });
+  });
+
+  it("cancellation leaves active items pending and checkpoint unchanged", async () => {
+    const checkpoint = new Date("2026-07-17T00:00:00Z");
+    await db.vocaDbSongSyncState.create({
+      data: {
+        id: VOCADB_SONG_SYNC_STATE_ID,
+        version: 4,
+        activityCheckpoint: checkpoint,
+        lastSeedCompletedAt: checkpoint,
+      },
+    });
+    const controller = new AbortController();
+    let started = 0;
+    const promise = runVocaDbSongSync(
+      { mode: SyncRunMode.SEED },
+      {
+        db,
+        concurrency: 2,
+        signal: controller.signal,
+        logger: quietLogger,
+        client: {
+          getSongIds: async () => [1, 2, 3],
+          getSongActivityEntries: async () => [],
+          getSong: async (_id: number, options?: { signal?: AbortSignal }) => {
+            started += 1;
+            if (started === 2) controller.abort();
+            if (options?.signal?.aborted) throw new VocaDbCancellationError();
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            if (options?.signal?.aborted) throw new VocaDbCancellationError();
+            return source(1);
+          },
+        },
+      },
+    );
+
+    await expect(promise).rejects.toBeInstanceOf(VocaDbCancellationError);
+    expect(started).toBe(2);
+    const run = await db.syncRun.findFirstOrThrow();
+    expect(run).toMatchObject({ status: "RUNNING", errorCode: "CANCELLED" });
+    expect(
+      await db.syncItem.count({ where: { status: SyncStatus.PENDING } }),
+    ).toBe(3);
+    const state = await db.vocaDbSongSyncState.findUniqueOrThrow({
+      where: { id: VOCADB_SONG_SYNC_STATE_ID },
+    });
+    expect(state.version).toBe(4);
+    expect(state.activityCheckpoint).toEqual(checkpoint);
+  });
+
+  it("does not advance checkpoints for legacy SOURCE_MISSING items", async () => {
+    const checkpoint = new Date("2026-07-17T00:00:00Z");
+    await db.vocaDbSongSyncState.create({
+      data: {
+        id: VOCADB_SONG_SYNC_STATE_ID,
+        version: 7,
+        activityCheckpoint: checkpoint,
+        lastSeedCompletedAt: checkpoint,
+      },
+    });
+    const run = await db.syncRun.create({
+      data: {
+        mode: SyncRunMode.SEED,
+        discoveryCompletedAt: checkpoint,
+        baselineAt: checkpoint,
+        expectedStateVersion: 7,
+        items: {
+          create: [{ vocadbId: 1, status: SyncStatus.SOURCE_MISSING }],
+        },
+      },
+    });
+
+    const result = await runVocaDbSongSync(
+      { mode: "RESUME" },
+      {
+        db,
+        client: {
+          getSongIds: async () => [],
+          getSongActivityEntries: async () => [],
+          getSong: async () => source(1),
+        },
+        logger: quietLogger,
+      },
+    );
+
+    expect(result).toMatchObject({ runId: run.id, failureCount: 1 });
+    const state = await db.vocaDbSongSyncState.findUniqueOrThrow({
+      where: { id: VOCADB_SONG_SYNC_STATE_ID },
+    });
+    expect(state.version).toBe(7);
+    expect(state.activityCheckpoint).toEqual(checkpoint);
+  });
+
   it("does not advance the seed checkpoint when an item fails", async () => {
     const checkpoint = new Date("2026-07-17T00:00:00Z");
     await db.vocaDbSongSyncState.create({
@@ -186,6 +314,39 @@ describe("durable VocaDB sync runner", () => {
     expect(state.activityCheckpoint?.toISOString()).toBe(
       checkpoint.toISOString(),
     );
+  });
+
+  it("completes reconciliation when inventory has no deletion candidates", async () => {
+    await runVocaDbSongSync(
+      { mode: SyncRunMode.SEED },
+      {
+        db,
+        client: {
+          getSongIds: async () => [1],
+          getSongActivityEntries: async () => [],
+          getSong: async (id: number) => source(id),
+        },
+        logger: quietLogger,
+      },
+    );
+
+    const result = await runVocaDbSongSync(
+      { mode: SyncRunMode.RECONCILE },
+      {
+        db,
+        client: {
+          getSongIds: async () => [1],
+          getSongActivityEntries: async () => [],
+          getSong: async () => {
+            throw new Error("no candidate details should be fetched");
+          },
+        },
+        logger: quietLogger,
+      },
+    );
+
+    expect(result).toMatchObject({ successCount: 0, failureCount: 0 });
+    expect(result.status).toBe("SUCCEEDED");
   });
 
   it("reconciles inventory absence plus detail 404 as source deletion", async () => {

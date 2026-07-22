@@ -5,7 +5,12 @@ import {
   VOCADB_ACTIVITY_MAX_RESULTS,
   type VocaDbClient,
 } from "@/lib/vocadb/client";
-import { VocaDbError } from "@/lib/vocadb/errors";
+import {
+  isVocaDbCancellation,
+  throwIfVocaDbCancelled,
+  VocaDbCancellationError,
+  VocaDbError,
+} from "@/lib/vocadb/errors";
 import { normalizeVocaDbSong } from "@/lib/vocadb/normalize";
 import {
   markSongSourceDeleted,
@@ -39,6 +44,13 @@ export type SyncRunRequest =
   | { mode: typeof SyncRunMode.SEED }
   | { mode: typeof SyncRunMode.INCREMENTAL }
   | { mode: typeof SyncRunMode.RECONCILE }
+  | {
+      mode: "AUTO";
+      target:
+        | typeof SyncRunMode.SEED
+        | typeof SyncRunMode.INCREMENTAL
+        | typeof SyncRunMode.RECONCILE;
+    }
   | { mode: "RESUME" };
 
 export type SyncRunnerOptions = {
@@ -52,6 +64,7 @@ export type SyncRunnerOptions = {
   concurrency?: number;
   activityOverlapMs?: number;
   settlementLagMs?: number;
+  signal?: AbortSignal;
 };
 
 export type SyncRunResult = {
@@ -86,22 +99,53 @@ export async function runVocaDbSongSync(
     options.settlementLagMs ?? DEFAULT_SETTLEMENT_LAG_MS,
   );
 
+  throwIfVocaDbCancelled(options.signal);
   let run: RunRecord;
   if (request.mode === "RESUME") {
     run = await getRunningRun(options.db);
+    await clearRunError(options.db, run.id);
+  } else if (request.mode === "AUTO") {
+    const running = await findRunningRuns(options.db);
+    if (running.length > 1) {
+      throw new Error("Multiple running sync runs require operator intervention");
+    }
+    if (running.length === 1) {
+      run = running[0];
+      await clearRunError(options.db, run.id);
+      logger.log(
+        `Scheduled ${request.target} sync resumes ${run.mode} run ${run.id}`,
+      );
+    } else {
+      const targetRequest = { mode: request.target };
+      run = await createRun(
+        targetRequest,
+        options.db,
+        now,
+        overlapMs,
+        settlementLagMs,
+      );
+    }
   } else {
     await assertNoRunningRun(options.db);
     run = await createRun(request, options.db, now, overlapMs, settlementLagMs);
   }
 
   try {
+    throwIfVocaDbCancelled(options.signal);
     if (!run.discoveryCompletedAt) {
-      const discovery = await discoverRun(run, request, options.db, options.client);
+      const discovery = await discoverRun(
+        run,
+        options.db,
+        options.client,
+        options.signal,
+      );
+      throwIfVocaDbCancelled(options.signal);
       await persistManifest(options.db, run.id, discovery, now());
       run = { ...run, discoveryCompletedAt: now() };
     }
 
     await processPendingItems(run, options, concurrency, now, logger);
+    throwIfVocaDbCancelled(options.signal);
     return await finalizeRun(options.db, run, now());
   } catch (error) {
     await recordRunInterruption(options.db, run.id, error);
@@ -110,7 +154,7 @@ export async function runVocaDbSongSync(
 }
 
 async function createRun(
-  request: Exclude<SyncRunRequest, { mode: "RESUME" }>,
+  request: Exclude<SyncRunRequest, { mode: "RESUME" } | { mode: "AUTO" }>,
   db: PrismaClient,
   now: () => Date,
   overlapMs: number,
@@ -187,13 +231,17 @@ const runSelect = {
   expectedStateVersion: true,
 } as const;
 
-async function getRunningRun(db: PrismaClient): Promise<RunRecord> {
-  const runs = await db.syncRun.findMany({
+async function findRunningRuns(db: PrismaClient): Promise<RunRecord[]> {
+  return db.syncRun.findMany({
     where: { status: SyncRunStatus.RUNNING },
     orderBy: { sequence: "asc" },
     take: 2,
     select: runSelect,
   });
+}
+
+async function getRunningRun(db: PrismaClient): Promise<RunRecord> {
+  const runs = await findRunningRuns(db);
   if (runs.length !== 1) {
     throw new Error(
       runs.length === 0
@@ -204,13 +252,15 @@ async function getRunningRun(db: PrismaClient): Promise<RunRecord> {
   return runs[0];
 }
 
+async function clearRunError(db: PrismaClient, runId: string): Promise<void> {
+  await db.syncRun.update({
+    where: { id: runId },
+    data: { errorCode: null, errorMessage: null },
+  });
+}
+
 async function assertNoRunningRun(db: PrismaClient): Promise<void> {
-  if (
-    await db.syncRun.findFirst({
-      where: { status: SyncRunStatus.RUNNING },
-      select: { id: true },
-    })
-  ) {
+  if ((await findRunningRuns(db)).length > 0) {
     throw new Error("A sync run is already running; use resume");
   }
 }
@@ -222,16 +272,16 @@ type Discovery = {
 
 async function discoverRun(
   run: RunRecord,
-  _request: SyncRunRequest,
   db: PrismaClient,
   client: SyncRunnerOptions["client"],
+  signal?: AbortSignal,
 ): Promise<Discovery> {
   if (run.mode === SyncRunMode.IDS) {
     throw new Error("IDS run manifest must be created atomically");
   }
 
   if (run.mode === SyncRunMode.SEED) {
-    return { ids: await client.getSongIds() };
+    return { ids: await client.getSongIds({ signal }) };
   }
 
   if (run.mode === SyncRunMode.INCREMENTAL) {
@@ -243,12 +293,13 @@ async function discoverRun(
         client,
         run.activityWindowStart,
         run.activityWindowEnd,
+        signal,
       ),
     };
   }
 
   if (run.mode === SyncRunMode.RECONCILE) {
-    const inventoryIds = await client.getSongIds();
+    const inventoryIds = await client.getSongIds({ signal });
     const inventory = new Set(inventoryIds);
     const local = await db.song.findMany({
       where: {
@@ -266,7 +317,7 @@ async function discoverRun(
           song.syncStatus === SyncStatus.SOURCE_MISSING,
       )
       .map((song) => song.vocadbId);
-    return { ids: normalizeIds(ids), inventoryIds };
+    return { ids: normalizeIds(ids, true), inventoryIds };
   }
 
   throw new Error(`Unsupported run mode: ${run.mode}`);
@@ -320,15 +371,26 @@ async function processPendingItems(
   });
 
   let nextIndex = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-      while (nextIndex < items.length) {
-        const item = items[nextIndex];
-        nextIndex += 1;
-        await processItem(run, item, options, now, logger);
+  let stopped = false;
+  let firstError: unknown;
+  const lanes = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (!stopped && nextIndex < items.length) {
+        try {
+          throwIfVocaDbCancelled(options.signal);
+          const item = items[nextIndex];
+          nextIndex += 1;
+          await processItem(run, item, options, now, logger);
+        } catch (error) {
+          stopped = true;
+          firstError ??= error;
+        }
       }
-    }),
+    },
   );
+  await Promise.allSettled(lanes);
+  if (firstError !== undefined) throw firstError;
 }
 
 async function processItem(
@@ -351,7 +413,9 @@ async function processItem(
   });
 
   try {
-    const source = await options.client.getSong(item.vocadbId);
+    const source = await options.client.getSong(item.vocadbId, {
+      signal: options.signal,
+    });
     const result = await syncVocaDbSong(
       options.db,
       normalizeVocaDbSong(source),
@@ -363,6 +427,11 @@ async function processItem(
     await finishItem(options.db, item.id, status, now());
     logger.log(`VocaDB ${item.vocadbId}: ${result.status} /songs/${result.id}`);
   } catch (error) {
+    if (isVocaDbCancellation(error, options.signal)) {
+      throw error instanceof VocaDbCancellationError
+        ? error
+        : new VocaDbCancellationError(options.signal?.reason);
+    }
     const details = safeError(error);
     if (
       run.mode === SyncRunMode.RECONCILE &&
@@ -467,7 +536,12 @@ async function finalizeRun(
   finishedAt: Date,
 ): Promise<SyncRunResult> {
   const [failureCount, successCount] = await Promise.all([
-    db.syncItem.count({ where: { runId: run.id, status: SyncStatus.FAILED } }),
+    db.syncItem.count({
+      where: {
+        runId: run.id,
+        status: { in: [SyncStatus.FAILED, SyncStatus.SOURCE_MISSING] },
+      },
+    }),
     db.syncItem.count({
       where: {
         runId: run.id,
@@ -498,6 +572,8 @@ async function finalizeRun(
         successCount,
         failureCount,
         finishedAt,
+        errorCode: null,
+        errorMessage: null,
       },
     });
   });
@@ -578,9 +654,10 @@ export async function discoverActivityIds(
   client: Pick<VocaDbClient, "getSongActivityEntries">,
   since: Date,
   before: Date,
+  signal?: AbortSignal,
 ): Promise<number[]> {
   const ids = new Set<number>();
-  await collectActivityIds(client, since, before, ids);
+  await collectActivityIds(client, since, before, ids, signal);
   return [...ids].sort((left, right) => left - right);
 }
 
@@ -589,8 +666,10 @@ async function collectActivityIds(
   since: Date,
   before: Date,
   ids: Set<number>,
+  signal?: AbortSignal,
 ): Promise<void> {
-  const entries = await client.getSongActivityEntries({ since, before });
+  throwIfVocaDbCancelled(signal);
+  const entries = await client.getSongActivityEntries({ since, before, signal });
   if (entries.length < VOCADB_ACTIVITY_MAX_RESULTS) {
     for (const entry of entries) ids.add(entry.entry.id);
     return;
@@ -618,8 +697,8 @@ async function collectActivityIds(
     throw new ActivityIntervalSaturatedError();
   }
 
-  await collectActivityIds(client, since, leftBefore, ids);
-  await collectActivityIds(client, rightSince, before, ids);
+  await collectActivityIds(client, since, leftBefore, ids, signal);
+  await collectActivityIds(client, rightSince, before, ids, signal);
 }
 
 export function digestIds(ids: number[]): string {

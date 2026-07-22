@@ -6,6 +6,7 @@ export type VocaDbErrorCode =
   | "CLIENT_ERROR"
   | "SERVER_ERROR"
   | "TIMEOUT"
+  | "CANCELLED"
   | "NETWORK_ERROR"
   | "INVALID_JSON"
   | "VALIDATION_ERROR";
@@ -73,6 +74,25 @@ export class VocaDbTimeoutError extends VocaDbError {
       cause,
     });
   }
+}
+
+export class VocaDbCancellationError extends VocaDbError {
+  constructor(cause?: unknown) {
+    super("CANCELLED", "VocaDB request was cancelled", { cause });
+  }
+}
+
+export function throwIfVocaDbCancelled(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new VocaDbCancellationError(signal.reason);
+  }
+}
+
+export function isVocaDbCancellation(
+  error: unknown,
+  signal?: AbortSignal,
+): boolean {
+  return error instanceof VocaDbCancellationError || signal?.aborted === true;
 }
 
 export class VocaDbNetworkError extends VocaDbError {

@@ -3,24 +3,37 @@ import pg from "pg";
 import { SyncRunMode } from "../src/generated/prisma/enums";
 import { getDb } from "../src/lib/db";
 import { VocaDbClient } from "../src/lib/vocadb/client";
+import {
+  isVocaDbCancellation,
+  VocaDbCancellationError,
+} from "../src/lib/vocadb/errors";
 import { parseSyncArgs } from "../src/lib/vocadb/sync-cli";
 import {
-  DEFAULT_ACTIVITY_OVERLAP_MS,
-  DEFAULT_SETTLEMENT_LAG_MS,
   runVocaDbSongSync,
   type SyncRunRequest,
 } from "../src/lib/vocadb/sync-runner";
+import { parseVocaDbWorkerConfig } from "../src/lib/vocadb/worker-config";
 
 const ADVISORY_LOCK_KEY = 8_621_427_941;
 
 async function main() {
   const request = toRunnerRequest(parseSyncArgs(process.argv.slice(2)));
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL is required");
+  const config = parseVocaDbWorkerConfig(process.env);
+  process.env.DATABASE_URL = config.connectionString;
+  const shutdown = new AbortController();
+  let shutdownExitCode: number | undefined;
+  const onSignal = (signal: NodeJS.Signals) => {
+    if (shutdown.signal.aborted) return;
+    shutdownExitCode = signal === "SIGINT" ? 130 : 143;
+    console.error(`${signal} received; stopping VocaDB sync gracefully`);
+    shutdown.abort(new VocaDbCancellationError());
+  };
+  process.once("SIGTERM", onSignal);
+  process.once("SIGINT", onSignal);
 
-  const lockClient = new pg.Client({ connectionString });
-  await lockClient.connect();
+  const lockClient = new pg.Client({ connectionString: config.connectionString });
   try {
+    await lockClient.connect();
     const lock = await lockClient.query<{ locked: boolean }>(
       "SELECT pg_try_advisory_lock($1) AS locked",
       [ADVISORY_LOCK_KEY],
@@ -28,27 +41,21 @@ async function main() {
     if (!lock.rows[0]?.locked) {
       throw new Error("Another VocaDB sync worker holds the advisory lock");
     }
+    if (shutdown.signal.aborted) throw new VocaDbCancellationError();
 
     const db = getDb();
     try {
       const result = await runVocaDbSongSync(request, {
         db,
         client: new VocaDbClient({
-          baseUrl: process.env.VOCADB_BASE_URL,
-          userAgent: process.env.VOCADB_USER_AGENT,
-          timeoutMs: parseOptionalNumber(
-            process.env.VOCADB_TIMEOUT_MS,
-            "VOCADB_TIMEOUT_MS",
-          ),
+          baseUrl: config.baseUrl,
+          userAgent: config.userAgent,
+          timeoutMs: config.timeoutMs,
         }),
-        activityOverlapMs: parseOptionalNumber(
-          process.env.VOCADB_ACTIVITY_OVERLAP_MS,
-          "VOCADB_ACTIVITY_OVERLAP_MS",
-        ) ?? DEFAULT_ACTIVITY_OVERLAP_MS,
-        settlementLagMs: parseOptionalNumber(
-          process.env.VOCADB_SETTLEMENT_LAG_MS,
-          "VOCADB_SETTLEMENT_LAG_MS",
-        ) ?? DEFAULT_SETTLEMENT_LAG_MS,
+        activityOverlapMs: config.activityOverlapMs,
+        settlementLagMs: config.settlementLagMs,
+        concurrency: config.concurrency,
+        signal: shutdown.signal,
       });
 
       console.log(
@@ -58,29 +65,28 @@ async function main() {
     } finally {
       await db.$disconnect();
     }
+  } catch (error) {
+    if (isVocaDbCancellation(error, shutdown.signal)) {
+      process.exitCode = shutdownExitCode ?? 1;
+      return;
+    }
+    throw error;
   } finally {
-    await lockClient.end();
+    await lockClient.end().catch(() => undefined);
+    process.removeListener("SIGTERM", onSignal);
+    process.removeListener("SIGINT", onSignal);
   }
 }
 
 function toRunnerRequest(request: ReturnType<typeof parseSyncArgs>): SyncRunRequest {
   if (request.mode === "RESUME") return { mode: "RESUME" };
+  if (request.mode === "AUTO") {
+    return { mode: "AUTO", target: request.target };
+  }
   if (request.mode === SyncRunMode.IDS) {
     return { mode: SyncRunMode.IDS, ids: request.ids };
   }
   return { mode: request.mode };
-}
-
-function parseOptionalNumber(
-  value: string | undefined,
-  name: string,
-): number | undefined {
-  if (value === undefined) return undefined;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error(`${name} must be a non-negative number`);
-  }
-  return parsed;
 }
 
 main().catch((error) => {

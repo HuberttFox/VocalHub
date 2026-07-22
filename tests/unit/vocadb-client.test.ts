@@ -7,6 +7,7 @@ import {
   parseRetryAfter,
 } from "@/lib/vocadb/client";
 import {
+  VocaDbCancellationError,
   VocaDbHttpError,
   VocaDbNetworkError,
   VocaDbNotFoundError,
@@ -45,6 +46,42 @@ describe("VocaDbClient", () => {
       "VocalHub-Test/1.0",
     );
     expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("cancels caller-aborted requests without retrying", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          "abort",
+          () => reject(init.signal?.reason),
+          { once: true },
+        );
+      });
+    });
+    const sleep = vi.fn();
+    const client = new VocaDbClient({ fetch: fetchMock, sleep });
+    const request = client.getSongIds({ signal: controller.signal });
+    await Promise.resolve();
+    controller.abort();
+
+    await expect(request).rejects.toBeInstanceOf(VocaDbCancellationError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it("uses a fresh timeout signal for each retry", async () => {
+    const signals: AbortSignal[] = [];
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      if (init?.signal) signals.push(init.signal);
+      if (signals.length === 1) throw Object.assign(new Error("timeout"), { name: "TimeoutError" });
+      return jsonResponse([1]);
+    });
+    const client = new VocaDbClient({ fetch: fetchMock, sleep: vi.fn() });
+
+    await expect(client.getSongIds()).resolves.toEqual([1]);
+    expect(signals).toHaveLength(2);
+    expect(signals[0]).not.toBe(signals[1]);
   });
 
   it("classifies an HTML 404 by status before parsing the body", async () => {

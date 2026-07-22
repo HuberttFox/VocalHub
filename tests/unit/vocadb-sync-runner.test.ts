@@ -25,6 +25,10 @@ describe("sync CLI", () => {
     expect(parseSyncArgs(["incremental"])).toEqual({ mode: "INCREMENTAL" });
     expect(parseSyncArgs(["reconcile"])).toEqual({ mode: "RECONCILE" });
     expect(parseSyncArgs(["resume"])).toEqual({ mode: "RESUME" });
+    expect(parseSyncArgs(["auto", "incremental"])).toEqual({
+      mode: "AUTO",
+      target: "INCREMENTAL",
+    });
   });
 
   it("rejects invalid arguments", () => {
@@ -33,6 +37,9 @@ describe("sync CLI", () => {
       ["ids"],
       ["seed", "--ids=1"],
       ["ids", "--ids=0"],
+      ["auto"],
+      ["auto", "ids"],
+      ["auto", "incremental", "extra"],
       ["unknown"],
     ]) {
       expect(() => parseSyncArgs(args)).toThrow();
@@ -45,6 +52,22 @@ describe("sync discovery helpers", () => {
     expect(normalizeIds([3, 1, 3])).toEqual([1, 3]);
     expect(digestIds([3, 1, 3])).toBe(digestIds([1, 3]));
     expect(digestIds([])).toHaveLength(64);
+  });
+
+  it("stops activity discovery before an aborted request", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const client = { getSongActivityEntries: vi.fn() };
+
+    await expect(
+      discoverActivityIds(
+        client,
+        new Date("2026-07-18T00:00:00Z"),
+        new Date("2026-07-18T01:00:00Z"),
+        controller.signal,
+      ),
+    ).rejects.toMatchObject({ code: "CANCELLED" });
+    expect(client.getSongActivityEntries).not.toHaveBeenCalled();
   });
 
   it("returns deduplicated IDs from an unsaturated interval", async () => {

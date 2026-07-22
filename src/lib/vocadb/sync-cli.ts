@@ -3,10 +3,25 @@ import type { SyncRunMode } from "@/generated/prisma/enums";
 export type SyncCliRequest =
   | { mode: "IDS"; ids: number[] }
   | { mode: Exclude<SyncRunMode, "IDS"> }
+  | {
+      mode: "AUTO";
+      target: Exclude<SyncRunMode, "IDS">;
+    }
   | { mode: "RESUME" };
 
 export function parseSyncArgs(args: string[]): SyncCliRequest {
   const [mode, ...flags] = args;
+  if (mode === "auto") {
+    if (flags.length !== 1) {
+      throw new Error("auto mode requires exactly one target mode");
+    }
+    const target = parseScheduledMode(flags[0]);
+    if (!target) {
+      throw new Error("auto target must be seed, incremental, or reconcile");
+    }
+    return { mode: "AUTO", target };
+  }
+
   const idsArguments = flags.filter((argument) => argument.startsWith("--ids="));
   const unknownFlags = flags.filter((argument) => !argument.startsWith("--ids="));
 
@@ -28,14 +43,22 @@ export function parseSyncArgs(args: string[]): SyncCliRequest {
     throw new Error("--ids is only supported by ids mode");
   }
 
-  if (mode === "seed") return { mode: "SEED" };
-  if (mode === "incremental") return { mode: "INCREMENTAL" };
-  if (mode === "reconcile") return { mode: "RECONCILE" };
+  const scheduledMode = parseScheduledMode(mode);
+  if (scheduledMode) return { mode: scheduledMode };
   if (mode === "resume") return { mode: "RESUME" };
 
   throw new Error(
-    "Usage: sync-vocadb <ids|seed|incremental|reconcile|resume> [--ids=...]",
+    "Usage: sync-vocadb <ids|seed|incremental|reconcile|resume|auto> [target|--ids=...]",
   );
+}
+
+function parseScheduledMode(
+  value: string | undefined,
+): Exclude<SyncRunMode, "IDS"> | undefined {
+  if (value === "seed") return "SEED";
+  if (value === "incremental") return "INCREMENTAL";
+  if (value === "reconcile") return "RECONCILE";
+  return undefined;
 }
 
 function parseIds(value: string): number[] {
