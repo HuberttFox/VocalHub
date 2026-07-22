@@ -246,9 +246,32 @@ TEST_DATABASE_URL=postgresql://vocalhub:vocalhub@localhost:5433/vocalhub_test \
 
 `TEST_DATABASE_URL` 未设置时，测试会回退到本机 5432 上名为 `vocalhub_test` 的数据库；不要指向开发库。
 
+## 目录查询性能基线
+
+性能 harness 使用确定性合成数据和独立数据库，不请求 VocaDB，也不复用开发库或集成测试库。所有 destructive command 都要求数据库名以 `_benchmark` 结尾，并显式确认 reset：
+
+```bash
+docker compose --profile benchmark up -d --wait postgres-benchmark
+export BENCHMARK_DATABASE_URL=postgresql://vocalhub:vocalhub@localhost:5434/vocalhub_benchmark
+npm run benchmark:catalog -- setup --install-pg-trgm
+npm run benchmark:catalog -- load --songs=5000 --seed=20260720 --confirm-reset=vocalhub_benchmark
+npm run benchmark:catalog -- run --output=.benchmark-results/catalog-5000.json
+```
+
+标准规模为 5k、10k 和 20k，默认每场景 3 次 warmup、15 次 measured run。`run` 调用真实 `listSongs()` / `listArtistWorks()` repository，记录完整调用时延、Prisma emitted SQL 和 `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`；原始 JSON 输出位于 ignored `.benchmark-results/`，不加入普通 CI。
+
+候选索引只在 benchmark DB 比较：
+
+```bash
+npm run benchmark:catalog -- compare --candidate=credit-artist \
+  --confirm-reset=vocalhub_benchmark
+```
+
+compare 执行 baseline A、candidate B 和 drop 后 baseline A2，并精确删除所有 `bench_` index。只有 10k/20k 计划证明 PostgreSQL 实际使用候选，且 scan/sort/buffer 与时延改善超过基线波动后，才另建生产 migration；“当前规模无需索引”也是合法结论。当前脱敏结论记录于 [`docs/performance/catalog-index-baseline.md`](docs/performance/catalog-index-baseline.md)。
+
 ## 路线图
 
-1. 用 5,000–20,000 首真实数据测量搜索与作者作品查询，按结果评估 `pg_trgm` 和关系索引。
+1. 根据 5k/10k/20k benchmark 证据决定是否加入 `pg_trgm`、关系方向索引或公开目录排序索引。
 2. 独立同步 artist detail，再扩展作者别名、简介、资料图片和可信头像字段。
 3. 按部署需求评估图片服务端代理、持久缓存与 CDN，而非开放任意 URL 代理。
 4. 接入 Auth.js，设计 User/Favorite/Playlist 模型和功能。

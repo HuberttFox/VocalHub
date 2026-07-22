@@ -9,6 +9,7 @@ const eslintConfig = defineConfig([
     files: [
       "src/app/**/*.{ts,tsx}",
       "src/lib/{songs,artists,catalog}/**/*.{ts,tsx}",
+      "benchmarks/**/*.{ts,tsx}",
     ],
     rules: {
       "no-restricted-imports": [
