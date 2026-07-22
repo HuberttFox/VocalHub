@@ -28,6 +28,8 @@ const ARTIST_WORK_SELECT = {
 
 type ArtistWorkRow = Prisma.SongGetPayload<{ select: typeof ARTIST_WORK_SELECT }>;
 
+export type ArtistWorksDb = Pick<ReturnType<typeof getDb>, "$transaction" | "artist" | "song">;
+
 export async function getArtistDetailById(
   id: string,
 ): Promise<ArtistDetailDto | null> {
@@ -69,10 +71,11 @@ export async function getArtistDetailById(
 export async function listArtistWorks(
   id: string,
   query: ArtistWorksQuery,
+  database?: ArtistWorksDb,
 ): Promise<ArtistWorksDto | null> {
   if (!isUuid(id)) return null;
 
-  const db = getDb();
+  const db = database ?? getDb();
   const artist = await db.artist.findFirst({
     where: { id, ...PUBLIC_ARTIST_WHERE },
     select: { id: true, name: true, artistType: true },

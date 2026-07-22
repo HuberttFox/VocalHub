@@ -30,5 +30,20 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres-benchmark:
+    image: postgres:17-alpine
+    profiles: ["benchmark"]
+    environment:
+      POSTGRES_DB: vocalhub_benchmark
+      POSTGRES_USER: vocalhub
+      POSTGRES_PASSWORD: vocalhub
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vocalhub -d vocalhub_benchmark"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
 volumes:
   vocalhub-postgres:

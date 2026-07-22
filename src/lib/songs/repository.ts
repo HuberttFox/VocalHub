@@ -39,8 +39,12 @@ export const SONG_LIST_SELECT = {
 
 type SongListRow = Prisma.SongGetPayload<{ select: typeof SONG_LIST_SELECT }>;
 
-export async function listSongs(query: SongListQuery): Promise<SongListDto> {
-  const db = getDb();
+export type SongListDb = Pick<ReturnType<typeof getDb>, "$transaction" | "song">;
+
+export async function listSongs(
+  query: SongListQuery,
+  db: SongListDb = getDb(),
+): Promise<SongListDto> {
   const where = buildSongListWhere(query.q);
   const skip = (query.page - 1) * query.pageSize;
 
