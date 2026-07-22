@@ -392,7 +392,8 @@ export const ModelName = {
   SongTag: 'SongTag',
   SongPV: 'SongPV',
   SyncRun: 'SyncRun',
-  SyncItem: 'SyncItem'
+  SyncItem: 'SyncItem',
+  VocaDbSongSyncState: 'VocaDbSongSyncState'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -408,7 +409,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "song" | "songName" | "artist" | "songArtistCredit" | "tag" | "songTag" | "songPV" | "syncRun" | "syncItem"
+    modelProps: "song" | "songName" | "artist" | "songArtistCredit" | "tag" | "songTag" | "songPV" | "syncRun" | "syncItem" | "vocaDbSongSyncState"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1078,6 +1079,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    VocaDbSongSyncState: {
+      payload: Prisma.$VocaDbSongSyncStatePayload<ExtArgs>
+      fields: Prisma.VocaDbSongSyncStateFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.VocaDbSongSyncStateFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.VocaDbSongSyncStateFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload>
+        }
+        findFirst: {
+          args: Prisma.VocaDbSongSyncStateFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.VocaDbSongSyncStateFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload>
+        }
+        findMany: {
+          args: Prisma.VocaDbSongSyncStateFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload>[]
+        }
+        create: {
+          args: Prisma.VocaDbSongSyncStateCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload>
+        }
+        createMany: {
+          args: Prisma.VocaDbSongSyncStateCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.VocaDbSongSyncStateCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload>[]
+        }
+        delete: {
+          args: Prisma.VocaDbSongSyncStateDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload>
+        }
+        update: {
+          args: Prisma.VocaDbSongSyncStateUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload>
+        }
+        deleteMany: {
+          args: Prisma.VocaDbSongSyncStateDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.VocaDbSongSyncStateUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.VocaDbSongSyncStateUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload>[]
+        }
+        upsert: {
+          args: Prisma.VocaDbSongSyncStateUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$VocaDbSongSyncStatePayload>
+        }
+        aggregate: {
+          args: Prisma.VocaDbSongSyncStateAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateVocaDbSongSyncState>
+        }
+        groupBy: {
+          args: Prisma.VocaDbSongSyncStateGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VocaDbSongSyncStateGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.VocaDbSongSyncStateCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.VocaDbSongSyncStateCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1240,12 +1315,23 @@ export type SongPVScalarFieldEnum = (typeof SongPVScalarFieldEnum)[keyof typeof 
 
 export const SyncRunScalarFieldEnum = {
   id: 'id',
+  sequence: 'sequence',
+  mode: 'mode',
   status: 'status',
   startedAt: 'startedAt',
+  discoveryCompletedAt: 'discoveryCompletedAt',
   finishedAt: 'finishedAt',
+  activityWindowStart: 'activityWindowStart',
+  activityWindowEnd: 'activityWindowEnd',
+  baselineAt: 'baselineAt',
+  expectedStateVersion: 'expectedStateVersion',
+  sourceIdCount: 'sourceIdCount',
+  sourceIdDigest: 'sourceIdDigest',
   requestedCount: 'requestedCount',
   successCount: 'successCount',
-  failureCount: 'failureCount'
+  failureCount: 'failureCount',
+  errorCode: 'errorCode',
+  errorMessage: 'errorMessage'
 } as const
 
 export type SyncRunScalarFieldEnum = (typeof SyncRunScalarFieldEnum)[keyof typeof SyncRunScalarFieldEnum]
@@ -1256,14 +1342,29 @@ export const SyncItemScalarFieldEnum = {
   runId: 'runId',
   vocadbId: 'vocadbId',
   status: 'status',
+  sourcePresent: 'sourcePresent',
   attemptCount: 'attemptCount',
   errorCode: 'errorCode',
   errorMessage: 'errorMessage',
   startedAt: 'startedAt',
+  lastAttemptAt: 'lastAttemptAt',
   finishedAt: 'finishedAt'
 } as const
 
 export type SyncItemScalarFieldEnum = (typeof SyncItemScalarFieldEnum)[keyof typeof SyncItemScalarFieldEnum]
+
+
+export const VocaDbSongSyncStateScalarFieldEnum = {
+  id: 'id',
+  version: 'version',
+  activityCheckpoint: 'activityCheckpoint',
+  lastSeedCompletedAt: 'lastSeedCompletedAt',
+  lastReconciledAt: 'lastReconciledAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type VocaDbSongSyncStateScalarFieldEnum = (typeof VocaDbSongSyncStateScalarFieldEnum)[keyof typeof VocaDbSongSyncStateScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1356,6 +1457,34 @@ export type EnumSyncStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$Prism
  * Reference to a field of type 'SyncStatus[]'
  */
 export type ListEnumSyncStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SyncStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'BigInt'
+ */
+export type BigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt'>
+    
+
+
+/**
+ * Reference to a field of type 'BigInt[]'
+ */
+export type ListBigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt[]'>
+    
+
+
+/**
+ * Reference to a field of type 'SyncRunMode'
+ */
+export type EnumSyncRunModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SyncRunMode'>
+    
+
+
+/**
+ * Reference to a field of type 'SyncRunMode[]'
+ */
+export type ListEnumSyncRunModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SyncRunMode[]'>
     
 
 
@@ -1505,6 +1634,7 @@ export type GlobalOmitConfig = {
   songPV?: Prisma.SongPVOmit
   syncRun?: Prisma.SyncRunOmit
   syncItem?: Prisma.SyncItemOmit
+  vocaDbSongSyncState?: Prisma.VocaDbSongSyncStateOmit
 }
 
 /* Types for Logging */

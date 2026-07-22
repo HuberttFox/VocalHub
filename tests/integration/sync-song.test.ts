@@ -67,4 +67,20 @@ describe("syncVocaDbSong", () => {
     expect(await db.songPV.count({ where: { songId: first.id } })).toBe(0);
     expect(await db.songArtistCredit.count({ where: { songId: first.id } })).toBe(1);
   });
+
+  it("clears all relations when complete source collections are empty", async () => {
+    const input = normalizeVocaDbSong(vocaDbSongSchema.parse(vocaDbSongFixture));
+    const first = await syncVocaDbSong(db, input);
+
+    await syncVocaDbSong(db, {
+      ...input,
+      artistCredits: [],
+      tags: [],
+      pvs: [],
+    });
+
+    expect(await db.songArtistCredit.count({ where: { songId: first.id } })).toBe(0);
+    expect(await db.songTag.count({ where: { songId: first.id } })).toBe(0);
+    expect(await db.songPV.count({ where: { songId: first.id } })).toBe(0);
+  });
 });

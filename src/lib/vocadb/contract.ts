@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const nonNegativeInteger = z.number().int().nonnegative();
 const positiveInteger = z.number().int().positive();
+const positiveSafeInteger = z.number().int().positive().safe();
 const vocaDbDateSchema = z.string().min(1).refine((value) => {
   const hasZone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(value);
   return !Number.isNaN(Date.parse(hasZone ? value : `${value}Z`));
@@ -98,6 +99,30 @@ export const vocaDbSongSchema = z.object({
 export type VocaDbSong = z.infer<typeof vocaDbSongSchema>;
 export type VocaDbArtistCredit = z.infer<typeof vocaDbArtistCreditSchema>;
 export type VocaDbPv = z.infer<typeof vocaDbPvSchema>;
+
+export const vocaDbSongIdsSchema = z
+  .array(positiveSafeInteger)
+  .nonempty()
+  .transform((ids) => [...new Set(ids)].sort((left, right) => left - right));
+
+const vocaDbActivityEntryCandidateSchema = z.object({
+  createDate: vocaDbDateSchema,
+  editEvent: z.string().min(1),
+  entry: z.object({
+    id: positiveSafeInteger,
+    entryType: z.literal("Song"),
+  }),
+});
+
+export const vocaDbActivityEntriesResponseSchema = z
+  .object({
+    items: z.array(vocaDbActivityEntryCandidateSchema),
+  })
+  .transform(({ items }) => items);
+
+export type VocaDbActivityEntry = z.infer<
+  typeof vocaDbActivityEntryCandidateSchema
+>;
 
 // Acronym-preserving aliases for callers that use the VocaDB spelling.
 export const vocaDBSongSchema = vocaDbSongSchema;

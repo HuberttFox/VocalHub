@@ -65,6 +65,21 @@ export async function markSongSyncFailure(
   });
 }
 
+export async function markSongSourceDeleted(
+  db: DbClient,
+  vocadbId: number,
+  message: string,
+): Promise<void> {
+  await db.song.updateMany({
+    where: { vocadbId },
+    data: {
+      sourceDeleted: true,
+      syncStatus: SyncStatus.SOURCE_DELETED,
+      lastSyncError: message.slice(0, 500),
+    },
+  });
+}
+
 function songScalars(input: NormalizedVocaDbSong, now: Date) {
   return {
     vocadbId: input.vocadbId,
@@ -178,9 +193,7 @@ async function syncCredits(
   await tx.songArtistCredit.deleteMany({
     where: {
       songId,
-      ...(incomingIds.length > 0
-        ? { vocadbId: { notIn: incomingIds } }
-        : {}),
+      vocadbId: { notIn: incomingIds },
     },
   });
 }
@@ -232,9 +245,7 @@ async function syncTags(
   await tx.songTag.deleteMany({
     where: {
       songId,
-      ...(incomingTagIds.length > 0
-        ? { tagId: { notIn: incomingTagIds } }
-        : {}),
+      tagId: { notIn: incomingTagIds },
     },
   });
 }
@@ -286,9 +297,7 @@ async function syncPvs(
   await tx.songPV.deleteMany({
     where: {
       songId,
-      ...(incomingIds.length > 0
-        ? { vocadbId: { notIn: incomingIds } }
-        : {}),
+      vocadbId: { notIn: incomingIds },
     },
   });
 }

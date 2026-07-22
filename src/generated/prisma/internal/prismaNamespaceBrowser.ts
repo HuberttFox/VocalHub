@@ -59,7 +59,8 @@ export const ModelName = {
   SongTag: 'SongTag',
   SongPV: 'SongPV',
   SyncRun: 'SyncRun',
-  SyncItem: 'SyncItem'
+  SyncItem: 'SyncItem',
+  VocaDbSongSyncState: 'VocaDbSongSyncState'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -201,12 +202,23 @@ export type SongPVScalarFieldEnum = (typeof SongPVScalarFieldEnum)[keyof typeof 
 
 export const SyncRunScalarFieldEnum = {
   id: 'id',
+  sequence: 'sequence',
+  mode: 'mode',
   status: 'status',
   startedAt: 'startedAt',
+  discoveryCompletedAt: 'discoveryCompletedAt',
   finishedAt: 'finishedAt',
+  activityWindowStart: 'activityWindowStart',
+  activityWindowEnd: 'activityWindowEnd',
+  baselineAt: 'baselineAt',
+  expectedStateVersion: 'expectedStateVersion',
+  sourceIdCount: 'sourceIdCount',
+  sourceIdDigest: 'sourceIdDigest',
   requestedCount: 'requestedCount',
   successCount: 'successCount',
-  failureCount: 'failureCount'
+  failureCount: 'failureCount',
+  errorCode: 'errorCode',
+  errorMessage: 'errorMessage'
 } as const
 
 export type SyncRunScalarFieldEnum = (typeof SyncRunScalarFieldEnum)[keyof typeof SyncRunScalarFieldEnum]
@@ -217,14 +229,29 @@ export const SyncItemScalarFieldEnum = {
   runId: 'runId',
   vocadbId: 'vocadbId',
   status: 'status',
+  sourcePresent: 'sourcePresent',
   attemptCount: 'attemptCount',
   errorCode: 'errorCode',
   errorMessage: 'errorMessage',
   startedAt: 'startedAt',
+  lastAttemptAt: 'lastAttemptAt',
   finishedAt: 'finishedAt'
 } as const
 
 export type SyncItemScalarFieldEnum = (typeof SyncItemScalarFieldEnum)[keyof typeof SyncItemScalarFieldEnum]
+
+
+export const VocaDbSongSyncStateScalarFieldEnum = {
+  id: 'id',
+  version: 'version',
+  activityCheckpoint: 'activityCheckpoint',
+  lastSeedCompletedAt: 'lastSeedCompletedAt',
+  lastReconciledAt: 'lastReconciledAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type VocaDbSongSyncStateScalarFieldEnum = (typeof VocaDbSongSyncStateScalarFieldEnum)[keyof typeof VocaDbSongSyncStateScalarFieldEnum]
 
 
 export const SortOrder = {

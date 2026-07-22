@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  VOCADB_ACTIVITY_MAX_RESULTS,
   VOCADB_SONG_FIELDS,
   VocaDbClient,
+  parseRetryAfter,
 } from "@/lib/vocadb/client";
 import {
+  VocaDbCancellationError,
   VocaDbHttpError,
   VocaDbNetworkError,
   VocaDbNotFoundError,
@@ -45,6 +48,42 @@ describe("VocaDbClient", () => {
     expect(init?.signal).toBeInstanceOf(AbortSignal);
   });
 
+  it("cancels caller-aborted requests without retrying", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          "abort",
+          () => reject(init.signal?.reason),
+          { once: true },
+        );
+      });
+    });
+    const sleep = vi.fn();
+    const client = new VocaDbClient({ fetch: fetchMock, sleep });
+    const request = client.getSongIds({ signal: controller.signal });
+    await Promise.resolve();
+    controller.abort();
+
+    await expect(request).rejects.toBeInstanceOf(VocaDbCancellationError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it("uses a fresh timeout signal for each retry", async () => {
+    const signals: AbortSignal[] = [];
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      if (init?.signal) signals.push(init.signal);
+      if (signals.length === 1) throw Object.assign(new Error("timeout"), { name: "TimeoutError" });
+      return jsonResponse([1]);
+    });
+    const client = new VocaDbClient({ fetch: fetchMock, sleep: vi.fn() });
+
+    await expect(client.getSongIds()).resolves.toEqual([1]);
+    expect(signals).toHaveLength(2);
+    expect(signals[0]).not.toBe(signals[1]);
+  });
+
   it("classifies an HTML 404 by status before parsing the body", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
@@ -60,6 +99,8 @@ describe("VocaDbClient", () => {
   });
 
   it.each([
+    [408, VocaDbHttpError, 3],
+    [425, VocaDbHttpError, 3],
     [429, VocaDbRateLimitError, 3],
     [503, VocaDbHttpError, 3],
     [400, VocaDbHttpError, 1],
@@ -72,6 +113,7 @@ describe("VocaDbClient", () => {
       fetch: fetchMock,
       sleep,
       retryBaseDelayMs: 10,
+      random: () => 0.5,
     });
 
     await expect(client.getSong(123)).rejects.toBeInstanceOf(ErrorType);
@@ -151,6 +193,185 @@ describe("VocaDbClient", () => {
       await expect(client.getSong(123)).rejects.toBeInstanceOf(
         VocaDbValidationError,
       );
+    }
+  });
+
+  it("discovers sorted, deduplicated song IDs", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse([42, 3, 42, 9]));
+    const client = new VocaDbClient({ fetch: fetchMock, sleep: vi.fn() });
+
+    await expect(client.getSongIds()).resolves.toEqual([3, 9, 42]);
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "https://vocadb.net/api/songs/ids",
+    );
+  });
+
+  it.each([
+    { payload: [] },
+    { payload: [0] },
+    { payload: [-1] },
+    { payload: [1.5] },
+    { payload: [Number.MAX_SAFE_INTEGER + 1] },
+  ])(
+    "rejects an invalid song ID discovery contract: $payload",
+    async ({ payload }) => {
+      const client = new VocaDbClient({
+        fetch: vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(payload)),
+        sleep: vi.fn(),
+      });
+
+      await expect(client.getSongIds()).rejects.toBeInstanceOf(
+        VocaDbValidationError,
+      );
+    },
+  );
+
+  it("requests and parses song activity entries", async () => {
+    const payload = {
+      items: [
+        {
+          createDate: "2026-07-17T12:00:00Z",
+          editEvent: "Updated",
+          entry: { id: 17, entryType: "Song", name: "Song" },
+        },
+      ],
+      totalCount: 1,
+    };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(payload));
+    const client = new VocaDbClient({ fetch: fetchMock, sleep: vi.fn() });
+
+    await expect(
+      client.getSongActivityEntries({
+        since: "2026-07-16T00:00:00Z",
+        before: new Date("2026-07-18T00:00:00Z"),
+      }),
+    ).resolves.toEqual([
+      {
+        createDate: "2026-07-17T12:00:00Z",
+        editEvent: "Updated",
+        entry: { id: 17, entryType: "Song" },
+      },
+    ]);
+
+    const url = fetchMock.mock.calls[0][0] as URL;
+    expect(url.pathname).toBe("/api/activityEntries");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      since: "2026-07-16T00:00:00.000Z",
+      before: "2026-07-18T00:00:00.000Z",
+      entryType: "Song",
+      fields: "Entry",
+      sortRule: "CreateDate",
+      maxResults: String(VOCADB_ACTIVITY_MAX_RESULTS),
+    });
+  });
+
+  it.each([
+    {
+      createDate: "invalid",
+      editEvent: "Updated",
+      entry: { id: 17, entryType: "Song" },
+    },
+    {
+      createDate: "2026-07-17T12:00:00Z",
+      entry: { id: 17, entryType: "Song" },
+    },
+    {
+      createDate: "2026-07-17T12:00:00Z",
+      editEvent: "Updated",
+      entry: { id: 17 },
+    },
+    {
+      createDate: "2026-07-17T12:00:00Z",
+      editEvent: "Updated",
+      entry: { id: 17, entryType: "Artist" },
+    },
+    { unrelated: true },
+  ])("rejects a malformed song activity candidate", async (candidate) => {
+    const client = new VocaDbClient({
+      fetch: vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(jsonResponse({ items: [candidate] })),
+      sleep: vi.fn(),
+    });
+
+    await expect(client.getSongActivityEntries()).rejects.toBeInstanceOf(
+      VocaDbValidationError,
+    );
+  });
+
+  it("parses Retry-After delta seconds and HTTP dates", () => {
+    const now = Date.parse("2026-07-17T12:00:00Z");
+    expect(parseRetryAfter("12", now)).toBe(12_000);
+    expect(parseRetryAfter("Fri, 17 Jul 2026 12:00:09 GMT", now)).toBe(9_000);
+    expect(parseRetryAfter("invalid", now)).toBeUndefined();
+  });
+
+  it("shares Retry-After cooldown across client instances", async () => {
+    let now = Date.parse("2026-07-17T12:00:00Z");
+    const firstSleep = vi.fn(async (milliseconds: number) => {
+      now += milliseconds;
+    });
+    const firstClient = new VocaDbClient({
+      fetch: vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 429,
+            headers: { "Retry-After": "10" },
+          }),
+        )
+        .mockResolvedValueOnce(jsonResponse([1])),
+      maxAttempts: 2,
+      retryBaseDelayMs: 1,
+      now: () => now,
+      random: () => 0.5,
+      sleep: firstSleep,
+    });
+
+    await expect(firstClient.getSongIds()).resolves.toEqual([1]);
+    expect(firstSleep).toHaveBeenCalledWith(10_000);
+
+    now -= 5_000;
+    const secondSleep = vi.fn(async (milliseconds: number) => {
+      now += milliseconds;
+    });
+    const secondFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse([2]));
+    const secondClient = new VocaDbClient({
+      fetch: secondFetch,
+      now: () => now,
+      sleep: secondSleep,
+    });
+
+    await expect(secondClient.getSongIds()).resolves.toEqual([2]);
+    expect(secondSleep).toHaveBeenCalledWith(5_000);
+    expect(secondFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("bounds retry jitter around exponential backoff", async () => {
+    for (const [random, expected] of [
+      [0, 75],
+      [1, 125],
+    ] as const) {
+      const sleep = vi.fn().mockResolvedValue(undefined);
+      const client = new VocaDbClient({
+        fetch: vi
+          .fn<typeof fetch>()
+          .mockRejectedValueOnce(new TypeError("offline"))
+          .mockResolvedValueOnce(jsonResponse([1])),
+        maxAttempts: 2,
+        retryBaseDelayMs: 100,
+        random: () => random,
+        sleep,
+      });
+
+      await client.getSongIds();
+      expect(sleep).toHaveBeenCalledWith(expected);
     }
   });
 });

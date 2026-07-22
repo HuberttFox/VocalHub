@@ -273,11 +273,55 @@ export type UuidNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedStringNullableFilter<$PrismaModel>
 }
 
+export type BigIntFilter<$PrismaModel = never> = {
+  equals?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  in?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
+  notIn?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
+  lt?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  lte?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  gt?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  gte?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedBigIntFilter<$PrismaModel> | bigint | number
+}
+
+export type EnumSyncRunModeFilter<$PrismaModel = never> = {
+  equals?: $Enums.SyncRunMode | Prisma.EnumSyncRunModeFieldRefInput<$PrismaModel>
+  in?: $Enums.SyncRunMode[] | Prisma.ListEnumSyncRunModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SyncRunMode[] | Prisma.ListEnumSyncRunModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSyncRunModeFilter<$PrismaModel> | $Enums.SyncRunMode
+}
+
 export type EnumSyncRunStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.SyncRunStatus | Prisma.EnumSyncRunStatusFieldRefInput<$PrismaModel>
   in?: $Enums.SyncRunStatus[] | Prisma.ListEnumSyncRunStatusFieldRefInput<$PrismaModel>
   notIn?: $Enums.SyncRunStatus[] | Prisma.ListEnumSyncRunStatusFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumSyncRunStatusFilter<$PrismaModel> | $Enums.SyncRunStatus
+}
+
+export type BigIntWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  in?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
+  notIn?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
+  lt?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  lte?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  gt?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  gte?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedBigIntWithAggregatesFilter<$PrismaModel> | bigint | number
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _avg?: Prisma.NestedFloatFilter<$PrismaModel>
+  _sum?: Prisma.NestedBigIntFilter<$PrismaModel>
+  _min?: Prisma.NestedBigIntFilter<$PrismaModel>
+  _max?: Prisma.NestedBigIntFilter<$PrismaModel>
+}
+
+export type EnumSyncRunModeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SyncRunMode | Prisma.EnumSyncRunModeFieldRefInput<$PrismaModel>
+  in?: $Enums.SyncRunMode[] | Prisma.ListEnumSyncRunModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SyncRunMode[] | Prisma.ListEnumSyncRunModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSyncRunModeWithAggregatesFilter<$PrismaModel> | $Enums.SyncRunMode
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSyncRunModeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSyncRunModeFilter<$PrismaModel>
 }
 
 export type EnumSyncRunStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -288,6 +332,19 @@ export type EnumSyncRunStatusWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumSyncRunStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumSyncRunStatusFilter<$PrismaModel>
+}
+
+export type BoolNullableFilter<$PrismaModel = never> = {
+  equals?: boolean | Prisma.BooleanFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedBoolNullableFilter<$PrismaModel> | boolean | null
+}
+
+export type BoolNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: boolean | Prisma.BooleanFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedBoolNullableWithAggregatesFilter<$PrismaModel> | boolean | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedBoolNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedBoolNullableFilter<$PrismaModel>
 }
 
 export type NestedUuidFilter<$PrismaModel = never> = {
@@ -558,11 +615,55 @@ export type NestedUuidNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedStringNullableFilter<$PrismaModel>
 }
 
+export type NestedBigIntFilter<$PrismaModel = never> = {
+  equals?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  in?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
+  notIn?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
+  lt?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  lte?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  gt?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  gte?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedBigIntFilter<$PrismaModel> | bigint | number
+}
+
+export type NestedEnumSyncRunModeFilter<$PrismaModel = never> = {
+  equals?: $Enums.SyncRunMode | Prisma.EnumSyncRunModeFieldRefInput<$PrismaModel>
+  in?: $Enums.SyncRunMode[] | Prisma.ListEnumSyncRunModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SyncRunMode[] | Prisma.ListEnumSyncRunModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSyncRunModeFilter<$PrismaModel> | $Enums.SyncRunMode
+}
+
 export type NestedEnumSyncRunStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.SyncRunStatus | Prisma.EnumSyncRunStatusFieldRefInput<$PrismaModel>
   in?: $Enums.SyncRunStatus[] | Prisma.ListEnumSyncRunStatusFieldRefInput<$PrismaModel>
   notIn?: $Enums.SyncRunStatus[] | Prisma.ListEnumSyncRunStatusFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumSyncRunStatusFilter<$PrismaModel> | $Enums.SyncRunStatus
+}
+
+export type NestedBigIntWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  in?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
+  notIn?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
+  lt?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  lte?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  gt?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  gte?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedBigIntWithAggregatesFilter<$PrismaModel> | bigint | number
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _avg?: Prisma.NestedFloatFilter<$PrismaModel>
+  _sum?: Prisma.NestedBigIntFilter<$PrismaModel>
+  _min?: Prisma.NestedBigIntFilter<$PrismaModel>
+  _max?: Prisma.NestedBigIntFilter<$PrismaModel>
+}
+
+export type NestedEnumSyncRunModeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SyncRunMode | Prisma.EnumSyncRunModeFieldRefInput<$PrismaModel>
+  in?: $Enums.SyncRunMode[] | Prisma.ListEnumSyncRunModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SyncRunMode[] | Prisma.ListEnumSyncRunModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSyncRunModeWithAggregatesFilter<$PrismaModel> | $Enums.SyncRunMode
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSyncRunModeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSyncRunModeFilter<$PrismaModel>
 }
 
 export type NestedEnumSyncRunStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -573,6 +674,19 @@ export type NestedEnumSyncRunStatusWithAggregatesFilter<$PrismaModel = never> = 
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumSyncRunStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumSyncRunStatusFilter<$PrismaModel>
+}
+
+export type NestedBoolNullableFilter<$PrismaModel = never> = {
+  equals?: boolean | Prisma.BooleanFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedBoolNullableFilter<$PrismaModel> | boolean | null
+}
+
+export type NestedBoolNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: boolean | Prisma.BooleanFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedBoolNullableWithAggregatesFilter<$PrismaModel> | boolean | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedBoolNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedBoolNullableFilter<$PrismaModel>
 }
 
 
