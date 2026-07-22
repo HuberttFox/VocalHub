@@ -76,15 +76,16 @@ async function main(): Promise<void> {
       return;
 
     case "load": {
-      const collector = createCatalogQueryEventCollector();
-      const db = createCatalogBenchmarkClient(config.connectionString, collector.onQuery);
+      const db = createCatalogBenchmarkClient(config.connectionString);
       try {
-        const loaded = await loadCatalogBenchmark(db, config, {
-          songCount: integerOption(args, "songs", undefined),
-          seed: integerOption(args, "seed", DEFAULT_SEED),
-          chunkSize: optionalIntegerOption(args, "chunk-size"),
-          confirmReset: stringOption(args, "confirm-reset"),
-        });
+        const loaded = await withPgClient(config.connectionString, (lockClient) =>
+          loadCatalogBenchmark(db, lockClient, config, {
+            songCount: integerOption(args, "songs", undefined),
+            seed: integerOption(args, "seed", DEFAULT_SEED),
+            chunkSize: optionalIntegerOption(args, "chunk-size"),
+            confirmReset: stringOption(args, "confirm-reset"),
+          }),
+        );
         console.log(JSON.stringify({ database: config.databaseIdentity, loaded }, null, 2));
       } finally {
         await db.$disconnect();
@@ -147,12 +148,14 @@ async function runMatrix(
   for (const songCount of sizes) {
     const loader = createCatalogBenchmarkClient(config.connectionString);
     try {
-      await loadCatalogBenchmark(loader, config, {
-        songCount,
-        seed,
-        chunkSize: optionalIntegerOption(args, "chunk-size"),
-        confirmReset: config.databaseName,
-      });
+      await withPgClient(config.connectionString, (lockClient) =>
+        loadCatalogBenchmark(loader, lockClient, config, {
+          songCount,
+          seed,
+          chunkSize: optionalIntegerOption(args, "chunk-size"),
+          confirmReset: config.databaseName,
+        }),
+      );
     } finally {
       await loader.$disconnect();
     }

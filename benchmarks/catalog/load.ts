@@ -1,9 +1,8 @@
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@/generated/prisma/client";
+import type { PoolClient } from "pg";
+import type { PrismaClient } from "@/generated/prisma/client";
 import {
   assertBenchmarkDatabaseName,
   assertResetConfirmation,
-  parseCatalogBenchmarkConfig,
   parseChunkSize,
   type CatalogBenchmarkConfig,
 } from "./config";
@@ -33,18 +32,6 @@ type CatalogTableCounts = {
   songTagCount: number;
 };
 
-export function createCatalogBenchmarkClient(
-  environment: Record<string, string | undefined> = process.env,
-): { config: CatalogBenchmarkConfig; db: PrismaClient } {
-  const config = parseCatalogBenchmarkConfig(environment);
-  return {
-    config,
-    db: new PrismaClient({
-      adapter: new PrismaPg({ connectionString: config.connectionString }),
-    }),
-  };
-}
-
 export async function assertCatalogBenchmarkServerDatabase(
   db: PrismaClient,
   config: CatalogBenchmarkConfig,
@@ -65,25 +52,31 @@ export async function assertCatalogBenchmarkServerDatabase(
   return serverDatabaseName;
 }
 
-export async function acquireCatalogBenchmarkLock(db: PrismaClient): Promise<void> {
-  const rows = await db.$queryRawUnsafe<Array<{ acquired: boolean }>>(
+type CatalogBenchmarkLockClient = Pick<PoolClient, "query">;
+
+export async function acquireCatalogBenchmarkLock(
+  db: CatalogBenchmarkLockClient,
+): Promise<void> {
+  const result = await db.query<{ acquired: boolean }>(
     "SELECT pg_try_advisory_lock($1::integer, $2::integer) AS acquired",
-    ...BENCHMARK_LOCK_KEYS,
+    [...BENCHMARK_LOCK_KEYS],
   );
-  if (rows[0]?.acquired !== true) {
+  if (result.rows[0]?.acquired !== true) {
     throw new Error("another catalog benchmark process holds the database lock");
   }
 }
 
-export async function releaseCatalogBenchmarkLock(db: PrismaClient): Promise<void> {
-  await db.$queryRawUnsafe(
+export async function releaseCatalogBenchmarkLock(
+  db: CatalogBenchmarkLockClient,
+): Promise<void> {
+  await db.query(
     "SELECT pg_advisory_unlock($1::integer, $2::integer)",
-    ...BENCHMARK_LOCK_KEYS,
+    [...BENCHMARK_LOCK_KEYS],
   );
 }
 
 export async function withCatalogBenchmarkLock<T>(
-  db: PrismaClient,
+  db: CatalogBenchmarkLockClient,
   operation: () => Promise<T>,
 ): Promise<T> {
   await acquireCatalogBenchmarkLock(db);
@@ -96,6 +89,7 @@ export async function withCatalogBenchmarkLock<T>(
 
 export async function loadCatalogBenchmark(
   db: PrismaClient,
+  lockClient: CatalogBenchmarkLockClient,
   config: CatalogBenchmarkConfig,
   options: CatalogBenchmarkLoadOptions,
 ): Promise<CatalogBenchmarkLoadResult> {
@@ -103,7 +97,7 @@ export async function loadCatalogBenchmark(
   assertResetConfirmation(config.databaseName, options.confirmReset);
   const chunkSize = parseChunkSize(options.chunkSize);
 
-  return withCatalogBenchmarkLock(db, async () => {
+  return withCatalogBenchmarkLock(lockClient, async () => {
     await assertCatalogBenchmarkServerDatabase(db, config);
     await ensureMetadataTable(db);
     await resetCatalogTables(db);

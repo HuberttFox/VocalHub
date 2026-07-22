@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { listArtistWorks } from "@/lib/artists/repository";
 import { parseArtistWorksQuery } from "@/lib/artists/works-query";
 
 function parse(query = "") { return parseArtistWorksQuery(new URLSearchParams(query)); }
@@ -8,4 +9,14 @@ describe("parseArtistWorksQuery", () => {
   it("parses supported values", () => { expect(parse("page=2&pageSize=10&sort=popular")).toEqual({ success: true, data: { page: 2, pageSize: 10, sort: "popular" } }); });
   it.each(["page=0", "page=-1", "page=1.5", "page=no", "page=10001", "pageSize=0", "pageSize=51", "sort=relevance", "page=1&page=2"])("rejects %s", (query) => { expect(parse(query)).toEqual({ success: false }); });
   it("rejects array search params", () => { expect(parseArtistWorksQuery({ page: ["1", "2"] })).toEqual({ success: false }); });
+});
+
+describe("listArtistWorks", () => {
+  it("rejects invalid UUIDs before initializing the database", async () => {
+    vi.stubEnv("DATABASE_URL", "");
+
+    await expect(
+      listArtistWorks("100", { page: 1, pageSize: 24, sort: "latest" }),
+    ).resolves.toBeNull();
+  });
 });

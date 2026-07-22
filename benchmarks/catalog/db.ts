@@ -19,24 +19,32 @@ export type CatalogBenchmarkClient = PrismaClient<"query">;
 
 export function createCatalogBenchmarkClient(
   connectionString: string,
+  onQuery: CatalogQueryEventSink,
+): CatalogBenchmarkClient;
+export function createCatalogBenchmarkClient(
+  connectionString: string,
+): PrismaClient;
+export function createCatalogBenchmarkClient(
+  connectionString: string,
   onQuery?: CatalogQueryEventSink,
-): CatalogBenchmarkClient {
+): CatalogBenchmarkClient | PrismaClient {
+  const adapter = new PrismaPg({ connectionString });
+  if (!onQuery) return new PrismaClient({ adapter });
+
   const client = new PrismaClient({
-    adapter: new PrismaPg({ connectionString }),
+    adapter,
     log: [{ emit: "event", level: "query" }],
   });
 
-  if (onQuery) {
-    client.$on("query", (event: Prisma.QueryEvent) => {
-      onQuery({
-        timestamp: event.timestamp.toISOString(),
-        query: event.query,
-        params: event.params,
-        durationMs: event.duration,
-        target: event.target,
-      });
+  client.$on("query", (event: Prisma.QueryEvent) => {
+    onQuery({
+      timestamp: event.timestamp.toISOString(),
+      query: event.query,
+      params: event.params,
+      durationMs: event.duration,
+      target: event.target,
     });
-  }
+  });
 
   return client;
 }
