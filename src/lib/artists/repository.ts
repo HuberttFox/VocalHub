@@ -119,20 +119,17 @@ export async function listArtistWorks(
   if (!isUuid(id)) return null;
 
   const db = database ?? getDb();
-  const artist = await db.artist.findFirst({
-    where: { id, ...PUBLIC_ARTIST_WHERE },
-    select: { id: true, name: true, artistType: true },
-  });
-
-  if (!artist) return null;
-
   const where = {
     ...PUBLIC_SONG_WHERE,
-    artistCredits: { some: { artistId: artist.id } },
+    artistCredits: { some: { artistId: id } },
   } satisfies Prisma.SongWhereInput;
 
-  const [totalItems, rows] = await db.$transaction(
+  const [artist, totalItems, rows] = await db.$transaction(
     [
+      db.artist.findFirst({
+        where: { id, ...PUBLIC_ARTIST_WHERE },
+        select: { id: true, name: true, artistType: true },
+      }),
       db.song.count({ where }),
       db.song.findMany({
         where,
@@ -144,6 +141,8 @@ export async function listArtistWorks(
     ],
     { isolationLevel: "RepeatableRead" },
   );
+
+  if (!artist) return null;
 
   return {
     artist,

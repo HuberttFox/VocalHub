@@ -102,6 +102,34 @@ describe("durable artist refresh", () => {
     expect(await db.syncRun.count({ where: { entity: SyncEntity.SONG } })).toBe(1);
   });
 
+  it("does not re-fetch a fresh profile when an older summary version differs", async () => {
+    await seedArtist();
+    await runVocaDbArtistSync(
+      { mode: "REFRESH" },
+      {
+        db,
+        logger,
+        now: () => new Date("2026-07-01T00:00:00Z"),
+        client: {
+          getArtist: async () =>
+            vocaDbArtistDetailSchema.parse(makeVocaDbArtistFixture({ version: 8 })),
+        },
+      },
+    );
+
+    const noRetry = vi.fn();
+    await runVocaDbArtistSync(
+      { mode: "REFRESH" },
+      {
+        db,
+        logger,
+        now: () => new Date("2026-07-02T00:00:00Z"),
+        client: { getArtist: noRetry },
+      },
+    );
+    expect(noRetry).not.toHaveBeenCalled();
+  });
+
   it("requeues a deleted artist only after a newer song summary", async () => {
     const summaryAt = new Date("2026-07-01T00:00:00Z");
     await syncVocaDbSong(
