@@ -4,6 +4,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { SyncStatus } from "@/generated/prisma/enums";
 import { GET } from "@/app/api/songs/route";
+import { listSongsWithBroadSearch } from "@/lib/songs/repository";
+import { listSongsWithDecomposedSearch } from "@/lib/songs/search-query";
 import { vocaDbSongSchema } from "@/lib/vocadb/contract";
 import { normalizeVocaDbSong } from "@/lib/vocadb/normalize";
 import { syncVocaDbSong } from "@/lib/vocadb/sync-song";
@@ -74,12 +76,93 @@ describe("GET /api/songs", () => {
   it("treats LIKE wildcard characters literally", async () => {
     await seedSong({ id: 124, name: "100% Song", defaultName: "100% Song" });
     await seedSong({ id: 125, name: "100x Song", defaultName: "100x Song" });
+    await seedSong({
+      id: 126,
+      name: "Literal_under",
+      defaultName: "Literal_under",
+    });
+    await seedSong({
+      id: 127,
+      name: "LiteralXunder",
+      defaultName: "LiteralXunder",
+    });
+    await seedSong({
+      id: 128,
+      name: "Literal\\slash",
+      defaultName: "Literal\\slash",
+    });
+    await seedSong({
+      id: 129,
+      name: "LiteralXslash",
+      defaultName: "LiteralXslash",
+    });
 
-    const response = await requestSongs("q=100%25");
-    const payload = await response.json();
-    expect(payload.items.map((item: { title: string }) => item.title)).toEqual([
+    const percent = await requestSongs("q=100%25");
+    const underscore = await requestSongs(
+      `q=${encodeURIComponent("literal_")}`,
+    );
+    const backslash = await requestSongs(
+      `q=${encodeURIComponent("literal\\")}`,
+    );
+
+    expect((await percent.json()).items.map((item: { title: string }) => item.title)).toEqual([
       "100% Song",
     ]);
+    expect((await underscore.json()).items.map((item: { title: string }) => item.title)).toEqual([
+      "Literal_under",
+    ]);
+    expect((await backslash.json()).items.map((item: { title: string }) => item.title)).toEqual([
+      "Literal\\slash",
+    ]);
+  });
+
+  it("uses substring tag names and exact case-sensitive tag aliases", async () => {
+    const song = await seedSong({
+      id: 124,
+      name: "Unrelated Song",
+      defaultName: "Unrelated Song",
+      tags: [
+        {
+          count: 1,
+          tag: {
+            additionalNames: "CaseAlias, Long Alias",
+            categoryName: "Genres",
+            id: 301,
+            name: "Dream Pop",
+            urlSlug: "dream-pop",
+          },
+        },
+      ],
+    });
+
+    const nameSubstring = await requestSongs("q=dream");
+    const exactAlias = await requestSongs("q=CaseAlias");
+    const wrongCaseAlias = await requestSongs("q=casealias");
+    const aliasSubstring = await requestSongs("q=Case");
+
+    expect((await nameSubstring.json()).items.map((item: { id: string }) => item.id)).toEqual([
+      song.id,
+    ]);
+    expect((await exactAlias.json()).items.map((item: { id: string }) => item.id)).toEqual([
+      song.id,
+    ]);
+    expect((await wrongCaseAlias.json()).items).toEqual([]);
+    expect((await aliasSubstring.json()).items).toEqual([]);
+  });
+
+  it("counts a song matching multiple search branches once", async () => {
+    const song = await seedSong({
+      artistString: "Overlap Match",
+      defaultName: "Overlap Match",
+      name: "Overlap Match",
+      names: [{ language: "English", value: "Overlap Match" }],
+    });
+
+    const response = await requestSongs("q=overlap");
+    const payload = await response.json();
+
+    expect(payload.items.map((item: { id: string }) => item.id)).toEqual([song.id]);
+    expect(payload.pagination).toMatchObject({ totalItems: 1, totalPages: 1 });
   });
 
   it("filters hidden songs while retaining failed snapshots", async () => {
@@ -103,6 +186,50 @@ describe("GET /api/songs", () => {
     );
     expect(payload.items[0]).not.toHaveProperty("syncStatus");
     expect(payload.items.map((item: { id: string }) => item.id)).not.toContain(deleted.id);
+  });
+
+  it("applies visibility rules to searched songs", async () => {
+    const synced = await seedSong({
+      id: 124,
+      name: "Search Visible Synced",
+      defaultName: "Search Visible Synced",
+    });
+    const failed = await seedSong({
+      id: 125,
+      name: "Search Visible Failed",
+      defaultName: "Search Visible Failed",
+    });
+    const missing = await seedSong({
+      id: 126,
+      name: "Search Visible Missing",
+      defaultName: "Search Visible Missing",
+    });
+    const deleted = await seedSong({
+      id: 127,
+      name: "Search Visible Deleted",
+      defaultName: "Search Visible Deleted",
+      deleted: true,
+    });
+
+    await db.song.update({
+      where: { id: failed.id },
+      data: { syncStatus: SyncStatus.FAILED },
+    });
+    await db.song.update({
+      where: { id: missing.id },
+      data: { syncStatus: SyncStatus.SOURCE_MISSING },
+    });
+
+    const response = await requestSongs("q=search%20visible");
+    const payload = await response.json();
+
+    expect(payload.items.map((item: { id: string }) => item.id).sort()).toEqual(
+      [synced.id, failed.id].sort(),
+    );
+    expect(payload.pagination.totalItems).toBe(2);
+    expect(payload.items.map((item: { id: string }) => item.id)).not.toContain(
+      deleted.id,
+    );
   });
 
   it("returns cover URLs and nulls when no cover exists", async () => {
@@ -132,6 +259,110 @@ describe("GET /api/songs", () => {
       coverUrlOriginal: null,
       coverUrlThumb: null,
     });
+  });
+
+  it("orders searched latest and popular ties deterministically", async () => {
+    const first = await seedSong({
+      id: 124,
+      artistString: "Ordering Search",
+      createDate: "2026-07-02T00:00:00Z",
+      defaultName: "Ordering First",
+      favoritedTimes: 50,
+      name: "Ordering First",
+      publishDate: "2026-06-01T00:00:00Z",
+      ratingScore: 100,
+    });
+    const second = await seedSong({
+      id: 125,
+      artistString: "Ordering Search",
+      createDate: "2026-07-02T00:00:00Z",
+      defaultName: "Ordering Second",
+      favoritedTimes: 50,
+      name: "Ordering Second",
+      publishDate: "2026-06-01T00:00:00Z",
+      ratingScore: 100,
+    });
+    const older = await seedSong({
+      id: 126,
+      artistString: "Ordering Search",
+      createDate: "2026-07-01T00:00:00Z",
+      defaultName: "Ordering Older",
+      favoritedTimes: 50,
+      name: "Ordering Older",
+      publishDate: "2026-06-01T00:00:00Z",
+      ratingScore: 100,
+    });
+    const newestIds = [first.id, second.id].sort();
+    const allIds = [first.id, second.id, older.id].sort();
+
+    const latestResponse = await requestSongs("q=ordering%20search&sort=latest");
+    const popularResponse = await requestSongs(
+      "q=ordering%20search&sort=popular",
+    );
+
+    expect(
+      (await latestResponse.json()).items.map((item: { id: string }) => item.id),
+    ).toEqual([...newestIds, older.id]);
+    expect(
+      (await popularResponse.json()).items.map((item: { id: string }) => item.id),
+    ).toEqual(allIds);
+  });
+
+  it("returns searched empty and deep pagination metadata", async () => {
+    await seedSong({
+      id: 124,
+      artistString: "Pagination Search",
+      defaultName: "Pagination One",
+      name: "Pagination One",
+    });
+    await seedSong({
+      id: 125,
+      artistString: "Pagination Search",
+      defaultName: "Pagination Two",
+      name: "Pagination Two",
+    });
+
+    const emptyResponse = await requestSongs("q=no-search-results&page=4&pageSize=1");
+    const deepResponse = await requestSongs(
+      "q=pagination%20search&page=9&pageSize=1",
+    );
+    const empty = await emptyResponse.json();
+    const deep = await deepResponse.json();
+
+    expect(empty.items).toEqual([]);
+    expect(empty.pagination).toEqual({
+      page: 4,
+      pageSize: 1,
+      totalItems: 0,
+      totalPages: 0,
+    });
+    expect(deep.items).toEqual([]);
+    expect(deep.pagination).toEqual({
+      page: 9,
+      pageSize: 1,
+      totalItems: 2,
+      totalPages: 2,
+    });
+  });
+
+  it("keeps decomposed search equivalent to broad search semantics", async () => {
+    await seedSong({ id: 124, name: "100% Literal_under\\slash", defaultName: "Overlap Match" });
+    await seedSong({ id: 125, name: "Failed Overlap Match", defaultName: "Failed Overlap Match" });
+    const failed = await db.song.findFirstOrThrow({ where: { vocadbId: 125 } });
+    await db.song.update({ where: { id: failed.id }, data: { syncStatus: SyncStatus.FAILED } });
+
+    for (const q of ["100%", "Literal_", "Literal\\", "overlap", "synth", "ELECTRONIC"]) {
+      for (const sort of ["latest", "popular"] as const) {
+        const query = { q, sort, page: 1, pageSize: 1 };
+        const broad = await listSongsWithBroadSearch(query, db);
+        const decomposed = await listSongsWithDecomposedSearch(query, db);
+        expect(decomposed).toEqual(broad);
+      }
+    }
+
+    const deep = { q: "overlap", sort: "latest" as const, page: 9, pageSize: 1 };
+    expect(await listSongsWithDecomposedSearch(deep, db))
+      .toEqual(await listSongsWithBroadSearch(deep, db));
   });
 
   it("paginates and supports popular sorting", async () => {

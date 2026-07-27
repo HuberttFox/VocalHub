@@ -59,6 +59,20 @@ export function defineCatalogBenchmarkScenarios(
     searchScenario("songs-search-medium-default-title", marker.searchMarkers.mediumDefaultTitle),
     searchScenario("songs-search-cjk-alternate-name", marker.searchMarkers.cjkAlternateName),
     searchScenario("songs-search-common-artist-string", marker.searchMarkers.commonArtistString),
+    searchScenario(
+      "songs-search-common-artist-string-deep-page",
+      marker.searchMarkers.commonArtistString,
+      deepPageFor(
+        marker.searchMarkers.commonArtistString.expectedPublicSongCount,
+        CATALOG_BENCHMARK_PAGE_SIZE,
+      ),
+    ),
+    searchScenario(
+      "songs-search-common-artist-string-popular",
+      marker.searchMarkers.commonArtistString,
+      1,
+      "popular",
+    ),
     searchScenario("songs-search-literal-credit", marker.searchMarkers.literalCredit),
     searchScenario("songs-search-linked-artist-name", marker.searchMarkers.linkedArtistName),
     searchScenario("songs-search-rare-tag-name", marker.searchMarkers.rareTagName),
@@ -142,12 +156,17 @@ function songScenario(
   return { id, kind: "songs", query, expectedTotalItems };
 }
 
-function searchScenario(id: string, marker: CatalogBenchmarkSearchMarker): CatalogBenchmarkScenario {
+function searchScenario(
+  id: string,
+  marker: CatalogBenchmarkSearchMarker,
+  page = 1,
+  sort: SongListQuery["sort"] = "latest",
+): CatalogBenchmarkScenario {
   return songScenario(id, {
     q: marker.term,
-    page: 1,
+    page,
     pageSize: CATALOG_BENCHMARK_PAGE_SIZE,
-    sort: "latest",
+    sort,
   }, marker.expectedPublicSongCount);
 }
 

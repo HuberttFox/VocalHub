@@ -63,9 +63,20 @@ At 10k, PostgreSQL used this index in every measured artist-work scenario. Media
 
 High fan-out popular showed -38.65%, but A2 drifted +47.37%; treat that single figure as noisy. Remaining scenarios improved beyond their A/A2 drift. Candidate was removed after comparison, and no `bench_catalog_%` indexes remained.
 
-At 20k, PostgreSQL again used the candidate in every artist-work plan, but run-order drift was much larger. Medium/sparse/duplicate medians improved 8–19%, high latest first improved only 2%, high popular regressed 16%, and A2 drift ranged from -15% to +91%. This does not independently confirm a stable end-to-end gain.
+Interleaved 20k state blocks (8 AB/BA cycles, 1 warmup and 3 measured calls per block) removed the earlier A/A2 ambiguity. PostgreSQL used `bench_catalog_credit_artist_song` in candidate evidence plans, and every scenario improved:
 
-Decision: **defer production migration**. Planner-use evidence is strong at both scales, but timing evidence conflicts at 20k. Repeat under a less noisy environment or use interleaved A/B execution before production DDL.
+| Scenario | A median | B median | Median paired improvement | B win rate |
+| --- | ---: | ---: | ---: | ---: |
+| High fan-out latest first | 33.30 ms | 25.48 ms | 29.40% | 100% |
+| High fan-out latest deep | 32.89 ms | 23.93 ms | 28.36% | 100% |
+| High fan-out popular first | 32.52 ms | 25.28 ms | 25.54% | 88% |
+| Medium fan-out latest | 35.31 ms | 24.85 ms | 31.55% | 100% |
+| Sparse latest | 14.13 ms | 7.91 ms | 46.53% | 100% |
+| Duplicate-credit latest | 16.77 ms | 9.13 ms | 48.25% | 100% |
+
+A second independent 20k invocation confirmed the result: 18.72–50.05% median paired improvement, 75–100% B wins, and both run-order strata improved for all scenarios.
+
+Decision: **promote to a separate migration candidate**. This benchmark branch still makes no schema or migration change; production DDL needs its own migration, lock-impact, and rollback review.
 
 ### `public-latest`
 
@@ -83,6 +94,34 @@ Decision: **reject bundled trigram migration**. Broad repository SQL still evalu
 
 Evidence collection remains pending or incomplete. No production recommendation yet.
 
+## Interleaved search-shape follow-up
+
+The follow-up benchmark replaces fixed run-order comparisons with adjacent `A→B` / `B→A` pairs. A is the original broad Prisma relation `OR`; B is a parameterized relation-branch `UNION` that returns exact total plus ordered page IDs and then hydrates the existing DTO inside one repeatable-read transaction. Every measured pair requires equal result digest and marker cardinality.
+
+Commands:
+
+```bash
+npm run benchmark:catalog -- compare-search-shape \
+  --warmups=3 --repeats=15 \
+  --output=.benchmark-results/catalog-10000-search-shape.json
+```
+
+Completed evidence:
+
+| Scale/run | A median range | B median range | Median paired improvement | B win rate |
+| --- | ---: | ---: | ---: | ---: |
+| 5k | 137.18–191.64 ms | 31.14–50.83 ms | 69.83–78.59% | 100% |
+| 10k run 1 | 898.42–1,041.81 ms | 50.62–72.23 ms | 92.67–94.44% | 100% |
+| 10k run 2 | 893.17–1,049.59 ms | 47.37–74.10 ms | 92.75–94.64% | 100% |
+| 20k run 1 | 964.27–1,326.10 ms | 85.92–156.27 ms | 88.09–91.03% | 100% |
+| 20k run 2 | 971.74–1,118.20 ms | 93.98–127.31 ms | 88.20–90.26% | 100% |
+
+All 11 scenarios—including rare/common/no-hit, every relation branch, common deep page, and popular sort—produced identical IDs, query metadata, and pagination. `B first` and `B second` strata point in the same direction. At 10k, candidate EXPLAIN used independent branch plans without temp read/write blocks; representative root SQL execution fell from roughly 448–559 ms per broad count/page statement to about 55 ms for the combined match/count/page statement.
+
+Both independent 20k invocations also cleared every gate: 88–91% median paired improvement, 100% B wins, consistent order strata, no semantic mismatch, and no candidate EXPLAIN temp read/write blocks. Across both 10k and both 20k runs, candidate p95 improved by at least 85.73%; no representative branch regressed.
+
+Decision: **adopt relation-branch `UNION` for searched repository requests**. Keep unsearched catalog requests on their existing Prisma path. Retain broad search only as a benchmark parity control. This changes query execution, not search semantics or database schema.
+
 ## Current decision
 
-Do not change `prisma/schema.prisma` or add a migration in this benchmark branch. Search has strongest scaling problem, but bundled trigram indexes do not fix broad `OR` query cost. Reverse artist-credit index is consistently selected by PostgreSQL, yet 20k timing variance prevents accepting it. Public latest index was not selected. Next step: reduce benchmark noise/interleave candidates and redesign search query shape before production DDL.
+Search query decomposition adds no production index or migration. The bundled trigram and public-latest candidates remain rejected. Reverse artist-credit index now has repeatable interleaved 20k evidence and is promoted to a separate migration candidate; production DDL remains outside this branch and needs its own lock-impact and rollback review.

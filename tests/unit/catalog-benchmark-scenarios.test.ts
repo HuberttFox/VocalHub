@@ -100,6 +100,8 @@ describe("catalog benchmark scenarios", () => {
       "songs-popular-first-page", "songs-popular-deep-page",
       "songs-search-rare-title", "songs-search-medium-default-title",
       "songs-search-cjk-alternate-name", "songs-search-common-artist-string",
+      "songs-search-common-artist-string-deep-page",
+      "songs-search-common-artist-string-popular",
       "songs-search-literal-credit", "songs-search-linked-artist-name",
       "songs-search-rare-tag-name",
       "songs-search-medium-tag-alias", "songs-search-no-hit",
@@ -122,6 +124,15 @@ describe("catalog benchmark scenarios", () => {
       Math.ceil(4_980 / CATALOG_BENCHMARK_PAGE_SIZE) * CATALOG_BENCHMARK_DEEP_PAGE_FRACTION,
     );
     expect(result.find(({ id }) => id === "songs-latest-deep-page")?.query.page).toBe(songDeepPage);
+    expect(result.find(({ id }) => id === "songs-search-common-artist-string-deep-page")?.query)
+      .toEqual({
+        q: "common-artist-string",
+        page: deepPageFor(1, CATALOG_BENCHMARK_PAGE_SIZE),
+        pageSize: CATALOG_BENCHMARK_PAGE_SIZE,
+        sort: "latest",
+      });
+    expect(result.find(({ id }) => id === "songs-search-common-artist-string-popular")?.query.sort)
+      .toBe("popular");
     expect(result.find(({ id }) => id === "artist-works-high-latest-deep-page")?.query).toEqual({
       page: deepPageFor(123, CATALOG_BENCHMARK_ARTIST_PAGE_SIZE),
       pageSize: CATALOG_BENCHMARK_ARTIST_PAGE_SIZE,
@@ -138,6 +149,7 @@ describe("catalog benchmark scenarios", () => {
     );
     expect(searches.map(({ query }) => query.q)).toEqual([
       "rare-title", "medium-default-title", "中文别名", "common-artist-string",
+      "common-artist-string", "common-artist-string",
       "100% literal_credit", "linked-artist-name", "rare-tag-name",
       "medium-tag-alias", "no-hit",
     ]);

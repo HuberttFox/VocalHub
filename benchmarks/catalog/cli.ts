@@ -4,12 +4,17 @@ import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { Pool, type PoolClient } from "pg";
 import { listArtistWorks } from "@/lib/artists/repository";
-import { listSongs } from "@/lib/songs/repository";
+import { listSongs, listSongsWithBroadSearch } from "@/lib/songs/repository";
+import { listSongsWithDecomposedSearch } from "@/lib/songs/search-query";
+import {
+  measureAlternatingStateSuite,
+  measurePairedAlternating,
+  type PairedComparison,
+} from "./compare";
 import { parseCatalogBenchmarkConfig } from "./config";
 import {
   createCatalogBenchmarkClient,
   createCatalogQueryEventCollector,
-  type CatalogBenchmarkClient,
 } from "./db";
 import { explainCapturedQueries } from "./explain";
 import {
@@ -17,7 +22,6 @@ import {
   cleanupBenchmarkIndexes,
   getIndexCandidate,
   installCandidate,
-  removeCandidate,
   type IndexCandidate,
 } from "./index-candidates";
 import { loadCatalogBenchmark, readCatalogBenchmarkMarker } from "./load";
@@ -28,14 +32,15 @@ import {
   type QueryCapture,
 } from "./measure";
 import {
-  compareRuns,
   printReport,
   toReportScenario,
   writeReport,
   type BenchmarkReport,
+  type PairedComparisonReport,
   type ReportRun,
 } from "./report";
 import {
+  catalogBenchmarkResultChecksum,
   checkCatalogBenchmarkResult,
   defineCatalogBenchmarkScenarios,
   type CatalogBenchmarkScenario,
@@ -46,6 +51,8 @@ import type { CatalogBenchmarkMarker } from "./types";
 const DEFAULT_SEED = 20_260_720;
 const DEFAULT_WARMUPS = 3;
 const DEFAULT_REPEATS = 15;
+const DEFAULT_CYCLES = 8;
+const DEFAULT_BLOCK_REPEATS = 3;
 const DEFAULT_SIZES = [5_000, 10_000, 20_000] as const;
 const CLI_LOCK_KEYS = [0x564f4341, 0x54434c49];
 
@@ -105,6 +112,19 @@ async function main(): Promise<void> {
       return;
     }
 
+    case "compare-search-shape": {
+      const report = await runLockedSearchShapeComparison(
+        config.connectionString,
+        config.databaseName,
+        config.databaseIdentity,
+        integerOption(args, "warmups", DEFAULT_WARMUPS),
+        integerOption(args, "repeats", DEFAULT_REPEATS),
+        scenarioIdsOption(args),
+      );
+      await emitReport(report, optionalStringOption(args, "output"));
+      return;
+    }
+
     case "compare": {
       const candidate = getIndexCandidate(stringOption(args, "candidate"));
       requireConfirmation(args, config.databaseName);
@@ -113,8 +133,9 @@ async function main(): Promise<void> {
         config.databaseName,
         config.databaseIdentity,
         candidate,
-        integerOption(args, "warmups", DEFAULT_WARMUPS),
-        integerOption(args, "repeats", DEFAULT_REPEATS),
+        integerOption(args, "warmups", 1),
+        integerOption(args, "cycles", DEFAULT_CYCLES),
+        integerOption(args, "block-repeats", DEFAULT_BLOCK_REPEATS),
         scenarioIdsOption(args),
       );
       await emitReport(report, optionalStringOption(args, "output"));
@@ -143,6 +164,8 @@ async function runMatrix(
   const seed = integerOption(args, "seed", DEFAULT_SEED);
   const warmups = integerOption(args, "warmups", DEFAULT_WARMUPS);
   const repeats = integerOption(args, "repeats", DEFAULT_REPEATS);
+  const cycles = integerOption(args, "cycles", DEFAULT_CYCLES);
+  const blockRepeats = integerOption(args, "block-repeats", DEFAULT_BLOCK_REPEATS);
   const scenarioIds = scenarioIdsOption(args);
 
   for (const songCount of sizes) {
@@ -167,7 +190,8 @@ async function runMatrix(
           config.databaseIdentity,
           getIndexCandidate(candidateName),
           warmups,
-          repeats,
+          cycles,
+          blockRepeats,
           scenarioIds,
         )
       : await runLockedBenchmark(config.connectionString, config.databaseName, {
@@ -180,6 +204,156 @@ async function runMatrix(
     const suffix = candidateName ? `compare-${candidateName}` : "baseline";
     await emitReport(report, resolve(outputDirectory, `catalog-${songCount}-${suffix}.json`));
   }
+}
+
+async function runLockedSearchShapeComparison(
+  connectionString: string,
+  databaseName: string,
+  databaseIdentity: string,
+  warmups: number,
+  repeats: number,
+  scenarioIds?: ReadonlySet<string>,
+): Promise<BenchmarkReport> {
+  return withPgClient(connectionString, (pg) =>
+    withAdvisoryLock(pg, async () => {
+      await assertConnectedDatabase(pg, databaseName);
+      await assertNoBenchmarkIndexes(pg);
+      const db = createCatalogBenchmarkClient(connectionString);
+      try {
+        const marker = await requireMarker(db);
+        const scenarios = defineCatalogBenchmarkScenarios({ marker }, scenarioIds)
+          .filter((scenario): scenario is Extract<CatalogBenchmarkScenario, { kind: "songs" }> =>
+            scenario.kind === "songs" && Boolean(scenario.query.q));
+        if (scenarios.length === 0) throw new Error("No search benchmark scenarios selected");
+
+        const reports: PairedComparisonReport["scenarios"] = [];
+        for (const scenario of scenarios) {
+          reports.push(await compareSearchScenario(
+            connectionString,
+            pg,
+            scenario,
+            warmups,
+            repeats,
+          ));
+        }
+
+        return {
+          schemaVersion: 2,
+          generatedAt: new Date().toISOString(),
+          command: "compare-search-shape",
+          dataset: marker,
+          environment: {
+            database: databaseIdentity,
+            node: process.version,
+            platform: process.platform,
+          },
+          runs: [],
+          pairedComparison: {
+            kind: "search-shape",
+            candidate: "relation-branch-union",
+            scenarios: reports,
+          },
+        };
+      } finally {
+        await db.$disconnect();
+      }
+    }),
+  );
+}
+
+async function compareSearchScenario(
+  connectionString: string,
+  pg: PoolClient,
+  scenario: Extract<CatalogBenchmarkScenario, { kind: "songs" }>,
+  warmups: number,
+  repeats: number,
+): Promise<PairedComparisonReport["scenarios"][number]> {
+  const aDb = createCatalogBenchmarkClient(connectionString);
+  const bDb = createCatalogBenchmarkClient(connectionString);
+  let resultDigest = "";
+
+  try {
+    const comparison: PairedComparison = await measurePairedAlternating({
+      a: {
+        warmups,
+        run: () => listSongsWithBroadSearch(scenario.query, aDb),
+      },
+      b: {
+        warmups,
+        run: () => listSongsWithDecomposedSearch(scenario.query, bDb),
+      },
+      repeats,
+      digest: (result) => checkCatalogBenchmarkResult(scenario, result).checksum,
+      observePair: ({ aValue }) => {
+        resultDigest = checkCatalogBenchmarkResult(scenario, aValue).checksum;
+      },
+    });
+
+    const aEvidence = await captureSongSearchEvidence(
+      connectionString,
+      pg,
+      scenario,
+      "broad",
+    );
+    const bEvidence = await captureSongSearchEvidence(
+      connectionString,
+      pg,
+      scenario,
+      "decomposed",
+    );
+
+    return {
+      name: scenario.id,
+      warmups,
+      repeats,
+      pairs: comparison.pairs,
+      summary: comparison.summary,
+      resultDigest,
+      aQueries: reportQueries(aEvidence.queries),
+      bQueries: reportQueries(bEvidence.queries),
+      aExplains: aEvidence.explains,
+      bExplains: bEvidence.explains,
+    };
+  } finally {
+    await Promise.all([aDb.$disconnect(), bDb.$disconnect()]);
+  }
+}
+
+async function captureSongSearchEvidence(
+  connectionString: string,
+  pg: PoolClient,
+  scenario: Extract<CatalogBenchmarkScenario, { kind: "songs" }>,
+  strategy: "broad" | "decomposed",
+): Promise<{ queries: Map<string, CapturedQuery>; explains: Awaited<ReturnType<typeof explainCapturedQueries>> }> {
+  const collector = createCatalogQueryEventCollector();
+  const db = createCatalogBenchmarkClient(connectionString, collector.onQuery);
+  const capture = collectorCapture(collector);
+  try {
+    capture.start();
+    if (strategy === "broad") await listSongsWithBroadSearch(scenario.query, db);
+    else await listSongsWithDecomposedSearch(scenario.query, db);
+    const queries = new Map<string, CapturedQuery>();
+    collectQueries(capture.stop(), queries);
+    return { queries, explains: await explainCapturedQueries(pg, [...queries.values()]) };
+  } finally {
+    await db.$disconnect();
+  }
+}
+
+function collectQueries(
+  queries: CapturedQuery[],
+  destination: Map<string, CapturedQuery>,
+): void {
+  for (const query of queries) destination.set(query.fingerprint, query);
+}
+
+function reportQueries(
+  queries: ReadonlyMap<string, CapturedQuery>,
+): PairedComparisonReport["scenarios"][number]["aQueries"] {
+  return [...queries.values()].map(({ fingerprint, durationMs }) => ({
+    fingerprint,
+    durationMs,
+  }));
 }
 
 async function runLockedBenchmark(
@@ -217,7 +391,8 @@ async function compareLockedBenchmark(
   databaseIdentity: string,
   candidate: IndexCandidate,
   warmups: number,
-  repeats: number,
+  cycles: number,
+  blockRepeats: number,
   scenarioIds?: ReadonlySet<string>,
 ): Promise<BenchmarkReport> {
   return withPgClient(connectionString, (pg) =>
@@ -225,24 +400,143 @@ async function compareLockedBenchmark(
       await assertConnectedDatabase(pg, databaseName);
       await cleanupBenchmarkIndexes(pg);
 
-      const baseline = await executeRun(connectionString, pg, "baseline-A", null, warmups, repeats, scenarioIds);
-      let changed: Awaited<ReturnType<typeof executeRun>>;
-
+      const metadataDb = createCatalogBenchmarkClient(connectionString);
       try {
-        await installCandidate(pg, candidate);
-        changed = await executeRun(connectionString, pg, "candidate-B", candidate.name, warmups, repeats, scenarioIds);
-      } finally {
-        await removeCandidate(pg, candidate);
-      }
+        const marker = await requireMarker(metadataDb);
+        const scenarios = defineCatalogBenchmarkScenarios({ marker }, scenarioIds);
+        if (scenarios.length === 0) throw new Error("No benchmark scenarios selected");
+        const reports = await compareIndexScenarios(
+          connectionString,
+          pg,
+          candidate,
+          scenarios,
+          warmups,
+          cycles,
+          blockRepeats,
+        );
 
-      const restored = await executeRun(connectionString, pg, "baseline-A2", null, warmups, repeats, scenarioIds);
-      const runs = [baseline.run, changed.run, restored.run];
-      return {
-        ...createReport("compare", databaseIdentity, baseline.marker, runs),
-        comparison: compareRuns(candidate.name, baseline.run, changed.run, restored.run),
-      };
+        await cleanupBenchmarkIndexes(pg);
+        return {
+          schemaVersion: 2,
+          generatedAt: new Date().toISOString(),
+          command: "compare",
+          dataset: marker,
+          environment: {
+            database: databaseIdentity,
+            node: process.version,
+            platform: process.platform,
+          },
+          runs: [],
+          pairedComparison: {
+            kind: "index",
+            candidate: candidate.name,
+            scenarios: reports,
+          },
+        };
+      } finally {
+        await cleanupBenchmarkIndexes(pg);
+        await metadataDb.$disconnect();
+      }
     }),
   );
+}
+
+async function compareIndexScenarios(
+  connectionString: string,
+  pg: PoolClient,
+  candidate: IndexCandidate,
+  scenarios: readonly CatalogBenchmarkScenario[],
+  warmups: number,
+  cycles: number,
+  blockRepeats: number,
+): Promise<PairedComparisonReport["scenarios"]> {
+  const db = createCatalogBenchmarkClient(connectionString);
+  let state: "A" | "B" | null = null;
+
+  const setState = async (next: "A" | "B") => {
+    if (state === next) return;
+    await cleanupBenchmarkIndexes(pg);
+    if (next === "B") await installCandidate(pg, candidate);
+    else await pg.query("ANALYZE");
+    state = next;
+  };
+
+  try {
+    const comparisons = await measureAlternatingStateSuite({
+      cycles,
+      blockRepeats,
+      warmups,
+      items: scenarios,
+      key: ({ id }) => id,
+      setState,
+      prepareState: async () => {
+        await pg.query("DISCARD PLANS");
+      },
+      run: (scenario) => runScenario(db, scenario),
+      digest: (result) => catalogBenchmarkResultChecksum(result as Exclude<CatalogBenchmarkScenarioResult, null>),
+    });
+
+    const reports: PairedComparisonReport["scenarios"] = [];
+    for (const scenario of scenarios) {
+      const comparison = comparisons.get(scenario.id);
+      if (!comparison) throw new Error(`Missing state comparison for ${scenario.id}`);
+      const sample = await runScenario(db, scenario);
+      const resultDigest = checkCatalogBenchmarkResult(scenario, sample).checksum;
+      const aEvidence = await captureScenarioEvidence(
+        connectionString,
+        pg,
+        scenario,
+        () => setState("A"),
+      );
+      const bEvidence = await captureScenarioEvidence(
+        connectionString,
+        pg,
+        scenario,
+        () => setState("B"),
+      );
+      reports.push({
+        name: scenario.id,
+        warmups,
+        repeats: blockRepeats,
+        pairs: comparison.pairs,
+        summary: comparison.summary,
+        resultDigest,
+        aQueries: reportQueries(aEvidence.queries),
+        bQueries: reportQueries(bEvidence.queries),
+        aExplains: aEvidence.explains,
+        bExplains: bEvidence.explains,
+      });
+    }
+    await setState("A");
+    return reports;
+  } finally {
+    await cleanupBenchmarkIndexes(pg);
+    await db.$disconnect();
+  }
+}
+
+async function captureScenarioEvidence(
+  connectionString: string,
+  pg: PoolClient,
+  scenario: CatalogBenchmarkScenario,
+  prepare: () => Promise<void>,
+): Promise<{ queries: Map<string, CapturedQuery>; explains: Awaited<ReturnType<typeof explainCapturedQueries>> }> {
+  await prepare();
+  const collector = createCatalogQueryEventCollector();
+  const db = createCatalogBenchmarkClient(connectionString, collector.onQuery);
+  const capture = collectorCapture(collector);
+  try {
+    capture.start();
+    await runScenario(db, scenario);
+    const queries = new Map<string, CapturedQuery>();
+    collectQueries(capture.stop(), queries);
+    return {
+      queries,
+      explains: await explainCapturedQueries(pg, [...queries.values()]),
+    };
+  } finally {
+    await db.$disconnect();
+  }
 }
 
 async function executeRun(
@@ -284,7 +578,7 @@ async function executeRun(
 }
 
 async function runScenario(
-  db: CatalogBenchmarkClient,
+  db: Parameters<typeof listSongs>[1] & Parameters<typeof listArtistWorks>[2],
   scenario: CatalogBenchmarkScenario,
 ): Promise<CatalogBenchmarkScenarioResult> {
   return scenario.kind === "songs"
@@ -307,7 +601,9 @@ function collectorCapture(
   };
 }
 
-async function requireMarker(db: CatalogBenchmarkClient): Promise<CatalogBenchmarkMarker> {
+async function requireMarker(
+  db: Parameters<typeof readCatalogBenchmarkMarker>[0],
+): Promise<CatalogBenchmarkMarker> {
   const marker = await readCatalogBenchmarkMarker(db);
   if (!marker) throw new Error("No benchmark dataset marker; run load first");
   return marker;
@@ -461,7 +757,8 @@ Commands:
   setup [--install-pg-trgm]
   load --songs=5000 --seed=${DEFAULT_SEED} --confirm-reset=NAME
   run [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
-  compare --candidate=NAME --confirm-reset=NAME [--scenarios=ID,...] [--output=FILE]
+  compare-search-shape [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
+  compare --candidate=NAME --confirm-reset=NAME [--cycles=${DEFAULT_CYCLES}] [--block-repeats=${DEFAULT_BLOCK_REPEATS}] [--scenarios=ID,...] [--output=FILE]
   matrix --confirm-reset=NAME [--sizes=5000,10000,20000] [--candidate=NAME] [--scenarios=ID,...]\n
 Candidates: credit-artist, tag-relation, tag-alias-gin, public-latest, public-popular, catalog-trigram`);
 }

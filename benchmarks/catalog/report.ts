@@ -1,10 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import type { PairedMeasurement, PairedMeasurementSummary } from "./compare";
 import type { ExplainPlan } from "./explain";
 import type { ScenarioMeasurement, TimingSummary } from "./measure";
 
 export interface BenchmarkReport {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   generatedAt: string;
   command: string;
   dataset: Record<string, unknown>;
@@ -15,6 +16,24 @@ export interface BenchmarkReport {
   };
   runs: ReportRun[];
   comparison?: ComparisonReport;
+  pairedComparison?: PairedComparisonReport;
+}
+
+export interface PairedComparisonReport {
+  kind: "search-shape" | "index";
+  candidate: string;
+  scenarios: Array<{
+    name: string;
+    warmups: number;
+    repeats: number;
+    pairs: PairedMeasurement[];
+    summary: PairedMeasurementSummary;
+    resultDigest: string;
+    aQueries: ReportScenario["queries"];
+    bQueries: ReportScenario["queries"];
+    aExplains: ExplainPlan[];
+    bExplains: ExplainPlan[];
+  }>;
 }
 
 export interface ReportRun {
@@ -122,6 +141,25 @@ export function printReport(report: BenchmarkReport): void {
     );
   }
 
+  if (safe.pairedComparison) {
+    console.log(`\nPaired comparison: ${safe.pairedComparison.candidate}`);
+    console.table(
+      safe.pairedComparison.scenarios.map((scenario) => ({
+        scenario: scenario.name,
+        aMedianMs: round(scenario.summary.a.medianMs),
+        bMedianMs: round(scenario.summary.b.medianMs),
+        pairedChangePercent: round(scenario.summary.medianPairedChangePercent),
+        bWinRate: round(scenario.summary.bWinRate),
+        bFirstChangePercent: nullableRound(
+          scenario.summary.bFirstMedianPairedChangePercent,
+        ),
+        bSecondChangePercent: nullableRound(
+          scenario.summary.bSecondMedianPairedChangePercent,
+        ),
+      })),
+    );
+  }
+
   if (safe.comparison) {
     console.log(`\nComparison: ${safe.comparison.candidate}`);
     console.table(
@@ -180,6 +218,10 @@ function requireScenario(run: ReportRun, name: string): ReportScenario {
 
 function percentChange(baseline: number, next: number): number {
   return baseline === 0 ? 0 : ((next - baseline) / baseline) * 100;
+}
+
+function nullableRound(value: number | null): number | null {
+  return value === null ? null : round(value);
 }
 
 function round(value: number): number {
