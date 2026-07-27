@@ -149,16 +149,18 @@ async function discoverArtistRun(
   });
   const ids = artists
     .filter((artist) => {
+      const summaryObservedAfterDetail =
+        artist.summaryObservedAt !== null &&
+        (artist.detailLastSyncedAt === null ||
+          artist.summaryObservedAt > artist.detailLastSyncedAt);
       const summaryChanged =
-        artist.summarySourceVersion !== artist.sourceVersion ||
-        artist.summarySourceStatus !== artist.sourceStatus ||
-        artist.summarySourceDeleted !== artist.sourceDeleted;
+        summaryObservedAfterDetail &&
+        (artist.summarySourceVersion > artist.sourceVersion ||
+          (artist.summarySourceVersion === artist.sourceVersion &&
+            (artist.summarySourceStatus !== artist.sourceStatus ||
+              artist.summarySourceDeleted !== artist.sourceDeleted)));
       if (artist.syncStatus === SyncStatus.SOURCE_DELETED) {
-        return (
-          artist.summaryObservedAt !== null &&
-          (artist.detailLastSyncedAt === null ||
-            artist.summaryObservedAt > artist.detailLastSyncedAt)
-        );
+        return summaryObservedAfterDetail && !artist.summarySourceDeleted;
       }
       if (summaryChanged || artist.syncStatus === SyncStatus.FAILED) return true;
       if (artist.syncStatus === SyncStatus.SOURCE_MISSING) {

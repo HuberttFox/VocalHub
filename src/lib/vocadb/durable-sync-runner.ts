@@ -121,7 +121,13 @@ export async function runDurableSync(
 
     await processPendingItems(run, options);
     throwIfVocaDbCancelled(options.signal);
-    return await finalizeRun(options.db, run, options.now(), options.advanceState);
+    return await finalizeRun(
+      options.db,
+      run,
+      options.now(),
+      options.advanceState,
+      options.signal,
+    );
   } catch (error) {
     await recordRunInterruption(options.db, run.id, error);
     throw error;
@@ -337,8 +343,10 @@ async function finalizeRun(
   db: PrismaClient,
   run: DurableRunRecord,
   finishedAt: Date,
-  advanceState?: DurableRunnerOptions["advanceState"],
+  advanceState: DurableRunnerOptions["advanceState"],
+  signal?: AbortSignal,
 ): Promise<DurableRunResult> {
+  throwIfVocaDbCancelled(signal);
   const [failureCount, successCount] = await Promise.all([
     db.syncItem.count({
       where: {
@@ -359,10 +367,13 @@ async function finalizeRun(
       ? SyncRunStatus.FAILED
       : SyncRunStatus.PARTIAL;
 
+  throwIfVocaDbCancelled(signal);
   await db.$transaction(async (tx) => {
+    throwIfVocaDbCancelled(signal);
     if (failureCount === 0 && advanceState) {
       await advanceState(tx, run, finishedAt);
     }
+    throwIfVocaDbCancelled(signal);
     await tx.syncRun.update({
       where: { id: run.id },
       data: {
