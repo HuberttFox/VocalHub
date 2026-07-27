@@ -135,6 +135,9 @@ async function syncCredits(
         create: {
           vocadbId: credit.artist.vocadbId,
           name: credit.artist.name,
+          defaultName: credit.artist.name,
+          defaultNameLanguage: "Unspecified",
+          additionalNames: credit.artist.additionalNames,
           artistType: credit.artist.artistType,
           sourceStatus: credit.artist.sourceStatus,
           sourceVersion: credit.artist.sourceVersion,
@@ -144,18 +147,22 @@ async function syncCredits(
           syncStatus: credit.artist.sourceDeleted
             ? SyncStatus.SOURCE_DELETED
             : SyncStatus.SYNCED,
+          summaryName: credit.artist.name,
+          summaryArtistType: credit.artist.artistType,
+          summaryAdditionalNames: credit.artist.additionalNames,
+          summarySourceStatus: credit.artist.sourceStatus,
+          summarySourceVersion: credit.artist.sourceVersion,
+          summarySourceDeleted: credit.artist.sourceDeleted,
+          summaryObservedAt: now,
         },
         update: {
-          name: credit.artist.name,
-          artistType: credit.artist.artistType,
-          sourceStatus: credit.artist.sourceStatus,
-          sourceVersion: credit.artist.sourceVersion,
-          sourceDeleted: credit.artist.sourceDeleted,
-          sourceUpdatedAt: credit.artist.sourceUpdatedAt,
-          lastSyncedAt: now,
-          syncStatus: credit.artist.sourceDeleted
-            ? SyncStatus.SOURCE_DELETED
-            : SyncStatus.SYNCED,
+          summaryName: credit.artist.name,
+          summaryArtistType: credit.artist.artistType,
+          summaryAdditionalNames: credit.artist.additionalNames,
+          summarySourceStatus: credit.artist.sourceStatus,
+          summarySourceVersion: credit.artist.sourceVersion,
+          summarySourceDeleted: credit.artist.sourceDeleted,
+          summaryObservedAt: now,
         },
       });
       artistId = artist.id;

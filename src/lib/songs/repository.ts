@@ -286,11 +286,13 @@ function buildSongListWhere(query: string | undefined): Prisma.SongWhereInput {
 
 function isPublicArtistSnapshot(artist: {
   sourceDeleted: boolean;
+  mergedToVocaDbId: number | null;
   lastSyncedAt: Date | null;
   syncStatus: string;
 }): boolean {
   return (
     !artist.sourceDeleted &&
+    artist.mergedToVocaDbId === null &&
     artist.lastSyncedAt !== null &&
     (artist.syncStatus === "SYNCED" || artist.syncStatus === "FAILED")
   );

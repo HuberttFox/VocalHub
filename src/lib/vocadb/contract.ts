@@ -23,6 +23,44 @@ export const vocaDbArtistSchema = z.object({
   additionalNames: z.string().optional(),
 });
 
+const vocaDbArtistPictureSchema = z.object({
+  mime: z.string().nullable().optional(),
+  urlOriginal: z.string().nullable().optional(),
+  urlThumb: z.string().nullable().optional(),
+  urlSmallThumb: z.string().nullable().optional(),
+  urlTinyThumb: z.string().nullable().optional(),
+});
+
+const vocaDbArtistWebLinkSchema = z.object({
+  id: positiveInteger,
+  url: z.string(),
+  description: z.string().nullable().optional(),
+  category: z.string().min(1),
+  disabled: z.boolean().optional().default(false),
+});
+
+/** Contract for fields requested by the independent artist-detail worker. */
+export const vocaDbArtistDetailSchema = z.object({
+  id: positiveSafeInteger,
+  name: z.string().min(1),
+  defaultName: z.string().min(1),
+  defaultNameLanguage: z.string().min(1),
+  additionalNames: z.string().optional().default(""),
+  description: z.string().nullable().optional(),
+  artistType: z.string().min(1),
+  status: z.string().min(1),
+  version: nonNegativeInteger,
+  deleted: z.boolean().optional().default(false),
+  mergedTo: positiveSafeInteger.nullable().optional().transform((value) => value ?? undefined),
+  createDate: vocaDbDateSchema,
+  releaseDate: vocaDbDateSchema.nullable().optional(),
+  mainPicture: vocaDbArtistPictureSchema.nullable().optional(),
+  names: z.array(vocaDbLocalizedStringSchema),
+  webLinks: z.array(vocaDbArtistWebLinkSchema),
+});
+
+export type VocaDbArtistDetail = z.infer<typeof vocaDbArtistDetailSchema>;
+
 export const vocaDbArtistCreditSchema = z.object({
   id: positiveInteger,
   artist: vocaDbArtistSchema.nullish().transform((value) => value ?? null),

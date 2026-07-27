@@ -1,12 +1,61 @@
 import { describe, expect, it } from "vitest";
 
-import { vocaDbSongSchema } from "@/lib/vocadb/contract";
 import {
+  vocaDbArtistDetailSchema,
+  vocaDbSongSchema,
+} from "@/lib/vocadb/contract";
+import {
+  normalizeHttpUrl,
+  normalizeVocaDbArtist,
   normalizeVocaDbSong,
   parseVocaDbDate,
   splitVocaDbFlags,
 } from "@/lib/vocadb/normalize";
+import { makeVocaDbArtistFixture } from "../fixtures/vocadb/artist";
 import { makeVocaDbSongFixture } from "../fixtures/vocadb/song";
+
+describe("normalizeVocaDbArtist", () => {
+  it("normalizes complete detail and retains disabled links", () => {
+    const normalized = normalizeVocaDbArtist(
+      vocaDbArtistDetailSchema.parse(makeVocaDbArtistFixture()),
+    );
+    expect(normalized).toMatchObject({
+      additionalNames: ["Producer Alias", "制作者"],
+      description: "Independent artist description.\nSecond line.",
+      sourceCreatedAt: new Date("2020-01-02T03:04:05Z"),
+      pictureUrlOriginal: "https://example.test/artist.png",
+    });
+    expect(normalized.names.map((name) => name.position)).toEqual([0, 1]);
+    expect(normalized.webLinks).toEqual([
+      expect.objectContaining({ vocadbId: 500, disabled: false, position: 0 }),
+      expect.objectContaining({ vocadbId: 501, disabled: true, position: 1 }),
+    ]);
+  });
+
+  it("removes unsafe URLs, credentials, and empty descriptions", () => {
+    const payload = makeVocaDbArtistFixture({
+      description: "  ",
+      mainPicture: {
+        urlOriginal: "https://user:pass@example.test/avatar.png",
+        urlThumb: "javascript:alert(1)",
+        urlTinyThumb: " http://example.test/tiny.png ",
+      },
+      webLinks: [
+        { id: 1, url: "data:text/plain,no", description: "bad", category: "Other" },
+        { id: 2, url: "https://example.test/ok", description: "ok", category: "Official" },
+      ],
+    });
+    const normalized = normalizeVocaDbArtist(vocaDbArtistDetailSchema.parse(payload));
+    expect(normalized.description).toBeNull();
+    expect(normalized.pictureUrlOriginal).toBeNull();
+    expect(normalized.pictureUrlThumb).toBeNull();
+    expect(normalized.pictureUrlTinyThumb).toBe("http://example.test/tiny.png");
+    expect(normalized.webLinks).toEqual([
+      expect.objectContaining({ vocadbId: 2, position: 0 }),
+    ]);
+    expect(normalizeHttpUrl("https://user:pass@example.test/")).toBeNull();
+  });
+});
 
 describe("normalizeVocaDbSong", () => {
   it("normalizes comma-separated flags and positional relations", () => {

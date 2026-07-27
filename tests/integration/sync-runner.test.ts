@@ -29,6 +29,8 @@ beforeEach(async () => {
   await db.songPV.deleteMany();
   await db.songTag.deleteMany();
   await db.tag.deleteMany();
+  await db.artistWebLink.deleteMany();
+  await db.artistName.deleteMany();
   await db.songArtistCredit.deleteMany();
   await db.artist.deleteMany();
   await db.songName.deleteMany();

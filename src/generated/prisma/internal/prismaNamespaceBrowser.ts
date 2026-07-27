@@ -54,6 +54,8 @@ export const ModelName = {
   Song: 'Song',
   SongName: 'SongName',
   Artist: 'Artist',
+  ArtistName: 'ArtistName',
+  ArtistWebLink: 'ArtistWebLink',
   SongArtistCredit: 'SongArtistCredit',
   Tag: 'Tag',
   SongTag: 'SongTag',
@@ -125,18 +127,65 @@ export const ArtistScalarFieldEnum = {
   id: 'id',
   vocadbId: 'vocadbId',
   name: 'name',
+  defaultName: 'defaultName',
+  defaultNameLanguage: 'defaultNameLanguage',
+  additionalNames: 'additionalNames',
+  description: 'description',
   artistType: 'artistType',
   sourceStatus: 'sourceStatus',
   sourceVersion: 'sourceVersion',
   sourceDeleted: 'sourceDeleted',
+  sourceCreatedAt: 'sourceCreatedAt',
+  releaseDate: 'releaseDate',
   sourceUpdatedAt: 'sourceUpdatedAt',
+  mergedToVocaDbId: 'mergedToVocaDbId',
+  pictureMime: 'pictureMime',
+  pictureUrlOriginal: 'pictureUrlOriginal',
+  pictureUrlThumb: 'pictureUrlThumb',
+  pictureUrlSmallThumb: 'pictureUrlSmallThumb',
+  pictureUrlTinyThumb: 'pictureUrlTinyThumb',
+  detailLastAttemptAt: 'detailLastAttemptAt',
+  detailLastSyncedAt: 'detailLastSyncedAt',
   lastSyncedAt: 'lastSyncedAt',
   syncStatus: 'syncStatus',
+  lastSyncError: 'lastSyncError',
+  summaryName: 'summaryName',
+  summaryArtistType: 'summaryArtistType',
+  summaryAdditionalNames: 'summaryAdditionalNames',
+  summarySourceStatus: 'summarySourceStatus',
+  summarySourceVersion: 'summarySourceVersion',
+  summarySourceDeleted: 'summarySourceDeleted',
+  summaryObservedAt: 'summaryObservedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type ArtistScalarFieldEnum = (typeof ArtistScalarFieldEnum)[keyof typeof ArtistScalarFieldEnum]
+
+
+export const ArtistNameScalarFieldEnum = {
+  id: 'id',
+  artistId: 'artistId',
+  language: 'language',
+  value: 'value',
+  position: 'position'
+} as const
+
+export type ArtistNameScalarFieldEnum = (typeof ArtistNameScalarFieldEnum)[keyof typeof ArtistNameScalarFieldEnum]
+
+
+export const ArtistWebLinkScalarFieldEnum = {
+  id: 'id',
+  artistId: 'artistId',
+  vocadbId: 'vocadbId',
+  url: 'url',
+  description: 'description',
+  category: 'category',
+  disabled: 'disabled',
+  position: 'position'
+} as const
+
+export type ArtistWebLinkScalarFieldEnum = (typeof ArtistWebLinkScalarFieldEnum)[keyof typeof ArtistWebLinkScalarFieldEnum]
 
 
 export const SongArtistCreditScalarFieldEnum = {
@@ -203,6 +252,7 @@ export type SongPVScalarFieldEnum = (typeof SongPVScalarFieldEnum)[keyof typeof 
 export const SyncRunScalarFieldEnum = {
   id: 'id',
   sequence: 'sequence',
+  entity: 'entity',
   mode: 'mode',
   status: 'status',
   startedAt: 'startedAt',
@@ -211,6 +261,7 @@ export const SyncRunScalarFieldEnum = {
   activityWindowStart: 'activityWindowStart',
   activityWindowEnd: 'activityWindowEnd',
   baselineAt: 'baselineAt',
+  refreshCutoffAt: 'refreshCutoffAt',
   expectedStateVersion: 'expectedStateVersion',
   sourceIdCount: 'sourceIdCount',
   sourceIdDigest: 'sourceIdDigest',

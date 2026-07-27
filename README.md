@@ -14,13 +14,12 @@
 - 歌曲、标题、artist credits、Artists、Tags、PVs 和同步记录幂等写入。
 - 歌曲目录、基础搜索、最新/热门排序、分页与歌曲详情。
 - 歌曲卡片与详情封面、公开 PV 缩略图展示；远程图片失败时保留稳定占位。
-- 作者详情和分页作品列表；作者资料来自已同步歌曲中的结构化 credit。
+- 作者详情和分页作品列表；作者 profile 可由独立 VocaDB detail refresh 补充别名、简介、头像和公开外链。
 - 单元测试和真实 PostgreSQL 集成测试。
 
 尚未实现：
 
 - 定时任务和部署级 worker service。
-- 独立 VocaDB artist detail 同步、作者简介、别名、头像或社交链接。
 - 图片服务端代理、对象存储或 CDN 持久缓存。
 - 作者索引、独立跨歌曲/作者/标签的全站搜索。
 - Auth.js、收藏、歌单、Redis、推荐、评论、投稿或 AI 功能。
@@ -66,7 +65,18 @@ npm run sync:vocadb -- ids --ids=121,1477,4904,25430
 npm run sync:vocadb -- resume
 ```
 
-所有 mode 都必须显式指定。`incremental` 要求至少一次成功 seed；`resume` 只处理 durable manifest 中未完成的 item。`auto` 遇到多个 `RUNNING` run 时 fail closed，需 operator 处理。命令返回非零表示 run 未完全成功或配置/并发锁失败。同步完成后启动：
+所有 mode 都必须显式指定。`incremental` 要求至少一次成功 seed；`resume` 只处理 durable manifest 中未完成的 item。`auto` 遇到多个同 entity 的 `RUNNING` run 时 fail closed，需 operator 处理。命令返回非零表示 run 未完全成功或配置/并发锁失败。
+
+独立 artist detail 只刷新已由结构化歌曲 credit 建立、且至少关联一首本地公开歌曲的 Artist；不会导入 VocaDB 全站 artist，也不会为 custom credit 创建 Artist。首次回填和每日错峰刷新：
+
+```bash
+npm run sync:vocadb -- artists refresh
+npm run sync:vocadb -- artists auto refresh
+```
+
+也可通过 `artists ids --ids=100,200` 刷新已存在的 source ID，或用 `artists resume` 恢复中断 manifest。默认刷新间隔为 7 天（`VOCADB_ARTIST_REFRESH_INTERVAL_MS=604800000`）；never-synced、FAILED、summary version/status 已变化和 stale profile 会进入 immutable manifest。建议每日运行 `artists auto refresh`，并与 song incremental/reconcile 错峰；全局 advisory lock 仍串行化所有 VocaDB worker。
+
+同步完成后启动：
 
 ```bash
 npm run dev
@@ -100,11 +110,12 @@ seed 成功后再启用外部 scheduler。单机 cron、systemd timer 或托管 
 ```bash
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker auto incremental
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker auto reconcile
+docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker artists auto refresh
 ```
 
-建议 incremental 每 15 分钟，reconcile 每日低峰运行；seed 只用于首次部署或人工重建 baseline。scheduler 应禁止重叠，但 PostgreSQL advisory lock 仍是跨 scheduler 的最终保护。worker 收到 `SIGTERM`/`SIGINT` 后停止领取新 item、取消 HTTP 等待、等所有 lane 收束再释放 DB 连接；未完成 item 保持 `PENDING`，run 保持 `RUNNING`，下次 `auto` 恢复。容器至少保留 60 秒 termination grace period。
+建议 incremental 每 15 分钟，reconcile 每日低峰运行，artist refresh 每日错峰调用；seed 只用于首次部署或人工重建 baseline。scheduler 应禁止重叠，但 PostgreSQL advisory lock 仍是所有 VocaDB worker 的最终保护。worker 收到 `SIGTERM`/`SIGINT` 后停止领取新 item、取消 HTTP 等待、等所有 lane 收束再释放 DB 连接；未完成 item 保持 `PENDING`，run 保持 `RUNNING`，下次对应 entity 的 `auto` 恢复。容器至少保留 60 秒 termination grace period。
 
-发布新版本时先暂停 scheduler 并等待 active worker 退出，再运行 `migrate`、部署 `app`，最后恢复 scheduler；advisory lock 不负责协调 migration。多个 `RUNNING` run 表示状态歧义，worker 会拒绝自动恢复；应先检查 `SyncRun`/`SyncItem`。`PARTIAL`/`FAILED` run 已终结，需根据 item error 修复后发起新 run。`ACTIVITY_INTERVAL_SATURATED` 需重新执行完整 seed。production app 不接收 `VOCADB_*`，且 lint 禁止请求路径导入 VocaDB 模块。
+发布新版本时先暂停 scheduler 并等待 active worker 退出，再运行 `migrate`、部署 `app`，最后恢复 scheduler；advisory lock 不负责协调 migration。同一 entity 出现多个 `RUNNING` run 表示状态歧义，对应 worker 会拒绝自动恢复；应先检查 `SyncRun`/`SyncItem`。`PARTIAL`/`FAILED` run 已终结，需根据 item error 修复后发起新 run。`ACTIVITY_INTERVAL_SATURATED` 需重新执行完整 song seed。production app 不接收 `VOCADB_*`，且 lint 禁止请求路径导入 VocaDB 模块。
 
 ### 生产索引 migration
 
@@ -179,7 +190,8 @@ GET /api/artists/{localUuid}/songs?page=1&pageSize=24&sort=latest
 
 - `Song`：本地 UUID、VocaDB 来源 ID、展示字段、来源和同步状态。
 - `SongName`：多语言标题。
-- `Artist`：从歌曲 credit 中同步的结构化作者概要。
+- `Artist`：从歌曲 credit 建立的结构化作者；独立 detail refresh 保存 canonical 名称、简介、头像、source lifecycle 和 summary observation。
+- `ArtistName` / `ArtistWebLink`：作者多语言别名与来源外链；disabled 或不安全 URL 不进入公开 DTO。
 - `SongArtistCredit`：歌曲署名、roles/categories、support/custom 标记；`artistId` 可空。
 - `Tag` / `SongTag`：标签及歌曲关系。
 - `SongPV`：外部播放入口。
@@ -206,13 +218,18 @@ GET /api/artists/{localUuid}/songs?page=1&pageSize=24&sort=latest
 - `sourceUpdatedAt` 只保存可信上游更新时间；本地抓取时间使用 `lastSyncedAt`。
 - 上游枚举/flags 以字符串/字符串数组保存，允许新增值。
 - Custom artist credit 即使没有 Artist 实体也保留。
+- artist detail refresh 只从本地已知、关联公开歌曲的 Artist 建 manifest；不调用 artist inventory。成功响应原子替换 canonical aliases/description/avatar/links；临时失败保留最后成功资料并保持 `FAILED` snapshot 可公开，404/deleted/merged 隐藏但不改 local UUID、不自动迁移 credit。
+- song detail 中的 embedded artist summary 只负责首次建立 fallback snapshot，并持续写入 `summary*` observation；Artist 已存在后不覆盖独立 detail 的 canonical fields 或 sync state。
+- 作者头像与 web link 只保留无 credentials 的 HTTP/HTTPS URL；disabled link 保存在本地 snapshot 但不公开。
 - 仅保留 HTTP/HTTPS PV 与媒体 URL；disabled PV 的播放信息和缩略图均不进入公开详情 API 或页面。
 
 ## 媒体与来源政策
 
-VocalHub 已获得可追溯书面许可，允许展示 VocaDB 提供的歌曲封面、作者头像和 PV 缩略图，并允许热链、服务端代理与持久缓存；许可原件不提交到公开仓库。当前版本只展示已有可靠字段：歌曲封面与公开 PV 缩略图。作者头像要等独立 artist detail 同步提供可信字段后再实现。
+VocalHub 已获得可追溯书面许可，允许展示 VocaDB 提供的歌曲封面、作者头像和 PV 缩略图，并允许热链、服务端代理与持久缓存；许可原件不提交到公开仓库。当前版本展示歌曲封面、公开 PV 缩略图和独立 artist detail 提供的作者头像。
 
 当前页面使用浏览器直连远程图片源，不经过 VocalHub 图片代理、`/_next/image`、对象存储或 CDN 持久缓存。图片元素使用 `referrerPolicy="no-referrer"`，加载失败时显示等尺寸占位；远程主机仍可获得访客 IP、User-Agent 等连接信息。页面 footer 统一标明 VocaDB 来源，歌曲和作者详情继续链接对应原条目，图片权利归各权利人。
+
+作者 detail 可公开四档头像 URL、plain-text description、稳定去重别名和 enabled web links。description 由 React 转义并保留换行，不作为 HTML/Markdown 执行；unsafe/credential-bearing URL 被丢弃，disabled link 不进入 API 或页面。
 
 歌曲列表 DTO 公开 `coverUrlOriginal` 与 `coverUrlThumb`；歌曲详情 DTO 另在公开 PV 中提供 `thumbnailUrl`。这些字段只可能是已规范化的 HTTP/HTTPS URL 或 `null`。disabled PV 的整个记录（包括播放 URL 与缩略图）均不会公开。VocalHub 不复制歌词。
 
@@ -305,7 +322,6 @@ compare 精确删除所有 `bench_` index；paired result digest 不一致时立
 
 ## 路线图
 
-1. 独立同步 artist detail，再扩展作者别名、简介、资料图片和可信头像字段。
-2. 按部署需求评估图片服务端代理、持久缓存与 CDN，而非开放任意 URL 代理。
-3. 接入 Auth.js，设计 User/Favorite/Playlist 模型和功能。
-4. 在真实数据和用户行为基础上评估标签页、推荐、Redis、AI 与社区能力。
+1. 按部署需求评估图片服务端代理、持久缓存与 CDN，而非开放任意 URL 代理。
+2. 接入 Auth.js，设计 User/Favorite/Playlist 模型和功能。
+3. 在真实数据和用户行为基础上评估标签页、推荐、Redis、AI 与社区能力。

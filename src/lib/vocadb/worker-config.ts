@@ -1,3 +1,4 @@
+import { DEFAULT_ARTIST_REFRESH_INTERVAL_MS } from "@/lib/vocadb/artist-sync-runner";
 import {
   VOCADB_BASE_URL,
   VOCADB_TIMEOUT_MS,
@@ -24,6 +25,7 @@ export type VocaDbWorkerConfig = {
   timeoutMs: number;
   activityOverlapMs: number;
   settlementLagMs: number;
+  artistRefreshIntervalMs: number;
   concurrency: number;
 };
 
@@ -75,6 +77,13 @@ export function parseVocaDbWorkerConfig(
       "VOCADB_SETTLEMENT_LAG_MS",
       DEFAULT_SETTLEMENT_LAG_MS,
       0,
+    ),
+    artistRefreshIntervalMs: parseInteger(
+      environment.VOCADB_ARTIST_REFRESH_INTERVAL_MS,
+      "VOCADB_ARTIST_REFRESH_INTERVAL_MS",
+      DEFAULT_ARTIST_REFRESH_INTERVAL_MS,
+      0,
+      MAX_TIMER_DELAY_MS,
     ),
     concurrency: parseInteger(
       environment.VOCADB_SYNC_CONCURRENCY,

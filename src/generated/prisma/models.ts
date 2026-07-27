@@ -11,6 +11,8 @@
 export type * from './models/Song'
 export type * from './models/SongName'
 export type * from './models/Artist'
+export type * from './models/ArtistName'
+export type * from './models/ArtistWebLink'
 export type * from './models/SongArtistCredit'
 export type * from './models/Tag'
 export type * from './models/SongTag'

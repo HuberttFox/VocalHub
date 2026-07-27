@@ -3,6 +3,7 @@ import pg from "pg";
 import { SyncRunMode } from "../src/generated/prisma/enums";
 import { getDb } from "../src/lib/db";
 import { VocaDbClient } from "../src/lib/vocadb/client";
+import { runVocaDbArtistSync } from "../src/lib/vocadb/artist-sync-runner";
 import {
   isVocaDbCancellation,
   VocaDbCancellationError,
@@ -17,7 +18,7 @@ import { parseVocaDbWorkerConfig } from "../src/lib/vocadb/worker-config";
 const ADVISORY_LOCK_KEY = 8_621_427_941;
 
 async function main() {
-  const request = toRunnerRequest(parseSyncArgs(process.argv.slice(2)));
+  const parsedRequest = parseSyncArgs(process.argv.slice(2));
   const config = parseVocaDbWorkerConfig(process.env);
   process.env.DATABASE_URL = config.connectionString;
   const shutdown = new AbortController();
@@ -45,18 +46,27 @@ async function main() {
 
     const db = getDb();
     try {
-      const result = await runVocaDbSongSync(request, {
+      const client = new VocaDbClient({
+        baseUrl: config.baseUrl,
+        userAgent: config.userAgent,
+        timeoutMs: config.timeoutMs,
+      });
+      const common = {
         db,
-        client: new VocaDbClient({
-          baseUrl: config.baseUrl,
-          userAgent: config.userAgent,
-          timeoutMs: config.timeoutMs,
-        }),
-        activityOverlapMs: config.activityOverlapMs,
-        settlementLagMs: config.settlementLagMs,
+        client,
         concurrency: config.concurrency,
         signal: shutdown.signal,
-      });
+      };
+      const result = "entity" in parsedRequest
+        ? await runVocaDbArtistSync(toArtistRunnerRequest(parsedRequest), {
+            ...common,
+            refreshIntervalMs: config.artistRefreshIntervalMs,
+          })
+        : await runVocaDbSongSync(toRunnerRequest(parsedRequest), {
+            ...common,
+            activityOverlapMs: config.activityOverlapMs,
+            settlementLagMs: config.settlementLagMs,
+          });
 
       console.log(
         `Sync run ${result.runId}: ${result.status} (${result.successCount} succeeded, ${result.failureCount} failed)`,
@@ -78,7 +88,9 @@ async function main() {
   }
 }
 
-function toRunnerRequest(request: ReturnType<typeof parseSyncArgs>): SyncRunRequest {
+function toRunnerRequest(
+  request: Exclude<ReturnType<typeof parseSyncArgs>, { entity: "ARTIST" }>,
+): SyncRunRequest {
   if (request.mode === "RESUME") return { mode: "RESUME" };
   if (request.mode === "AUTO") {
     return { mode: "AUTO", target: request.target };
@@ -87,6 +99,15 @@ function toRunnerRequest(request: ReturnType<typeof parseSyncArgs>): SyncRunRequ
     return { mode: SyncRunMode.IDS, ids: request.ids };
   }
   return { mode: request.mode };
+}
+
+function toArtistRunnerRequest(
+  request: Extract<ReturnType<typeof parseSyncArgs>, { entity: "ARTIST" }>,
+) {
+  if (request.mode === "IDS") return { mode: SyncRunMode.IDS, ids: request.ids } as const;
+  if (request.mode === "AUTO") return { mode: "AUTO", target: SyncRunMode.REFRESH } as const;
+  if (request.mode === "RESUME") return { mode: "RESUME" } as const;
+  return { mode: SyncRunMode.REFRESH } as const;
 }
 
 main().catch((error) => {

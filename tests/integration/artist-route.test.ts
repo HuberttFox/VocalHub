@@ -5,9 +5,11 @@ import { PrismaClient } from "@/generated/prisma/client";
 import { SyncStatus } from "@/generated/prisma/enums";
 import { GET as getArtist } from "@/app/api/artists/[id]/route";
 import { GET as getWorks } from "@/app/api/artists/[id]/songs/route";
-import { normalizeVocaDbSong } from "@/lib/vocadb/normalize";
+import { normalizeVocaDbArtist, normalizeVocaDbSong } from "@/lib/vocadb/normalize";
+import { syncVocaDbArtistDetail } from "@/lib/vocadb/sync-artist";
 import { syncVocaDbSong } from "@/lib/vocadb/sync-song";
-import { vocaDbSongSchema } from "@/lib/vocadb/contract";
+import { vocaDbArtistDetailSchema, vocaDbSongSchema } from "@/lib/vocadb/contract";
+import { makeVocaDbArtistFixture } from "../fixtures/vocadb/artist";
 import { vocaDbSongFixture } from "../fixtures/vocadb/song";
 
 const connectionString =
@@ -26,6 +28,8 @@ beforeEach(async () => {
   await db.songPV.deleteMany();
   await db.songTag.deleteMany();
   await db.tag.deleteMany();
+  await db.artistWebLink.deleteMany();
+  await db.artistName.deleteMany();
   await db.songArtistCredit.deleteMany();
   await db.artist.deleteMany();
   await db.songName.deleteMany();
@@ -83,8 +87,36 @@ describe("artist APIs", () => {
     });
     expect(payload).not.toHaveProperty("syncStatus");
     expect(payload).not.toHaveProperty("biography");
-    expect(payload).not.toHaveProperty("avatar");
+    expect(payload.avatar).toBeNull();
     expect(payload).not.toHaveProperty("avatarUrl");
+  });
+
+  it("returns independently synchronized profile fields and filters disabled links", async () => {
+    const { artist } = await seed();
+    await syncVocaDbArtistDetail(
+      db,
+      normalizeVocaDbArtist(
+        vocaDbArtistDetailSchema.parse(makeVocaDbArtistFixture()),
+      ),
+    );
+
+    const response = await artistRequest(artist.id);
+    const payload = await response.json();
+    expect(response.status).toBe(200);
+    expect(payload).toMatchObject({
+      defaultName: "Producer",
+      description: "Independent artist description.\nSecond line.",
+      aliases: expect.arrayContaining([
+        { language: "Japanese", value: "制作者" },
+        { language: null, value: "Producer Alias" },
+      ]),
+      avatar: { urlOriginal: "https://example.test/artist.png" },
+      webLinks: [
+        expect.objectContaining({ description: "Official site" }),
+      ],
+    });
+    expect(payload.webLinks).toHaveLength(1);
+    expect(payload).not.toHaveProperty("lastSyncError");
   });
 
   it("returns paginated works and target credit context", async () => {
@@ -165,6 +197,20 @@ describe("artist APIs", () => {
     const works = await worksRequest(artist.id);
     expect(works.status).toBe(200);
     expect((await works.json()).pagination.totalItems).toBe(1);
+  });
+
+  it("hides deleted or merged artist profiles", async () => {
+    const { artist } = await seed();
+    await syncVocaDbArtistDetail(
+      db,
+      normalizeVocaDbArtist(
+        vocaDbArtistDetailSchema.parse(
+          makeVocaDbArtistFixture({ deleted: true, mergedTo: 101 }),
+        ),
+      ),
+    );
+    expect((await artistRequest(artist.id)).status).toBe(404);
+    expect((await worksRequest(artist.id)).status).toBe(404);
   });
 
   it("returns an empty out-of-range page with stable totals", async () => {

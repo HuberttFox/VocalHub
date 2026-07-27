@@ -29,24 +29,48 @@ export type AggregateArtist = {
 export type ArtistAvgAggregateOutputType = {
   vocadbId: number | null
   sourceVersion: number | null
+  mergedToVocaDbId: number | null
+  summarySourceVersion: number | null
 }
 
 export type ArtistSumAggregateOutputType = {
   vocadbId: number | null
   sourceVersion: number | null
+  mergedToVocaDbId: number | null
+  summarySourceVersion: number | null
 }
 
 export type ArtistMinAggregateOutputType = {
   id: string | null
   vocadbId: number | null
   name: string | null
+  defaultName: string | null
+  defaultNameLanguage: string | null
+  description: string | null
   artistType: string | null
   sourceStatus: string | null
   sourceVersion: number | null
   sourceDeleted: boolean | null
+  sourceCreatedAt: Date | null
+  releaseDate: Date | null
   sourceUpdatedAt: Date | null
+  mergedToVocaDbId: number | null
+  pictureMime: string | null
+  pictureUrlOriginal: string | null
+  pictureUrlThumb: string | null
+  pictureUrlSmallThumb: string | null
+  pictureUrlTinyThumb: string | null
+  detailLastAttemptAt: Date | null
+  detailLastSyncedAt: Date | null
   lastSyncedAt: Date | null
   syncStatus: $Enums.SyncStatus | null
+  lastSyncError: string | null
+  summaryName: string | null
+  summaryArtistType: string | null
+  summarySourceStatus: string | null
+  summarySourceVersion: number | null
+  summarySourceDeleted: boolean | null
+  summaryObservedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -55,13 +79,33 @@ export type ArtistMaxAggregateOutputType = {
   id: string | null
   vocadbId: number | null
   name: string | null
+  defaultName: string | null
+  defaultNameLanguage: string | null
+  description: string | null
   artistType: string | null
   sourceStatus: string | null
   sourceVersion: number | null
   sourceDeleted: boolean | null
+  sourceCreatedAt: Date | null
+  releaseDate: Date | null
   sourceUpdatedAt: Date | null
+  mergedToVocaDbId: number | null
+  pictureMime: string | null
+  pictureUrlOriginal: string | null
+  pictureUrlThumb: string | null
+  pictureUrlSmallThumb: string | null
+  pictureUrlTinyThumb: string | null
+  detailLastAttemptAt: Date | null
+  detailLastSyncedAt: Date | null
   lastSyncedAt: Date | null
   syncStatus: $Enums.SyncStatus | null
+  lastSyncError: string | null
+  summaryName: string | null
+  summaryArtistType: string | null
+  summarySourceStatus: string | null
+  summarySourceVersion: number | null
+  summarySourceDeleted: boolean | null
+  summaryObservedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -70,13 +114,35 @@ export type ArtistCountAggregateOutputType = {
   id: number
   vocadbId: number
   name: number
+  defaultName: number
+  defaultNameLanguage: number
+  additionalNames: number
+  description: number
   artistType: number
   sourceStatus: number
   sourceVersion: number
   sourceDeleted: number
+  sourceCreatedAt: number
+  releaseDate: number
   sourceUpdatedAt: number
+  mergedToVocaDbId: number
+  pictureMime: number
+  pictureUrlOriginal: number
+  pictureUrlThumb: number
+  pictureUrlSmallThumb: number
+  pictureUrlTinyThumb: number
+  detailLastAttemptAt: number
+  detailLastSyncedAt: number
   lastSyncedAt: number
   syncStatus: number
+  lastSyncError: number
+  summaryName: number
+  summaryArtistType: number
+  summaryAdditionalNames: number
+  summarySourceStatus: number
+  summarySourceVersion: number
+  summarySourceDeleted: number
+  summaryObservedAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -86,24 +152,48 @@ export type ArtistCountAggregateOutputType = {
 export type ArtistAvgAggregateInputType = {
   vocadbId?: true
   sourceVersion?: true
+  mergedToVocaDbId?: true
+  summarySourceVersion?: true
 }
 
 export type ArtistSumAggregateInputType = {
   vocadbId?: true
   sourceVersion?: true
+  mergedToVocaDbId?: true
+  summarySourceVersion?: true
 }
 
 export type ArtistMinAggregateInputType = {
   id?: true
   vocadbId?: true
   name?: true
+  defaultName?: true
+  defaultNameLanguage?: true
+  description?: true
   artistType?: true
   sourceStatus?: true
   sourceVersion?: true
   sourceDeleted?: true
+  sourceCreatedAt?: true
+  releaseDate?: true
   sourceUpdatedAt?: true
+  mergedToVocaDbId?: true
+  pictureMime?: true
+  pictureUrlOriginal?: true
+  pictureUrlThumb?: true
+  pictureUrlSmallThumb?: true
+  pictureUrlTinyThumb?: true
+  detailLastAttemptAt?: true
+  detailLastSyncedAt?: true
   lastSyncedAt?: true
   syncStatus?: true
+  lastSyncError?: true
+  summaryName?: true
+  summaryArtistType?: true
+  summarySourceStatus?: true
+  summarySourceVersion?: true
+  summarySourceDeleted?: true
+  summaryObservedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -112,13 +202,33 @@ export type ArtistMaxAggregateInputType = {
   id?: true
   vocadbId?: true
   name?: true
+  defaultName?: true
+  defaultNameLanguage?: true
+  description?: true
   artistType?: true
   sourceStatus?: true
   sourceVersion?: true
   sourceDeleted?: true
+  sourceCreatedAt?: true
+  releaseDate?: true
   sourceUpdatedAt?: true
+  mergedToVocaDbId?: true
+  pictureMime?: true
+  pictureUrlOriginal?: true
+  pictureUrlThumb?: true
+  pictureUrlSmallThumb?: true
+  pictureUrlTinyThumb?: true
+  detailLastAttemptAt?: true
+  detailLastSyncedAt?: true
   lastSyncedAt?: true
   syncStatus?: true
+  lastSyncError?: true
+  summaryName?: true
+  summaryArtistType?: true
+  summarySourceStatus?: true
+  summarySourceVersion?: true
+  summarySourceDeleted?: true
+  summaryObservedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -127,13 +237,35 @@ export type ArtistCountAggregateInputType = {
   id?: true
   vocadbId?: true
   name?: true
+  defaultName?: true
+  defaultNameLanguage?: true
+  additionalNames?: true
+  description?: true
   artistType?: true
   sourceStatus?: true
   sourceVersion?: true
   sourceDeleted?: true
+  sourceCreatedAt?: true
+  releaseDate?: true
   sourceUpdatedAt?: true
+  mergedToVocaDbId?: true
+  pictureMime?: true
+  pictureUrlOriginal?: true
+  pictureUrlThumb?: true
+  pictureUrlSmallThumb?: true
+  pictureUrlTinyThumb?: true
+  detailLastAttemptAt?: true
+  detailLastSyncedAt?: true
   lastSyncedAt?: true
   syncStatus?: true
+  lastSyncError?: true
+  summaryName?: true
+  summaryArtistType?: true
+  summaryAdditionalNames?: true
+  summarySourceStatus?: true
+  summarySourceVersion?: true
+  summarySourceDeleted?: true
+  summaryObservedAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -229,13 +361,35 @@ export type ArtistGroupByOutputType = {
   id: string
   vocadbId: number
   name: string
+  defaultName: string
+  defaultNameLanguage: string
+  additionalNames: string[]
+  description: string | null
   artistType: string
   sourceStatus: string
   sourceVersion: number
   sourceDeleted: boolean
+  sourceCreatedAt: Date | null
+  releaseDate: Date | null
   sourceUpdatedAt: Date | null
+  mergedToVocaDbId: number | null
+  pictureMime: string | null
+  pictureUrlOriginal: string | null
+  pictureUrlThumb: string | null
+  pictureUrlSmallThumb: string | null
+  pictureUrlTinyThumb: string | null
+  detailLastAttemptAt: Date | null
+  detailLastSyncedAt: Date | null
   lastSyncedAt: Date | null
   syncStatus: $Enums.SyncStatus
+  lastSyncError: string | null
+  summaryName: string
+  summaryArtistType: string
+  summaryAdditionalNames: string[]
+  summarySourceStatus: string
+  summarySourceVersion: number
+  summarySourceDeleted: boolean
+  summaryObservedAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: ArtistCountAggregateOutputType | null
@@ -267,15 +421,39 @@ export type ArtistWhereInput = {
   id?: Prisma.UuidFilter<"Artist"> | string
   vocadbId?: Prisma.IntFilter<"Artist"> | number
   name?: Prisma.StringFilter<"Artist"> | string
+  defaultName?: Prisma.StringFilter<"Artist"> | string
+  defaultNameLanguage?: Prisma.StringFilter<"Artist"> | string
+  additionalNames?: Prisma.StringNullableListFilter<"Artist">
+  description?: Prisma.StringNullableFilter<"Artist"> | string | null
   artistType?: Prisma.StringFilter<"Artist"> | string
   sourceStatus?: Prisma.StringFilter<"Artist"> | string
   sourceVersion?: Prisma.IntFilter<"Artist"> | number
   sourceDeleted?: Prisma.BoolFilter<"Artist"> | boolean
+  sourceCreatedAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
+  releaseDate?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
   sourceUpdatedAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
+  mergedToVocaDbId?: Prisma.IntNullableFilter<"Artist"> | number | null
+  pictureMime?: Prisma.StringNullableFilter<"Artist"> | string | null
+  pictureUrlOriginal?: Prisma.StringNullableFilter<"Artist"> | string | null
+  pictureUrlThumb?: Prisma.StringNullableFilter<"Artist"> | string | null
+  pictureUrlSmallThumb?: Prisma.StringNullableFilter<"Artist"> | string | null
+  pictureUrlTinyThumb?: Prisma.StringNullableFilter<"Artist"> | string | null
+  detailLastAttemptAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
+  detailLastSyncedAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
   lastSyncedAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
   syncStatus?: Prisma.EnumSyncStatusFilter<"Artist"> | $Enums.SyncStatus
+  lastSyncError?: Prisma.StringNullableFilter<"Artist"> | string | null
+  summaryName?: Prisma.StringFilter<"Artist"> | string
+  summaryArtistType?: Prisma.StringFilter<"Artist"> | string
+  summaryAdditionalNames?: Prisma.StringNullableListFilter<"Artist">
+  summarySourceStatus?: Prisma.StringFilter<"Artist"> | string
+  summarySourceVersion?: Prisma.IntFilter<"Artist"> | number
+  summarySourceDeleted?: Prisma.BoolFilter<"Artist"> | boolean
+  summaryObservedAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Artist"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Artist"> | Date | string
+  names?: Prisma.ArtistNameListRelationFilter
+  webLinks?: Prisma.ArtistWebLinkListRelationFilter
   songCredits?: Prisma.SongArtistCreditListRelationFilter
 }
 
@@ -283,15 +461,39 @@ export type ArtistOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   vocadbId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  defaultName?: Prisma.SortOrder
+  defaultNameLanguage?: Prisma.SortOrder
+  additionalNames?: Prisma.SortOrder
+  description?: Prisma.SortOrderInput | Prisma.SortOrder
   artistType?: Prisma.SortOrder
   sourceStatus?: Prisma.SortOrder
   sourceVersion?: Prisma.SortOrder
   sourceDeleted?: Prisma.SortOrder
+  sourceCreatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  releaseDate?: Prisma.SortOrderInput | Prisma.SortOrder
   sourceUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  mergedToVocaDbId?: Prisma.SortOrderInput | Prisma.SortOrder
+  pictureMime?: Prisma.SortOrderInput | Prisma.SortOrder
+  pictureUrlOriginal?: Prisma.SortOrderInput | Prisma.SortOrder
+  pictureUrlThumb?: Prisma.SortOrderInput | Prisma.SortOrder
+  pictureUrlSmallThumb?: Prisma.SortOrderInput | Prisma.SortOrder
+  pictureUrlTinyThumb?: Prisma.SortOrderInput | Prisma.SortOrder
+  detailLastAttemptAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  detailLastSyncedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSyncedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   syncStatus?: Prisma.SortOrder
+  lastSyncError?: Prisma.SortOrderInput | Prisma.SortOrder
+  summaryName?: Prisma.SortOrder
+  summaryArtistType?: Prisma.SortOrder
+  summaryAdditionalNames?: Prisma.SortOrder
+  summarySourceStatus?: Prisma.SortOrder
+  summarySourceVersion?: Prisma.SortOrder
+  summarySourceDeleted?: Prisma.SortOrder
+  summaryObservedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  names?: Prisma.ArtistNameOrderByRelationAggregateInput
+  webLinks?: Prisma.ArtistWebLinkOrderByRelationAggregateInput
   songCredits?: Prisma.SongArtistCreditOrderByRelationAggregateInput
 }
 
@@ -302,15 +504,39 @@ export type ArtistWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.ArtistWhereInput[]
   NOT?: Prisma.ArtistWhereInput | Prisma.ArtistWhereInput[]
   name?: Prisma.StringFilter<"Artist"> | string
+  defaultName?: Prisma.StringFilter<"Artist"> | string
+  defaultNameLanguage?: Prisma.StringFilter<"Artist"> | string
+  additionalNames?: Prisma.StringNullableListFilter<"Artist">
+  description?: Prisma.StringNullableFilter<"Artist"> | string | null
   artistType?: Prisma.StringFilter<"Artist"> | string
   sourceStatus?: Prisma.StringFilter<"Artist"> | string
   sourceVersion?: Prisma.IntFilter<"Artist"> | number
   sourceDeleted?: Prisma.BoolFilter<"Artist"> | boolean
+  sourceCreatedAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
+  releaseDate?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
   sourceUpdatedAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
+  mergedToVocaDbId?: Prisma.IntNullableFilter<"Artist"> | number | null
+  pictureMime?: Prisma.StringNullableFilter<"Artist"> | string | null
+  pictureUrlOriginal?: Prisma.StringNullableFilter<"Artist"> | string | null
+  pictureUrlThumb?: Prisma.StringNullableFilter<"Artist"> | string | null
+  pictureUrlSmallThumb?: Prisma.StringNullableFilter<"Artist"> | string | null
+  pictureUrlTinyThumb?: Prisma.StringNullableFilter<"Artist"> | string | null
+  detailLastAttemptAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
+  detailLastSyncedAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
   lastSyncedAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
   syncStatus?: Prisma.EnumSyncStatusFilter<"Artist"> | $Enums.SyncStatus
+  lastSyncError?: Prisma.StringNullableFilter<"Artist"> | string | null
+  summaryName?: Prisma.StringFilter<"Artist"> | string
+  summaryArtistType?: Prisma.StringFilter<"Artist"> | string
+  summaryAdditionalNames?: Prisma.StringNullableListFilter<"Artist">
+  summarySourceStatus?: Prisma.StringFilter<"Artist"> | string
+  summarySourceVersion?: Prisma.IntFilter<"Artist"> | number
+  summarySourceDeleted?: Prisma.BoolFilter<"Artist"> | boolean
+  summaryObservedAt?: Prisma.DateTimeNullableFilter<"Artist"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Artist"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Artist"> | Date | string
+  names?: Prisma.ArtistNameListRelationFilter
+  webLinks?: Prisma.ArtistWebLinkListRelationFilter
   songCredits?: Prisma.SongArtistCreditListRelationFilter
 }, "id" | "vocadbId">
 
@@ -318,13 +544,35 @@ export type ArtistOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   vocadbId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  defaultName?: Prisma.SortOrder
+  defaultNameLanguage?: Prisma.SortOrder
+  additionalNames?: Prisma.SortOrder
+  description?: Prisma.SortOrderInput | Prisma.SortOrder
   artistType?: Prisma.SortOrder
   sourceStatus?: Prisma.SortOrder
   sourceVersion?: Prisma.SortOrder
   sourceDeleted?: Prisma.SortOrder
+  sourceCreatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  releaseDate?: Prisma.SortOrderInput | Prisma.SortOrder
   sourceUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  mergedToVocaDbId?: Prisma.SortOrderInput | Prisma.SortOrder
+  pictureMime?: Prisma.SortOrderInput | Prisma.SortOrder
+  pictureUrlOriginal?: Prisma.SortOrderInput | Prisma.SortOrder
+  pictureUrlThumb?: Prisma.SortOrderInput | Prisma.SortOrder
+  pictureUrlSmallThumb?: Prisma.SortOrderInput | Prisma.SortOrder
+  pictureUrlTinyThumb?: Prisma.SortOrderInput | Prisma.SortOrder
+  detailLastAttemptAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  detailLastSyncedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSyncedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   syncStatus?: Prisma.SortOrder
+  lastSyncError?: Prisma.SortOrderInput | Prisma.SortOrder
+  summaryName?: Prisma.SortOrder
+  summaryArtistType?: Prisma.SortOrder
+  summaryAdditionalNames?: Prisma.SortOrder
+  summarySourceStatus?: Prisma.SortOrder
+  summarySourceVersion?: Prisma.SortOrder
+  summarySourceDeleted?: Prisma.SortOrder
+  summaryObservedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ArtistCountOrderByAggregateInput
@@ -341,13 +589,35 @@ export type ArtistScalarWhereWithAggregatesInput = {
   id?: Prisma.UuidWithAggregatesFilter<"Artist"> | string
   vocadbId?: Prisma.IntWithAggregatesFilter<"Artist"> | number
   name?: Prisma.StringWithAggregatesFilter<"Artist"> | string
+  defaultName?: Prisma.StringWithAggregatesFilter<"Artist"> | string
+  defaultNameLanguage?: Prisma.StringWithAggregatesFilter<"Artist"> | string
+  additionalNames?: Prisma.StringNullableListFilter<"Artist">
+  description?: Prisma.StringNullableWithAggregatesFilter<"Artist"> | string | null
   artistType?: Prisma.StringWithAggregatesFilter<"Artist"> | string
   sourceStatus?: Prisma.StringWithAggregatesFilter<"Artist"> | string
   sourceVersion?: Prisma.IntWithAggregatesFilter<"Artist"> | number
   sourceDeleted?: Prisma.BoolWithAggregatesFilter<"Artist"> | boolean
+  sourceCreatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Artist"> | Date | string | null
+  releaseDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Artist"> | Date | string | null
   sourceUpdatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Artist"> | Date | string | null
+  mergedToVocaDbId?: Prisma.IntNullableWithAggregatesFilter<"Artist"> | number | null
+  pictureMime?: Prisma.StringNullableWithAggregatesFilter<"Artist"> | string | null
+  pictureUrlOriginal?: Prisma.StringNullableWithAggregatesFilter<"Artist"> | string | null
+  pictureUrlThumb?: Prisma.StringNullableWithAggregatesFilter<"Artist"> | string | null
+  pictureUrlSmallThumb?: Prisma.StringNullableWithAggregatesFilter<"Artist"> | string | null
+  pictureUrlTinyThumb?: Prisma.StringNullableWithAggregatesFilter<"Artist"> | string | null
+  detailLastAttemptAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Artist"> | Date | string | null
+  detailLastSyncedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Artist"> | Date | string | null
   lastSyncedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Artist"> | Date | string | null
   syncStatus?: Prisma.EnumSyncStatusWithAggregatesFilter<"Artist"> | $Enums.SyncStatus
+  lastSyncError?: Prisma.StringNullableWithAggregatesFilter<"Artist"> | string | null
+  summaryName?: Prisma.StringWithAggregatesFilter<"Artist"> | string
+  summaryArtistType?: Prisma.StringWithAggregatesFilter<"Artist"> | string
+  summaryAdditionalNames?: Prisma.StringNullableListFilter<"Artist">
+  summarySourceStatus?: Prisma.StringWithAggregatesFilter<"Artist"> | string
+  summarySourceVersion?: Prisma.IntWithAggregatesFilter<"Artist"> | number
+  summarySourceDeleted?: Prisma.BoolWithAggregatesFilter<"Artist"> | boolean
+  summaryObservedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Artist"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Artist"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Artist"> | Date | string
 }
@@ -356,15 +626,39 @@ export type ArtistCreateInput = {
   id?: string
   vocadbId: number
   name: string
+  defaultName: string
+  defaultNameLanguage: string
+  additionalNames?: Prisma.ArtistCreateadditionalNamesInput | string[]
+  description?: string | null
   artistType: string
   sourceStatus: string
   sourceVersion: number
   sourceDeleted?: boolean
+  sourceCreatedAt?: Date | string | null
+  releaseDate?: Date | string | null
   sourceUpdatedAt?: Date | string | null
+  mergedToVocaDbId?: number | null
+  pictureMime?: string | null
+  pictureUrlOriginal?: string | null
+  pictureUrlThumb?: string | null
+  pictureUrlSmallThumb?: string | null
+  pictureUrlTinyThumb?: string | null
+  detailLastAttemptAt?: Date | string | null
+  detailLastSyncedAt?: Date | string | null
   lastSyncedAt?: Date | string | null
   syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  summaryName: string
+  summaryArtistType: string
+  summaryAdditionalNames?: Prisma.ArtistCreatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus: string
+  summarySourceVersion: number
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  names?: Prisma.ArtistNameCreateNestedManyWithoutArtistInput
+  webLinks?: Prisma.ArtistWebLinkCreateNestedManyWithoutArtistInput
   songCredits?: Prisma.SongArtistCreditCreateNestedManyWithoutArtistInput
 }
 
@@ -372,15 +666,39 @@ export type ArtistUncheckedCreateInput = {
   id?: string
   vocadbId: number
   name: string
+  defaultName: string
+  defaultNameLanguage: string
+  additionalNames?: Prisma.ArtistCreateadditionalNamesInput | string[]
+  description?: string | null
   artistType: string
   sourceStatus: string
   sourceVersion: number
   sourceDeleted?: boolean
+  sourceCreatedAt?: Date | string | null
+  releaseDate?: Date | string | null
   sourceUpdatedAt?: Date | string | null
+  mergedToVocaDbId?: number | null
+  pictureMime?: string | null
+  pictureUrlOriginal?: string | null
+  pictureUrlThumb?: string | null
+  pictureUrlSmallThumb?: string | null
+  pictureUrlTinyThumb?: string | null
+  detailLastAttemptAt?: Date | string | null
+  detailLastSyncedAt?: Date | string | null
   lastSyncedAt?: Date | string | null
   syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  summaryName: string
+  summaryArtistType: string
+  summaryAdditionalNames?: Prisma.ArtistCreatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus: string
+  summarySourceVersion: number
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  names?: Prisma.ArtistNameUncheckedCreateNestedManyWithoutArtistInput
+  webLinks?: Prisma.ArtistWebLinkUncheckedCreateNestedManyWithoutArtistInput
   songCredits?: Prisma.SongArtistCreditUncheckedCreateNestedManyWithoutArtistInput
 }
 
@@ -388,15 +706,39 @@ export type ArtistUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  additionalNames?: Prisma.ArtistUpdateadditionalNamesInput | string[]
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   artistType?: Prisma.StringFieldUpdateOperationsInput | string
   sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
   sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergedToVocaDbId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pictureMime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlSmallThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlTinyThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  detailLastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detailLastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summaryName?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryArtistType?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryAdditionalNames?: Prisma.ArtistUpdatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  summarySourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  summarySourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  summaryObservedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  names?: Prisma.ArtistNameUpdateManyWithoutArtistNestedInput
+  webLinks?: Prisma.ArtistWebLinkUpdateManyWithoutArtistNestedInput
   songCredits?: Prisma.SongArtistCreditUpdateManyWithoutArtistNestedInput
 }
 
@@ -404,15 +746,39 @@ export type ArtistUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  additionalNames?: Prisma.ArtistUpdateadditionalNamesInput | string[]
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   artistType?: Prisma.StringFieldUpdateOperationsInput | string
   sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
   sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergedToVocaDbId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pictureMime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlSmallThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlTinyThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  detailLastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detailLastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summaryName?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryArtistType?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryAdditionalNames?: Prisma.ArtistUpdatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  summarySourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  summarySourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  summaryObservedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  names?: Prisma.ArtistNameUncheckedUpdateManyWithoutArtistNestedInput
+  webLinks?: Prisma.ArtistWebLinkUncheckedUpdateManyWithoutArtistNestedInput
   songCredits?: Prisma.SongArtistCreditUncheckedUpdateManyWithoutArtistNestedInput
 }
 
@@ -420,13 +786,35 @@ export type ArtistCreateManyInput = {
   id?: string
   vocadbId: number
   name: string
+  defaultName: string
+  defaultNameLanguage: string
+  additionalNames?: Prisma.ArtistCreateadditionalNamesInput | string[]
+  description?: string | null
   artistType: string
   sourceStatus: string
   sourceVersion: number
   sourceDeleted?: boolean
+  sourceCreatedAt?: Date | string | null
+  releaseDate?: Date | string | null
   sourceUpdatedAt?: Date | string | null
+  mergedToVocaDbId?: number | null
+  pictureMime?: string | null
+  pictureUrlOriginal?: string | null
+  pictureUrlThumb?: string | null
+  pictureUrlSmallThumb?: string | null
+  pictureUrlTinyThumb?: string | null
+  detailLastAttemptAt?: Date | string | null
+  detailLastSyncedAt?: Date | string | null
   lastSyncedAt?: Date | string | null
   syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  summaryName: string
+  summaryArtistType: string
+  summaryAdditionalNames?: Prisma.ArtistCreatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus: string
+  summarySourceVersion: number
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -435,13 +823,35 @@ export type ArtistUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  additionalNames?: Prisma.ArtistUpdateadditionalNamesInput | string[]
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   artistType?: Prisma.StringFieldUpdateOperationsInput | string
   sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
   sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergedToVocaDbId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pictureMime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlSmallThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlTinyThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  detailLastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detailLastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summaryName?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryArtistType?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryAdditionalNames?: Prisma.ArtistUpdatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  summarySourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  summarySourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  summaryObservedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -450,13 +860,35 @@ export type ArtistUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  additionalNames?: Prisma.ArtistUpdateadditionalNamesInput | string[]
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   artistType?: Prisma.StringFieldUpdateOperationsInput | string
   sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
   sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergedToVocaDbId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pictureMime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlSmallThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlTinyThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  detailLastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detailLastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summaryName?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryArtistType?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryAdditionalNames?: Prisma.ArtistUpdatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  summarySourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  summarySourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  summaryObservedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -465,13 +897,35 @@ export type ArtistCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   vocadbId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  defaultName?: Prisma.SortOrder
+  defaultNameLanguage?: Prisma.SortOrder
+  additionalNames?: Prisma.SortOrder
+  description?: Prisma.SortOrder
   artistType?: Prisma.SortOrder
   sourceStatus?: Prisma.SortOrder
   sourceVersion?: Prisma.SortOrder
   sourceDeleted?: Prisma.SortOrder
+  sourceCreatedAt?: Prisma.SortOrder
+  releaseDate?: Prisma.SortOrder
   sourceUpdatedAt?: Prisma.SortOrder
+  mergedToVocaDbId?: Prisma.SortOrder
+  pictureMime?: Prisma.SortOrder
+  pictureUrlOriginal?: Prisma.SortOrder
+  pictureUrlThumb?: Prisma.SortOrder
+  pictureUrlSmallThumb?: Prisma.SortOrder
+  pictureUrlTinyThumb?: Prisma.SortOrder
+  detailLastAttemptAt?: Prisma.SortOrder
+  detailLastSyncedAt?: Prisma.SortOrder
   lastSyncedAt?: Prisma.SortOrder
   syncStatus?: Prisma.SortOrder
+  lastSyncError?: Prisma.SortOrder
+  summaryName?: Prisma.SortOrder
+  summaryArtistType?: Prisma.SortOrder
+  summaryAdditionalNames?: Prisma.SortOrder
+  summarySourceStatus?: Prisma.SortOrder
+  summarySourceVersion?: Prisma.SortOrder
+  summarySourceDeleted?: Prisma.SortOrder
+  summaryObservedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -479,19 +933,41 @@ export type ArtistCountOrderByAggregateInput = {
 export type ArtistAvgOrderByAggregateInput = {
   vocadbId?: Prisma.SortOrder
   sourceVersion?: Prisma.SortOrder
+  mergedToVocaDbId?: Prisma.SortOrder
+  summarySourceVersion?: Prisma.SortOrder
 }
 
 export type ArtistMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   vocadbId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  defaultName?: Prisma.SortOrder
+  defaultNameLanguage?: Prisma.SortOrder
+  description?: Prisma.SortOrder
   artistType?: Prisma.SortOrder
   sourceStatus?: Prisma.SortOrder
   sourceVersion?: Prisma.SortOrder
   sourceDeleted?: Prisma.SortOrder
+  sourceCreatedAt?: Prisma.SortOrder
+  releaseDate?: Prisma.SortOrder
   sourceUpdatedAt?: Prisma.SortOrder
+  mergedToVocaDbId?: Prisma.SortOrder
+  pictureMime?: Prisma.SortOrder
+  pictureUrlOriginal?: Prisma.SortOrder
+  pictureUrlThumb?: Prisma.SortOrder
+  pictureUrlSmallThumb?: Prisma.SortOrder
+  pictureUrlTinyThumb?: Prisma.SortOrder
+  detailLastAttemptAt?: Prisma.SortOrder
+  detailLastSyncedAt?: Prisma.SortOrder
   lastSyncedAt?: Prisma.SortOrder
   syncStatus?: Prisma.SortOrder
+  lastSyncError?: Prisma.SortOrder
+  summaryName?: Prisma.SortOrder
+  summaryArtistType?: Prisma.SortOrder
+  summarySourceStatus?: Prisma.SortOrder
+  summarySourceVersion?: Prisma.SortOrder
+  summarySourceDeleted?: Prisma.SortOrder
+  summaryObservedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -500,13 +976,33 @@ export type ArtistMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   vocadbId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  defaultName?: Prisma.SortOrder
+  defaultNameLanguage?: Prisma.SortOrder
+  description?: Prisma.SortOrder
   artistType?: Prisma.SortOrder
   sourceStatus?: Prisma.SortOrder
   sourceVersion?: Prisma.SortOrder
   sourceDeleted?: Prisma.SortOrder
+  sourceCreatedAt?: Prisma.SortOrder
+  releaseDate?: Prisma.SortOrder
   sourceUpdatedAt?: Prisma.SortOrder
+  mergedToVocaDbId?: Prisma.SortOrder
+  pictureMime?: Prisma.SortOrder
+  pictureUrlOriginal?: Prisma.SortOrder
+  pictureUrlThumb?: Prisma.SortOrder
+  pictureUrlSmallThumb?: Prisma.SortOrder
+  pictureUrlTinyThumb?: Prisma.SortOrder
+  detailLastAttemptAt?: Prisma.SortOrder
+  detailLastSyncedAt?: Prisma.SortOrder
   lastSyncedAt?: Prisma.SortOrder
   syncStatus?: Prisma.SortOrder
+  lastSyncError?: Prisma.SortOrder
+  summaryName?: Prisma.SortOrder
+  summaryArtistType?: Prisma.SortOrder
+  summarySourceStatus?: Prisma.SortOrder
+  summarySourceVersion?: Prisma.SortOrder
+  summarySourceDeleted?: Prisma.SortOrder
+  summaryObservedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -514,11 +1010,64 @@ export type ArtistMinOrderByAggregateInput = {
 export type ArtistSumOrderByAggregateInput = {
   vocadbId?: Prisma.SortOrder
   sourceVersion?: Prisma.SortOrder
+  mergedToVocaDbId?: Prisma.SortOrder
+  summarySourceVersion?: Prisma.SortOrder
+}
+
+export type ArtistScalarRelationFilter = {
+  is?: Prisma.ArtistWhereInput
+  isNot?: Prisma.ArtistWhereInput
 }
 
 export type ArtistNullableScalarRelationFilter = {
   is?: Prisma.ArtistWhereInput | null
   isNot?: Prisma.ArtistWhereInput | null
+}
+
+export type ArtistCreateadditionalNamesInput = {
+  set: string[]
+}
+
+export type ArtistCreatesummaryAdditionalNamesInput = {
+  set: string[]
+}
+
+export type ArtistUpdateadditionalNamesInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type ArtistUpdatesummaryAdditionalNamesInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type ArtistCreateNestedOneWithoutNamesInput = {
+  create?: Prisma.XOR<Prisma.ArtistCreateWithoutNamesInput, Prisma.ArtistUncheckedCreateWithoutNamesInput>
+  connectOrCreate?: Prisma.ArtistCreateOrConnectWithoutNamesInput
+  connect?: Prisma.ArtistWhereUniqueInput
+}
+
+export type ArtistUpdateOneRequiredWithoutNamesNestedInput = {
+  create?: Prisma.XOR<Prisma.ArtistCreateWithoutNamesInput, Prisma.ArtistUncheckedCreateWithoutNamesInput>
+  connectOrCreate?: Prisma.ArtistCreateOrConnectWithoutNamesInput
+  upsert?: Prisma.ArtistUpsertWithoutNamesInput
+  connect?: Prisma.ArtistWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ArtistUpdateToOneWithWhereWithoutNamesInput, Prisma.ArtistUpdateWithoutNamesInput>, Prisma.ArtistUncheckedUpdateWithoutNamesInput>
+}
+
+export type ArtistCreateNestedOneWithoutWebLinksInput = {
+  create?: Prisma.XOR<Prisma.ArtistCreateWithoutWebLinksInput, Prisma.ArtistUncheckedCreateWithoutWebLinksInput>
+  connectOrCreate?: Prisma.ArtistCreateOrConnectWithoutWebLinksInput
+  connect?: Prisma.ArtistWhereUniqueInput
+}
+
+export type ArtistUpdateOneRequiredWithoutWebLinksNestedInput = {
+  create?: Prisma.XOR<Prisma.ArtistCreateWithoutWebLinksInput, Prisma.ArtistUncheckedCreateWithoutWebLinksInput>
+  connectOrCreate?: Prisma.ArtistCreateOrConnectWithoutWebLinksInput
+  upsert?: Prisma.ArtistUpsertWithoutWebLinksInput
+  connect?: Prisma.ArtistWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ArtistUpdateToOneWithWhereWithoutWebLinksInput, Prisma.ArtistUpdateWithoutWebLinksInput>, Prisma.ArtistUncheckedUpdateWithoutWebLinksInput>
 }
 
 export type ArtistCreateNestedOneWithoutSongCreditsInput = {
@@ -537,34 +1086,426 @@ export type ArtistUpdateOneWithoutSongCreditsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ArtistUpdateToOneWithWhereWithoutSongCreditsInput, Prisma.ArtistUpdateWithoutSongCreditsInput>, Prisma.ArtistUncheckedUpdateWithoutSongCreditsInput>
 }
 
-export type ArtistCreateWithoutSongCreditsInput = {
+export type ArtistCreateWithoutNamesInput = {
   id?: string
   vocadbId: number
   name: string
+  defaultName: string
+  defaultNameLanguage: string
+  additionalNames?: Prisma.ArtistCreateadditionalNamesInput | string[]
+  description?: string | null
   artistType: string
   sourceStatus: string
   sourceVersion: number
   sourceDeleted?: boolean
+  sourceCreatedAt?: Date | string | null
+  releaseDate?: Date | string | null
   sourceUpdatedAt?: Date | string | null
+  mergedToVocaDbId?: number | null
+  pictureMime?: string | null
+  pictureUrlOriginal?: string | null
+  pictureUrlThumb?: string | null
+  pictureUrlSmallThumb?: string | null
+  pictureUrlTinyThumb?: string | null
+  detailLastAttemptAt?: Date | string | null
+  detailLastSyncedAt?: Date | string | null
   lastSyncedAt?: Date | string | null
   syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  summaryName: string
+  summaryArtistType: string
+  summaryAdditionalNames?: Prisma.ArtistCreatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus: string
+  summarySourceVersion: number
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  webLinks?: Prisma.ArtistWebLinkCreateNestedManyWithoutArtistInput
+  songCredits?: Prisma.SongArtistCreditCreateNestedManyWithoutArtistInput
+}
+
+export type ArtistUncheckedCreateWithoutNamesInput = {
+  id?: string
+  vocadbId: number
+  name: string
+  defaultName: string
+  defaultNameLanguage: string
+  additionalNames?: Prisma.ArtistCreateadditionalNamesInput | string[]
+  description?: string | null
+  artistType: string
+  sourceStatus: string
+  sourceVersion: number
+  sourceDeleted?: boolean
+  sourceCreatedAt?: Date | string | null
+  releaseDate?: Date | string | null
+  sourceUpdatedAt?: Date | string | null
+  mergedToVocaDbId?: number | null
+  pictureMime?: string | null
+  pictureUrlOriginal?: string | null
+  pictureUrlThumb?: string | null
+  pictureUrlSmallThumb?: string | null
+  pictureUrlTinyThumb?: string | null
+  detailLastAttemptAt?: Date | string | null
+  detailLastSyncedAt?: Date | string | null
+  lastSyncedAt?: Date | string | null
+  syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  summaryName: string
+  summaryArtistType: string
+  summaryAdditionalNames?: Prisma.ArtistCreatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus: string
+  summarySourceVersion: number
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  webLinks?: Prisma.ArtistWebLinkUncheckedCreateNestedManyWithoutArtistInput
+  songCredits?: Prisma.SongArtistCreditUncheckedCreateNestedManyWithoutArtistInput
+}
+
+export type ArtistCreateOrConnectWithoutNamesInput = {
+  where: Prisma.ArtistWhereUniqueInput
+  create: Prisma.XOR<Prisma.ArtistCreateWithoutNamesInput, Prisma.ArtistUncheckedCreateWithoutNamesInput>
+}
+
+export type ArtistUpsertWithoutNamesInput = {
+  update: Prisma.XOR<Prisma.ArtistUpdateWithoutNamesInput, Prisma.ArtistUncheckedUpdateWithoutNamesInput>
+  create: Prisma.XOR<Prisma.ArtistCreateWithoutNamesInput, Prisma.ArtistUncheckedCreateWithoutNamesInput>
+  where?: Prisma.ArtistWhereInput
+}
+
+export type ArtistUpdateToOneWithWhereWithoutNamesInput = {
+  where?: Prisma.ArtistWhereInput
+  data: Prisma.XOR<Prisma.ArtistUpdateWithoutNamesInput, Prisma.ArtistUncheckedUpdateWithoutNamesInput>
+}
+
+export type ArtistUpdateWithoutNamesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  additionalNames?: Prisma.ArtistUpdateadditionalNamesInput | string[]
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  artistType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergedToVocaDbId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pictureMime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlSmallThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlTinyThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  detailLastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detailLastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summaryName?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryArtistType?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryAdditionalNames?: Prisma.ArtistUpdatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  summarySourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  summarySourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  summaryObservedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  webLinks?: Prisma.ArtistWebLinkUpdateManyWithoutArtistNestedInput
+  songCredits?: Prisma.SongArtistCreditUpdateManyWithoutArtistNestedInput
+}
+
+export type ArtistUncheckedUpdateWithoutNamesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  additionalNames?: Prisma.ArtistUpdateadditionalNamesInput | string[]
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  artistType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergedToVocaDbId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pictureMime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlSmallThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlTinyThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  detailLastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detailLastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summaryName?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryArtistType?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryAdditionalNames?: Prisma.ArtistUpdatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  summarySourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  summarySourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  summaryObservedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  webLinks?: Prisma.ArtistWebLinkUncheckedUpdateManyWithoutArtistNestedInput
+  songCredits?: Prisma.SongArtistCreditUncheckedUpdateManyWithoutArtistNestedInput
+}
+
+export type ArtistCreateWithoutWebLinksInput = {
+  id?: string
+  vocadbId: number
+  name: string
+  defaultName: string
+  defaultNameLanguage: string
+  additionalNames?: Prisma.ArtistCreateadditionalNamesInput | string[]
+  description?: string | null
+  artistType: string
+  sourceStatus: string
+  sourceVersion: number
+  sourceDeleted?: boolean
+  sourceCreatedAt?: Date | string | null
+  releaseDate?: Date | string | null
+  sourceUpdatedAt?: Date | string | null
+  mergedToVocaDbId?: number | null
+  pictureMime?: string | null
+  pictureUrlOriginal?: string | null
+  pictureUrlThumb?: string | null
+  pictureUrlSmallThumb?: string | null
+  pictureUrlTinyThumb?: string | null
+  detailLastAttemptAt?: Date | string | null
+  detailLastSyncedAt?: Date | string | null
+  lastSyncedAt?: Date | string | null
+  syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  summaryName: string
+  summaryArtistType: string
+  summaryAdditionalNames?: Prisma.ArtistCreatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus: string
+  summarySourceVersion: number
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  names?: Prisma.ArtistNameCreateNestedManyWithoutArtistInput
+  songCredits?: Prisma.SongArtistCreditCreateNestedManyWithoutArtistInput
+}
+
+export type ArtistUncheckedCreateWithoutWebLinksInput = {
+  id?: string
+  vocadbId: number
+  name: string
+  defaultName: string
+  defaultNameLanguage: string
+  additionalNames?: Prisma.ArtistCreateadditionalNamesInput | string[]
+  description?: string | null
+  artistType: string
+  sourceStatus: string
+  sourceVersion: number
+  sourceDeleted?: boolean
+  sourceCreatedAt?: Date | string | null
+  releaseDate?: Date | string | null
+  sourceUpdatedAt?: Date | string | null
+  mergedToVocaDbId?: number | null
+  pictureMime?: string | null
+  pictureUrlOriginal?: string | null
+  pictureUrlThumb?: string | null
+  pictureUrlSmallThumb?: string | null
+  pictureUrlTinyThumb?: string | null
+  detailLastAttemptAt?: Date | string | null
+  detailLastSyncedAt?: Date | string | null
+  lastSyncedAt?: Date | string | null
+  syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  summaryName: string
+  summaryArtistType: string
+  summaryAdditionalNames?: Prisma.ArtistCreatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus: string
+  summarySourceVersion: number
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  names?: Prisma.ArtistNameUncheckedCreateNestedManyWithoutArtistInput
+  songCredits?: Prisma.SongArtistCreditUncheckedCreateNestedManyWithoutArtistInput
+}
+
+export type ArtistCreateOrConnectWithoutWebLinksInput = {
+  where: Prisma.ArtistWhereUniqueInput
+  create: Prisma.XOR<Prisma.ArtistCreateWithoutWebLinksInput, Prisma.ArtistUncheckedCreateWithoutWebLinksInput>
+}
+
+export type ArtistUpsertWithoutWebLinksInput = {
+  update: Prisma.XOR<Prisma.ArtistUpdateWithoutWebLinksInput, Prisma.ArtistUncheckedUpdateWithoutWebLinksInput>
+  create: Prisma.XOR<Prisma.ArtistCreateWithoutWebLinksInput, Prisma.ArtistUncheckedCreateWithoutWebLinksInput>
+  where?: Prisma.ArtistWhereInput
+}
+
+export type ArtistUpdateToOneWithWhereWithoutWebLinksInput = {
+  where?: Prisma.ArtistWhereInput
+  data: Prisma.XOR<Prisma.ArtistUpdateWithoutWebLinksInput, Prisma.ArtistUncheckedUpdateWithoutWebLinksInput>
+}
+
+export type ArtistUpdateWithoutWebLinksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  additionalNames?: Prisma.ArtistUpdateadditionalNamesInput | string[]
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  artistType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergedToVocaDbId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pictureMime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlSmallThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlTinyThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  detailLastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detailLastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summaryName?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryArtistType?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryAdditionalNames?: Prisma.ArtistUpdatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  summarySourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  summarySourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  summaryObservedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  names?: Prisma.ArtistNameUpdateManyWithoutArtistNestedInput
+  songCredits?: Prisma.SongArtistCreditUpdateManyWithoutArtistNestedInput
+}
+
+export type ArtistUncheckedUpdateWithoutWebLinksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  additionalNames?: Prisma.ArtistUpdateadditionalNamesInput | string[]
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  artistType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergedToVocaDbId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pictureMime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlSmallThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlTinyThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  detailLastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detailLastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summaryName?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryArtistType?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryAdditionalNames?: Prisma.ArtistUpdatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  summarySourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  summarySourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  summaryObservedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  names?: Prisma.ArtistNameUncheckedUpdateManyWithoutArtistNestedInput
+  songCredits?: Prisma.SongArtistCreditUncheckedUpdateManyWithoutArtistNestedInput
+}
+
+export type ArtistCreateWithoutSongCreditsInput = {
+  id?: string
+  vocadbId: number
+  name: string
+  defaultName: string
+  defaultNameLanguage: string
+  additionalNames?: Prisma.ArtistCreateadditionalNamesInput | string[]
+  description?: string | null
+  artistType: string
+  sourceStatus: string
+  sourceVersion: number
+  sourceDeleted?: boolean
+  sourceCreatedAt?: Date | string | null
+  releaseDate?: Date | string | null
+  sourceUpdatedAt?: Date | string | null
+  mergedToVocaDbId?: number | null
+  pictureMime?: string | null
+  pictureUrlOriginal?: string | null
+  pictureUrlThumb?: string | null
+  pictureUrlSmallThumb?: string | null
+  pictureUrlTinyThumb?: string | null
+  detailLastAttemptAt?: Date | string | null
+  detailLastSyncedAt?: Date | string | null
+  lastSyncedAt?: Date | string | null
+  syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  summaryName: string
+  summaryArtistType: string
+  summaryAdditionalNames?: Prisma.ArtistCreatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus: string
+  summarySourceVersion: number
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  names?: Prisma.ArtistNameCreateNestedManyWithoutArtistInput
+  webLinks?: Prisma.ArtistWebLinkCreateNestedManyWithoutArtistInput
 }
 
 export type ArtistUncheckedCreateWithoutSongCreditsInput = {
   id?: string
   vocadbId: number
   name: string
+  defaultName: string
+  defaultNameLanguage: string
+  additionalNames?: Prisma.ArtistCreateadditionalNamesInput | string[]
+  description?: string | null
   artistType: string
   sourceStatus: string
   sourceVersion: number
   sourceDeleted?: boolean
+  sourceCreatedAt?: Date | string | null
+  releaseDate?: Date | string | null
   sourceUpdatedAt?: Date | string | null
+  mergedToVocaDbId?: number | null
+  pictureMime?: string | null
+  pictureUrlOriginal?: string | null
+  pictureUrlThumb?: string | null
+  pictureUrlSmallThumb?: string | null
+  pictureUrlTinyThumb?: string | null
+  detailLastAttemptAt?: Date | string | null
+  detailLastSyncedAt?: Date | string | null
   lastSyncedAt?: Date | string | null
   syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  summaryName: string
+  summaryArtistType: string
+  summaryAdditionalNames?: Prisma.ArtistCreatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus: string
+  summarySourceVersion: number
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  names?: Prisma.ArtistNameUncheckedCreateNestedManyWithoutArtistInput
+  webLinks?: Prisma.ArtistWebLinkUncheckedCreateNestedManyWithoutArtistInput
 }
 
 export type ArtistCreateOrConnectWithoutSongCreditsInput = {
@@ -587,30 +1528,78 @@ export type ArtistUpdateWithoutSongCreditsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  additionalNames?: Prisma.ArtistUpdateadditionalNamesInput | string[]
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   artistType?: Prisma.StringFieldUpdateOperationsInput | string
   sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
   sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergedToVocaDbId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pictureMime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlSmallThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlTinyThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  detailLastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detailLastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summaryName?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryArtistType?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryAdditionalNames?: Prisma.ArtistUpdatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  summarySourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  summarySourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  summaryObservedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  names?: Prisma.ArtistNameUpdateManyWithoutArtistNestedInput
+  webLinks?: Prisma.ArtistWebLinkUpdateManyWithoutArtistNestedInput
 }
 
 export type ArtistUncheckedUpdateWithoutSongCreditsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  additionalNames?: Prisma.ArtistUpdateadditionalNamesInput | string[]
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   artistType?: Prisma.StringFieldUpdateOperationsInput | string
   sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
   sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  releaseDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergedToVocaDbId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pictureMime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlSmallThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pictureUrlTinyThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  detailLastAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detailLastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summaryName?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryArtistType?: Prisma.StringFieldUpdateOperationsInput | string
+  summaryAdditionalNames?: Prisma.ArtistUpdatesummaryAdditionalNamesInput | string[]
+  summarySourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  summarySourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  summarySourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  summaryObservedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  names?: Prisma.ArtistNameUncheckedUpdateManyWithoutArtistNestedInput
+  webLinks?: Prisma.ArtistWebLinkUncheckedUpdateManyWithoutArtistNestedInput
 }
 
 
@@ -619,10 +1608,14 @@ export type ArtistUncheckedUpdateWithoutSongCreditsInput = {
  */
 
 export type ArtistCountOutputType = {
+  names: number
+  webLinks: number
   songCredits: number
 }
 
 export type ArtistCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  names?: boolean | ArtistCountOutputTypeCountNamesArgs
+  webLinks?: boolean | ArtistCountOutputTypeCountWebLinksArgs
   songCredits?: boolean | ArtistCountOutputTypeCountSongCreditsArgs
 }
 
@@ -639,6 +1632,20 @@ export type ArtistCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Exten
 /**
  * ArtistCountOutputType without action
  */
+export type ArtistCountOutputTypeCountNamesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ArtistNameWhereInput
+}
+
+/**
+ * ArtistCountOutputType without action
+ */
+export type ArtistCountOutputTypeCountWebLinksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ArtistWebLinkWhereInput
+}
+
+/**
+ * ArtistCountOutputType without action
+ */
 export type ArtistCountOutputTypeCountSongCreditsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.SongArtistCreditWhereInput
 }
@@ -648,15 +1655,39 @@ export type ArtistSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   id?: boolean
   vocadbId?: boolean
   name?: boolean
+  defaultName?: boolean
+  defaultNameLanguage?: boolean
+  additionalNames?: boolean
+  description?: boolean
   artistType?: boolean
   sourceStatus?: boolean
   sourceVersion?: boolean
   sourceDeleted?: boolean
+  sourceCreatedAt?: boolean
+  releaseDate?: boolean
   sourceUpdatedAt?: boolean
+  mergedToVocaDbId?: boolean
+  pictureMime?: boolean
+  pictureUrlOriginal?: boolean
+  pictureUrlThumb?: boolean
+  pictureUrlSmallThumb?: boolean
+  pictureUrlTinyThumb?: boolean
+  detailLastAttemptAt?: boolean
+  detailLastSyncedAt?: boolean
   lastSyncedAt?: boolean
   syncStatus?: boolean
+  lastSyncError?: boolean
+  summaryName?: boolean
+  summaryArtistType?: boolean
+  summaryAdditionalNames?: boolean
+  summarySourceStatus?: boolean
+  summarySourceVersion?: boolean
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  names?: boolean | Prisma.Artist$namesArgs<ExtArgs>
+  webLinks?: boolean | Prisma.Artist$webLinksArgs<ExtArgs>
   songCredits?: boolean | Prisma.Artist$songCreditsArgs<ExtArgs>
   _count?: boolean | Prisma.ArtistCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["artist"]>
@@ -665,13 +1696,35 @@ export type ArtistSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   id?: boolean
   vocadbId?: boolean
   name?: boolean
+  defaultName?: boolean
+  defaultNameLanguage?: boolean
+  additionalNames?: boolean
+  description?: boolean
   artistType?: boolean
   sourceStatus?: boolean
   sourceVersion?: boolean
   sourceDeleted?: boolean
+  sourceCreatedAt?: boolean
+  releaseDate?: boolean
   sourceUpdatedAt?: boolean
+  mergedToVocaDbId?: boolean
+  pictureMime?: boolean
+  pictureUrlOriginal?: boolean
+  pictureUrlThumb?: boolean
+  pictureUrlSmallThumb?: boolean
+  pictureUrlTinyThumb?: boolean
+  detailLastAttemptAt?: boolean
+  detailLastSyncedAt?: boolean
   lastSyncedAt?: boolean
   syncStatus?: boolean
+  lastSyncError?: boolean
+  summaryName?: boolean
+  summaryArtistType?: boolean
+  summaryAdditionalNames?: boolean
+  summarySourceStatus?: boolean
+  summarySourceVersion?: boolean
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["artist"]>
@@ -680,13 +1733,35 @@ export type ArtistSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   id?: boolean
   vocadbId?: boolean
   name?: boolean
+  defaultName?: boolean
+  defaultNameLanguage?: boolean
+  additionalNames?: boolean
+  description?: boolean
   artistType?: boolean
   sourceStatus?: boolean
   sourceVersion?: boolean
   sourceDeleted?: boolean
+  sourceCreatedAt?: boolean
+  releaseDate?: boolean
   sourceUpdatedAt?: boolean
+  mergedToVocaDbId?: boolean
+  pictureMime?: boolean
+  pictureUrlOriginal?: boolean
+  pictureUrlThumb?: boolean
+  pictureUrlSmallThumb?: boolean
+  pictureUrlTinyThumb?: boolean
+  detailLastAttemptAt?: boolean
+  detailLastSyncedAt?: boolean
   lastSyncedAt?: boolean
   syncStatus?: boolean
+  lastSyncError?: boolean
+  summaryName?: boolean
+  summaryArtistType?: boolean
+  summaryAdditionalNames?: boolean
+  summarySourceStatus?: boolean
+  summarySourceVersion?: boolean
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["artist"]>
@@ -695,19 +1770,43 @@ export type ArtistSelectScalar = {
   id?: boolean
   vocadbId?: boolean
   name?: boolean
+  defaultName?: boolean
+  defaultNameLanguage?: boolean
+  additionalNames?: boolean
+  description?: boolean
   artistType?: boolean
   sourceStatus?: boolean
   sourceVersion?: boolean
   sourceDeleted?: boolean
+  sourceCreatedAt?: boolean
+  releaseDate?: boolean
   sourceUpdatedAt?: boolean
+  mergedToVocaDbId?: boolean
+  pictureMime?: boolean
+  pictureUrlOriginal?: boolean
+  pictureUrlThumb?: boolean
+  pictureUrlSmallThumb?: boolean
+  pictureUrlTinyThumb?: boolean
+  detailLastAttemptAt?: boolean
+  detailLastSyncedAt?: boolean
   lastSyncedAt?: boolean
   syncStatus?: boolean
+  lastSyncError?: boolean
+  summaryName?: boolean
+  summaryArtistType?: boolean
+  summaryAdditionalNames?: boolean
+  summarySourceStatus?: boolean
+  summarySourceVersion?: boolean
+  summarySourceDeleted?: boolean
+  summaryObservedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ArtistOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "vocadbId" | "name" | "artistType" | "sourceStatus" | "sourceVersion" | "sourceDeleted" | "sourceUpdatedAt" | "lastSyncedAt" | "syncStatus" | "createdAt" | "updatedAt", ExtArgs["result"]["artist"]>
+export type ArtistOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "vocadbId" | "name" | "defaultName" | "defaultNameLanguage" | "additionalNames" | "description" | "artistType" | "sourceStatus" | "sourceVersion" | "sourceDeleted" | "sourceCreatedAt" | "releaseDate" | "sourceUpdatedAt" | "mergedToVocaDbId" | "pictureMime" | "pictureUrlOriginal" | "pictureUrlThumb" | "pictureUrlSmallThumb" | "pictureUrlTinyThumb" | "detailLastAttemptAt" | "detailLastSyncedAt" | "lastSyncedAt" | "syncStatus" | "lastSyncError" | "summaryName" | "summaryArtistType" | "summaryAdditionalNames" | "summarySourceStatus" | "summarySourceVersion" | "summarySourceDeleted" | "summaryObservedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["artist"]>
 export type ArtistInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  names?: boolean | Prisma.Artist$namesArgs<ExtArgs>
+  webLinks?: boolean | Prisma.Artist$webLinksArgs<ExtArgs>
   songCredits?: boolean | Prisma.Artist$songCreditsArgs<ExtArgs>
   _count?: boolean | Prisma.ArtistCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -717,19 +1816,43 @@ export type ArtistIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
 export type $ArtistPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Artist"
   objects: {
+    names: Prisma.$ArtistNamePayload<ExtArgs>[]
+    webLinks: Prisma.$ArtistWebLinkPayload<ExtArgs>[]
     songCredits: Prisma.$SongArtistCreditPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     vocadbId: number
     name: string
+    defaultName: string
+    defaultNameLanguage: string
+    additionalNames: string[]
+    description: string | null
     artistType: string
     sourceStatus: string
     sourceVersion: number
     sourceDeleted: boolean
+    sourceCreatedAt: Date | null
+    releaseDate: Date | null
     sourceUpdatedAt: Date | null
+    mergedToVocaDbId: number | null
+    pictureMime: string | null
+    pictureUrlOriginal: string | null
+    pictureUrlThumb: string | null
+    pictureUrlSmallThumb: string | null
+    pictureUrlTinyThumb: string | null
+    detailLastAttemptAt: Date | null
+    detailLastSyncedAt: Date | null
     lastSyncedAt: Date | null
     syncStatus: $Enums.SyncStatus
+    lastSyncError: string | null
+    summaryName: string
+    summaryArtistType: string
+    summaryAdditionalNames: string[]
+    summarySourceStatus: string
+    summarySourceVersion: number
+    summarySourceDeleted: boolean
+    summaryObservedAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["artist"]>
@@ -1126,6 +2249,8 @@ readonly fields: ArtistFieldRefs;
  */
 export interface Prisma__ArtistClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  names<T extends Prisma.Artist$namesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Artist$namesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArtistNamePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  webLinks<T extends Prisma.Artist$webLinksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Artist$webLinksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArtistWebLinkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   songCredits<T extends Prisma.Artist$songCreditsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Artist$songCreditsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SongArtistCreditPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1159,13 +2284,35 @@ export interface ArtistFieldRefs {
   readonly id: Prisma.FieldRef<"Artist", 'String'>
   readonly vocadbId: Prisma.FieldRef<"Artist", 'Int'>
   readonly name: Prisma.FieldRef<"Artist", 'String'>
+  readonly defaultName: Prisma.FieldRef<"Artist", 'String'>
+  readonly defaultNameLanguage: Prisma.FieldRef<"Artist", 'String'>
+  readonly additionalNames: Prisma.FieldRef<"Artist", 'String[]'>
+  readonly description: Prisma.FieldRef<"Artist", 'String'>
   readonly artistType: Prisma.FieldRef<"Artist", 'String'>
   readonly sourceStatus: Prisma.FieldRef<"Artist", 'String'>
   readonly sourceVersion: Prisma.FieldRef<"Artist", 'Int'>
   readonly sourceDeleted: Prisma.FieldRef<"Artist", 'Boolean'>
+  readonly sourceCreatedAt: Prisma.FieldRef<"Artist", 'DateTime'>
+  readonly releaseDate: Prisma.FieldRef<"Artist", 'DateTime'>
   readonly sourceUpdatedAt: Prisma.FieldRef<"Artist", 'DateTime'>
+  readonly mergedToVocaDbId: Prisma.FieldRef<"Artist", 'Int'>
+  readonly pictureMime: Prisma.FieldRef<"Artist", 'String'>
+  readonly pictureUrlOriginal: Prisma.FieldRef<"Artist", 'String'>
+  readonly pictureUrlThumb: Prisma.FieldRef<"Artist", 'String'>
+  readonly pictureUrlSmallThumb: Prisma.FieldRef<"Artist", 'String'>
+  readonly pictureUrlTinyThumb: Prisma.FieldRef<"Artist", 'String'>
+  readonly detailLastAttemptAt: Prisma.FieldRef<"Artist", 'DateTime'>
+  readonly detailLastSyncedAt: Prisma.FieldRef<"Artist", 'DateTime'>
   readonly lastSyncedAt: Prisma.FieldRef<"Artist", 'DateTime'>
   readonly syncStatus: Prisma.FieldRef<"Artist", 'SyncStatus'>
+  readonly lastSyncError: Prisma.FieldRef<"Artist", 'String'>
+  readonly summaryName: Prisma.FieldRef<"Artist", 'String'>
+  readonly summaryArtistType: Prisma.FieldRef<"Artist", 'String'>
+  readonly summaryAdditionalNames: Prisma.FieldRef<"Artist", 'String[]'>
+  readonly summarySourceStatus: Prisma.FieldRef<"Artist", 'String'>
+  readonly summarySourceVersion: Prisma.FieldRef<"Artist", 'Int'>
+  readonly summarySourceDeleted: Prisma.FieldRef<"Artist", 'Boolean'>
+  readonly summaryObservedAt: Prisma.FieldRef<"Artist", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Artist", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Artist", 'DateTime'>
 }
@@ -1558,6 +2705,54 @@ export type ArtistDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * Limit how many Artists to delete.
    */
   limit?: number
+}
+
+/**
+ * Artist.names
+ */
+export type Artist$namesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ArtistName
+   */
+  select?: Prisma.ArtistNameSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ArtistName
+   */
+  omit?: Prisma.ArtistNameOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ArtistNameInclude<ExtArgs> | null
+  where?: Prisma.ArtistNameWhereInput
+  orderBy?: Prisma.ArtistNameOrderByWithRelationInput | Prisma.ArtistNameOrderByWithRelationInput[]
+  cursor?: Prisma.ArtistNameWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ArtistNameScalarFieldEnum | Prisma.ArtistNameScalarFieldEnum[]
+}
+
+/**
+ * Artist.webLinks
+ */
+export type Artist$webLinksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ArtistWebLink
+   */
+  select?: Prisma.ArtistWebLinkSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ArtistWebLink
+   */
+  omit?: Prisma.ArtistWebLinkOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ArtistWebLinkInclude<ExtArgs> | null
+  where?: Prisma.ArtistWebLinkWhereInput
+  orderBy?: Prisma.ArtistWebLinkOrderByWithRelationInput | Prisma.ArtistWebLinkOrderByWithRelationInput[]
+  cursor?: Prisma.ArtistWebLinkWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ArtistWebLinkScalarFieldEnum | Prisma.ArtistWebLinkScalarFieldEnum[]
 }
 
 /**

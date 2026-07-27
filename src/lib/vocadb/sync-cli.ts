@@ -1,15 +1,33 @@
 import type { SyncRunMode } from "@/generated/prisma/enums";
 
+type SongScheduledMode = Extract<
+  SyncRunMode,
+  "SEED" | "INCREMENTAL" | "RECONCILE"
+>;
+
 export type SyncCliRequest =
   | { mode: "IDS"; ids: number[] }
-  | { mode: Exclude<SyncRunMode, "IDS"> }
+  | { mode: SongScheduledMode }
+  | { mode: "AUTO"; target: SongScheduledMode }
+  | { mode: "RESUME" }
   | {
-      mode: "AUTO";
-      target: Exclude<SyncRunMode, "IDS">;
+      entity: "ARTIST";
+      mode: "IDS";
+      ids: number[];
     }
-  | { mode: "RESUME" };
+  | {
+      entity: "ARTIST";
+      mode: "REFRESH" | "RESUME";
+    }
+  | {
+      entity: "ARTIST";
+      mode: "AUTO";
+      target: "REFRESH";
+    };
 
 export function parseSyncArgs(args: string[]): SyncCliRequest {
+  if (args[0] === "artists") return parseArtistArgs(args.slice(1));
+
   const [mode, ...flags] = args;
   if (mode === "auto") {
     if (flags.length !== 1) {
@@ -54,11 +72,37 @@ export function parseSyncArgs(args: string[]): SyncCliRequest {
 
 function parseScheduledMode(
   value: string | undefined,
-): Exclude<SyncRunMode, "IDS"> | undefined {
+): SongScheduledMode | undefined {
   if (value === "seed") return "SEED";
   if (value === "incremental") return "INCREMENTAL";
   if (value === "reconcile") return "RECONCILE";
   return undefined;
+}
+
+function parseArtistArgs(args: string[]): SyncCliRequest {
+  const [mode, ...flags] = args;
+  if (mode === "auto") {
+    if (flags.length !== 1 || flags[0] !== "refresh") {
+      throw new Error("artists auto requires exactly the refresh target");
+    }
+    return { entity: "ARTIST", mode: "AUTO", target: "REFRESH" };
+  }
+  if (mode === "resume" && flags.length === 0) {
+    return { entity: "ARTIST", mode: "RESUME" };
+  }
+  if (mode === "refresh" && flags.length === 0) {
+    return { entity: "ARTIST", mode: "REFRESH" };
+  }
+  if (mode === "ids" && flags.length === 1 && flags[0].startsWith("--ids=")) {
+    return {
+      entity: "ARTIST",
+      mode: "IDS",
+      ids: parseIds(flags[0].slice("--ids=".length)),
+    };
+  }
+  throw new Error(
+    "Usage: sync-vocadb artists <ids|refresh|resume|auto> [refresh|--ids=...]",
+  );
 }
 
 function parseIds(value: string): number[] {

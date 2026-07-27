@@ -141,6 +141,8 @@ export async function resetCatalogTables(db: PrismaClient): Promise<void> {
       "SongTag",
       "SongArtistCredit",
       "SongName",
+      "ArtistWebLink",
+      "ArtistName",
       "Tag",
       "Artist",
       "Song"
