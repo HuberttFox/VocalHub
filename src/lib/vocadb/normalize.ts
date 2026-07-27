@@ -1,4 +1,34 @@
-import type { VocaDbSong } from "./contract";
+import type { VocaDbArtistDetail, VocaDbSong } from "./contract";
+
+export type NormalizedVocaDbArtist = {
+  vocadbId: number;
+  name: string;
+  defaultName: string;
+  defaultNameLanguage: string;
+  additionalNames: string[];
+  description: string | null;
+  artistType: string;
+  sourceStatus: string;
+  sourceVersion: number;
+  sourceDeleted: boolean;
+  sourceCreatedAt: Date;
+  releaseDate: Date | null;
+  mergedToVocaDbId: number | null;
+  pictureMime: string | null;
+  pictureUrlOriginal: string | null;
+  pictureUrlThumb: string | null;
+  pictureUrlSmallThumb: string | null;
+  pictureUrlTinyThumb: string | null;
+  names: Array<{ language: string; value: string; position: number }>;
+  webLinks: Array<{
+    vocadbId: number;
+    url: string;
+    description: string;
+    category: string;
+    disabled: boolean;
+    position: number;
+  }>;
+};
 
 export type NormalizedVocaDbSong = {
   vocadbId: number;
@@ -33,6 +63,7 @@ export type NormalizedVocaDbSong = {
     artist: {
       vocadbId: number;
       name: string;
+      additionalNames: string[];
       artistType: string;
       sourceStatus: string;
       sourceVersion: number;
@@ -87,38 +118,94 @@ export function parseVocaDbDate(value: string | null | undefined): Date | null {
   return date;
 }
 
-export function isHttpUrl(value: string | null | undefined): value is string {
-  if (!value) return false;
+export function normalizeHttpUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
 
   try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    const url = new URL(value.trim());
+    if (
+      (url.protocol !== "http:" && url.protocol !== "https:") ||
+      !url.hostname ||
+      url.username ||
+      url.password
+    ) {
+      return null;
+    }
+    return url.toString();
   } catch {
-    return false;
+    return null;
   }
 }
 
+export function isHttpUrl(value: string | null | undefined): value is string {
+  return normalizeHttpUrl(value) !== null;
+}
+
 function nullableHttpUrl(value: string | null | undefined): string | null {
-  return isHttpUrl(value) ? value : null;
+  return normalizeHttpUrl(value);
+}
+
+function uniqueValues(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+export function normalizeVocaDbArtist(
+  artist: VocaDbArtistDetail,
+): NormalizedVocaDbArtist {
+  const webLinks = artist.webLinks.flatMap((link) => {
+    const url = normalizeHttpUrl(link.url);
+    if (!url) return [];
+    return [{
+      vocadbId: link.id,
+      url,
+      description: link.description?.trim() ?? "",
+      category: link.category.trim(),
+      disabled: link.disabled,
+    }];
+  }).map((link, position) => ({ ...link, position }));
+
+  return {
+    vocadbId: artist.id,
+    name: artist.name,
+    defaultName: artist.defaultName,
+    defaultNameLanguage: artist.defaultNameLanguage,
+    additionalNames: uniqueValues(splitVocaDbFlags(artist.additionalNames)),
+    description: artist.description?.trim() || null,
+    artistType: artist.artistType,
+    sourceStatus: artist.status,
+    sourceVersion: artist.version,
+    sourceDeleted: artist.deleted,
+    sourceCreatedAt: parseVocaDbDate(artist.createDate)!,
+    releaseDate: parseVocaDbDate(artist.releaseDate),
+    mergedToVocaDbId: artist.mergedTo ?? null,
+    pictureMime: artist.mainPicture?.mime?.trim() || null,
+    pictureUrlOriginal: normalizeHttpUrl(artist.mainPicture?.urlOriginal),
+    pictureUrlThumb: normalizeHttpUrl(artist.mainPicture?.urlThumb),
+    pictureUrlSmallThumb: normalizeHttpUrl(artist.mainPicture?.urlSmallThumb),
+    pictureUrlTinyThumb: normalizeHttpUrl(artist.mainPicture?.urlTinyThumb),
+    names: artist.names.map((name, position) => ({ ...name, position })),
+    webLinks,
+  };
 }
 
 export function normalizeVocaDbSong(song: VocaDbSong): NormalizedVocaDbSong {
-  const pvs = song.pvs
-    .filter((pv) => isHttpUrl(pv.url))
-    .map((pv, position) => ({
+  const pvs = song.pvs.flatMap((pv) => {
+    const url = normalizeHttpUrl(pv.url);
+    if (!url) return [];
+    return [{
       vocadbId: pv.id,
       externalId: pv.pvId,
       service: pv.service,
       pvType: pv.pvType,
-      url: pv.url,
+      url,
       name: pv.name ?? null,
       author: pv.author ?? null,
       thumbnailUrl: nullableHttpUrl(pv.thumbUrl),
       publishDate: parseVocaDbDate(pv.publishDate),
       durationSeconds: pv.length ?? null,
       disabled: pv.disabled,
-      position,
-    }));
+    }];
+  }).map((pv, position) => ({ ...pv, position }));
 
   return {
     vocadbId: song.id,
@@ -154,6 +241,9 @@ export function normalizeVocaDbSong(song: VocaDbSong): NormalizedVocaDbSong {
         ? {
             vocadbId: credit.artist.id,
             name: credit.artist.name,
+            additionalNames: uniqueValues(
+              splitVocaDbFlags(credit.artist.additionalNames ?? ""),
+            ),
             artistType: credit.artist.artistType,
             sourceStatus: credit.artist.status,
             sourceVersion: credit.artist.version,

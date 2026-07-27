@@ -10,7 +10,7 @@ type RemoteImageProps = {
   className?: string;
   fallbackLabel?: string;
   eager?: boolean;
-  fallbackIcon?: "music" | "video";
+  fallbackIcon?: "music" | "video" | "person";
 };
 
 export function RemoteImage({
@@ -38,7 +38,9 @@ export function RemoteImage({
         aria-label={alt ? fallbackLabel : undefined}
         aria-hidden={alt ? undefined : "true"}
       >
-        <span aria-hidden="true">{fallbackIcon === "video" ? "▶" : "♪"}</span>
+        <span aria-hidden="true">
+          {fallbackIcon === "video" ? "▶" : fallbackIcon === "person" ? "●" : "♪"}
+        </span>
         {alt && <span className="sr-only">{fallbackLabel}</span>}
       </div>
     );

@@ -9,6 +9,7 @@ export const PUBLIC_SONG_WHERE = {
 
 export const PUBLIC_ARTIST_SNAPSHOT_WHERE = {
   sourceDeleted: false,
+  mergedToVocaDbId: null,
   lastSyncedAt: { not: null },
   syncStatus: { in: [SyncStatus.SYNCED, SyncStatus.FAILED] },
 } satisfies Prisma.ArtistWhereInput;

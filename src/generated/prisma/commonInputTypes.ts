@@ -284,6 +284,13 @@ export type BigIntFilter<$PrismaModel = never> = {
   not?: Prisma.NestedBigIntFilter<$PrismaModel> | bigint | number
 }
 
+export type EnumSyncEntityFilter<$PrismaModel = never> = {
+  equals?: $Enums.SyncEntity | Prisma.EnumSyncEntityFieldRefInput<$PrismaModel>
+  in?: $Enums.SyncEntity[] | Prisma.ListEnumSyncEntityFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SyncEntity[] | Prisma.ListEnumSyncEntityFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSyncEntityFilter<$PrismaModel> | $Enums.SyncEntity
+}
+
 export type EnumSyncRunModeFilter<$PrismaModel = never> = {
   equals?: $Enums.SyncRunMode | Prisma.EnumSyncRunModeFieldRefInput<$PrismaModel>
   in?: $Enums.SyncRunMode[] | Prisma.ListEnumSyncRunModeFieldRefInput<$PrismaModel>
@@ -312,6 +319,16 @@ export type BigIntWithAggregatesFilter<$PrismaModel = never> = {
   _sum?: Prisma.NestedBigIntFilter<$PrismaModel>
   _min?: Prisma.NestedBigIntFilter<$PrismaModel>
   _max?: Prisma.NestedBigIntFilter<$PrismaModel>
+}
+
+export type EnumSyncEntityWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SyncEntity | Prisma.EnumSyncEntityFieldRefInput<$PrismaModel>
+  in?: $Enums.SyncEntity[] | Prisma.ListEnumSyncEntityFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SyncEntity[] | Prisma.ListEnumSyncEntityFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSyncEntityWithAggregatesFilter<$PrismaModel> | $Enums.SyncEntity
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSyncEntityFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSyncEntityFilter<$PrismaModel>
 }
 
 export type EnumSyncRunModeWithAggregatesFilter<$PrismaModel = never> = {
@@ -626,6 +643,13 @@ export type NestedBigIntFilter<$PrismaModel = never> = {
   not?: Prisma.NestedBigIntFilter<$PrismaModel> | bigint | number
 }
 
+export type NestedEnumSyncEntityFilter<$PrismaModel = never> = {
+  equals?: $Enums.SyncEntity | Prisma.EnumSyncEntityFieldRefInput<$PrismaModel>
+  in?: $Enums.SyncEntity[] | Prisma.ListEnumSyncEntityFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SyncEntity[] | Prisma.ListEnumSyncEntityFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSyncEntityFilter<$PrismaModel> | $Enums.SyncEntity
+}
+
 export type NestedEnumSyncRunModeFilter<$PrismaModel = never> = {
   equals?: $Enums.SyncRunMode | Prisma.EnumSyncRunModeFieldRefInput<$PrismaModel>
   in?: $Enums.SyncRunMode[] | Prisma.ListEnumSyncRunModeFieldRefInput<$PrismaModel>
@@ -654,6 +678,16 @@ export type NestedBigIntWithAggregatesFilter<$PrismaModel = never> = {
   _sum?: Prisma.NestedBigIntFilter<$PrismaModel>
   _min?: Prisma.NestedBigIntFilter<$PrismaModel>
   _max?: Prisma.NestedBigIntFilter<$PrismaModel>
+}
+
+export type NestedEnumSyncEntityWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SyncEntity | Prisma.EnumSyncEntityFieldRefInput<$PrismaModel>
+  in?: $Enums.SyncEntity[] | Prisma.ListEnumSyncEntityFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SyncEntity[] | Prisma.ListEnumSyncEntityFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSyncEntityWithAggregatesFilter<$PrismaModel> | $Enums.SyncEntity
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSyncEntityFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSyncEntityFilter<$PrismaModel>
 }
 
 export type NestedEnumSyncRunModeWithAggregatesFilter<$PrismaModel = never> = {

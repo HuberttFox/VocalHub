@@ -8,6 +8,23 @@ export type ArtistSummaryDto = {
 
 export type ArtistDetailDto = ArtistSummaryDto & {
   vocadbId: number;
+  defaultName: string;
+  defaultNameLanguage: string;
+  description: string | null;
+  aliases: Array<{ language: string | null; value: string }>;
+  avatar: {
+    urlOriginal: string | null;
+    urlThumb: string | null;
+    urlSmallThumb: string | null;
+    urlTinyThumb: string | null;
+    mime: string | null;
+  } | null;
+  webLinks: Array<{
+    id: string;
+    url: string;
+    description: string;
+    category: string;
+  }>;
   worksCount: number;
   source: {
     provider: "VocaDB";

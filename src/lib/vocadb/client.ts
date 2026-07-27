@@ -2,9 +2,11 @@ import { z } from "zod";
 
 import {
   vocaDbActivityEntriesResponseSchema,
+  vocaDbArtistDetailSchema,
   vocaDbSongIdsSchema,
   vocaDbSongSchema,
   type VocaDbActivityEntry,
+  type VocaDbArtistDetail,
   type VocaDbSong,
 } from "./contract";
 import {
@@ -23,6 +25,8 @@ import {
 export const VOCADB_BASE_URL = "https://vocadb.net";
 export const VOCADB_SONG_FIELDS =
   "Artists,Names,PVs,Tags,MainPicture,CultureCodes";
+export const VOCADB_ARTIST_FIELDS =
+  "AdditionalNames,Description,MainPicture,Names,WebLinks";
 export const VOCADB_USER_AGENT = "VocalHub/0.1 (VocaDB client)";
 export const VOCADB_TIMEOUT_MS = 10_000;
 export const VOCADB_MAX_ATTEMPTS = 3;
@@ -57,7 +61,7 @@ export type VocaDbRequestOptions = {
 type RequestOptions<T> = {
   schema: z.ZodType<T>;
   validationMessage: string;
-  notFoundSongId?: number;
+  notFound?: { entity: "song" | "artist"; vocadbId: number };
 };
 
 export class VocaDbClient {
@@ -98,7 +102,28 @@ export class VocaDbClient {
       {
         schema: vocaDbSongSchema,
         validationMessage: "VocaDB song response failed validation",
-        notFoundSongId: songId,
+        notFound: { entity: "song", vocadbId: songId },
+      },
+      request.signal,
+    );
+  }
+
+  async getArtist(
+    artistId: number,
+    request: VocaDbRequestOptions = {},
+  ): Promise<VocaDbArtistDetail> {
+    assertPositiveSafeInteger(artistId, "VocaDB artist ID");
+
+    const url = new URL(`/api/artists/${artistId}`, this.baseUrl);
+    url.searchParams.set("fields", VOCADB_ARTIST_FIELDS);
+    url.searchParams.set("lang", "Default");
+
+    return this.requestWithRetry(
+      url,
+      {
+        schema: vocaDbArtistDetailSchema,
+        validationMessage: "VocaDB artist response failed validation",
+        notFound: { entity: "artist", vocadbId: artistId },
       },
       request.signal,
     );
@@ -195,8 +220,11 @@ export class VocaDbClient {
 
     // Status is authoritative. In particular, VocaDB/proxies may return an
     // HTML 404 page, which must be classified before JSON parsing.
-    if (response.status === 404 && options.notFoundSongId !== undefined) {
-      throw new VocaDbNotFoundError(options.notFoundSongId);
+    if (response.status === 404 && options.notFound) {
+      throw new VocaDbNotFoundError(
+        options.notFound.vocadbId,
+        options.notFound.entity,
+      );
     }
     if (response.status === 429) {
       const retryAfterMs = parseRetryAfter(

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   VOCADB_ACTIVITY_MAX_RESULTS,
+  VOCADB_ARTIST_FIELDS,
   VOCADB_SONG_FIELDS,
   VocaDbClient,
   parseRetryAfter,
@@ -15,6 +16,7 @@ import {
   VocaDbTimeoutError,
   VocaDbValidationError,
 } from "@/lib/vocadb/errors";
+import { makeVocaDbArtistFixture } from "../fixtures/vocadb/artist";
 import { makeVocaDbSongFixture } from "../fixtures/vocadb/song";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -46,6 +48,45 @@ describe("VocaDbClient", () => {
       "VocalHub-Test/1.0",
     );
     expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("requests and validates independent artist detail fields", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(makeVocaDbArtistFixture({ mergedTo: null })),
+    );
+    const client = new VocaDbClient({ fetch: fetchMock, sleep: vi.fn() });
+
+    await expect(client.getArtist(100)).resolves.toMatchObject({
+      id: 100,
+      deleted: false,
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      `https://vocadb.net/api/artists/100?fields=${encodeURIComponent(VOCADB_ARTIST_FIELDS)}&lang=Default`,
+    );
+
+    for (const field of ["names", "webLinks"]) {
+      const payload = makeVocaDbArtistFixture() as Record<string, unknown>;
+      delete payload[field];
+      const invalid = new VocaDbClient({
+        fetch: vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(payload)),
+        sleep: vi.fn(),
+      });
+      await expect(invalid.getArtist(100)).rejects.toBeInstanceOf(
+        VocaDbValidationError,
+      );
+    }
+  });
+
+  it("classifies an artist 404 with artist context", async () => {
+    const client = new VocaDbClient({
+      fetch: vi.fn<typeof fetch>().mockResolvedValue(new Response("", { status: 404 })),
+      sleep: vi.fn(),
+    });
+    await expect(client.getArtist(100)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      entity: "artist",
+      vocadbId: 100,
+    });
   });
 
   it("cancels caller-aborted requests without retrying", async () => {

@@ -34,7 +34,16 @@ export const SyncRunMode = {
   IDS: 'IDS',
   SEED: 'SEED',
   INCREMENTAL: 'INCREMENTAL',
-  RECONCILE: 'RECONCILE'
+  RECONCILE: 'RECONCILE',
+  REFRESH: 'REFRESH'
 } as const
 
 export type SyncRunMode = (typeof SyncRunMode)[keyof typeof SyncRunMode]
+
+
+export const SyncEntity = {
+  SONG: 'SONG',
+  ARTIST: 'ARTIST'
+} as const
+
+export type SyncEntity = (typeof SyncEntity)[keyof typeof SyncEntity]

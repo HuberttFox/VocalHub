@@ -29,6 +29,24 @@ describe("sync CLI", () => {
       mode: "AUTO",
       target: "INCREMENTAL",
     });
+    expect(parseSyncArgs(["artists", "ids", "--ids=3,1,3"])).toEqual({
+      entity: "ARTIST",
+      mode: "IDS",
+      ids: [1, 3],
+    });
+    expect(parseSyncArgs(["artists", "refresh"])).toEqual({
+      entity: "ARTIST",
+      mode: "REFRESH",
+    });
+    expect(parseSyncArgs(["artists", "auto", "refresh"])).toEqual({
+      entity: "ARTIST",
+      mode: "AUTO",
+      target: "REFRESH",
+    });
+    expect(parseSyncArgs(["artists", "resume"])).toEqual({
+      entity: "ARTIST",
+      mode: "RESUME",
+    });
   });
 
   it("rejects invalid arguments", () => {
@@ -41,6 +59,9 @@ describe("sync CLI", () => {
       ["auto", "ids"],
       ["auto", "incremental", "extra"],
       ["unknown"],
+      ["artists", "seed"],
+      ["artists", "auto", "incremental"],
+      ["artists", "ids", "--ids=1", "extra"],
     ]) {
       expect(() => parseSyncArgs(args)).toThrow();
     }

@@ -27,6 +27,12 @@ enum SyncRunMode {
   SEED
   INCREMENTAL
   RECONCILE
+  REFRESH
+}
+
+enum SyncEntity {
+  SONG
+  ARTIST
 }
 
 model Song {
@@ -77,19 +83,72 @@ model SongName {
 }
 
 model Artist {
-  id              String             @id @default(uuid()) @db.Uuid
-  vocadbId        Int                @unique
-  name            String
-  artistType      String
-  sourceStatus    String
-  sourceVersion   Int
-  sourceDeleted   Boolean            @default(false)
-  sourceUpdatedAt DateTime?
-  lastSyncedAt    DateTime?
-  syncStatus      SyncStatus         @default(PENDING)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  songCredits     SongArtistCredit[]
+  id                       String             @id @default(uuid()) @db.Uuid
+  vocadbId                 Int                @unique
+  name                     String
+  defaultName              String
+  defaultNameLanguage      String
+  additionalNames          String[]
+  description              String?
+  artistType               String
+  sourceStatus             String
+  sourceVersion            Int
+  sourceDeleted            Boolean            @default(false)
+  sourceCreatedAt          DateTime?
+  releaseDate              DateTime?
+  sourceUpdatedAt          DateTime?
+  mergedToVocaDbId         Int?
+  pictureMime              String?
+  pictureUrlOriginal       String?
+  pictureUrlThumb          String?
+  pictureUrlSmallThumb     String?
+  pictureUrlTinyThumb      String?
+  detailLastAttemptAt      DateTime?
+  detailLastSyncedAt       DateTime?
+  lastSyncedAt             DateTime?
+  syncStatus               SyncStatus         @default(PENDING)
+  lastSyncError            String?
+  summaryName              String
+  summaryArtistType        String
+  summaryAdditionalNames   String[]
+  summarySourceStatus      String
+  summarySourceVersion     Int
+  summarySourceDeleted     Boolean            @default(false)
+  summaryObservedAt        DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  names                    ArtistName[]
+  webLinks                 ArtistWebLink[]
+  songCredits              SongArtistCredit[]
+
+  @@index([detailLastSyncedAt])
+  @@index([syncStatus])
+}
+
+model ArtistName {
+  id       String @id @default(uuid()) @db.Uuid
+  artistId String @db.Uuid
+  language String
+  value    String
+  position Int
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([artistId, position])
+}
+
+model ArtistWebLink {
+  id          String  @id @default(uuid()) @db.Uuid
+  artistId    String  @db.Uuid
+  vocadbId    Int
+  url         String
+  description String
+  category    String
+  disabled    Boolean @default(false)
+  position    Int
+  artist      Artist  @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([artistId, vocadbId])
+  @@index([artistId, position])
 }
 
 model SongArtistCredit {
@@ -159,6 +218,7 @@ model SongPV {
 model SyncRun {
   id                   String        @id @default(uuid()) @db.Uuid
   sequence             BigInt        @unique @default(autoincrement())
+  entity               SyncEntity    @default(SONG)
   mode                 SyncRunMode   @default(IDS)
   status               SyncRunStatus @default(RUNNING)
   startedAt            DateTime      @default(now())
@@ -167,6 +227,7 @@ model SyncRun {
   activityWindowStart  DateTime?
   activityWindowEnd    DateTime?
   baselineAt           DateTime?
+  refreshCutoffAt      DateTime?
   expectedStateVersion Int?
   sourceIdCount        Int?
   sourceIdDigest       String?
@@ -176,6 +237,8 @@ model SyncRun {
   errorCode            String?
   errorMessage         String?
   items                SyncItem[]
+
+  @@index([entity, status, sequence])
 }
 
 model SyncItem {

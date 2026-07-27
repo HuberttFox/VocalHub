@@ -94,19 +94,31 @@ export function generateCatalogBenchmarkArtists(
   return Array.from({ length: artistCount(options.songCount) }, (_, index) => {
     const number = index + 1;
     const updatedAt = dateFor(options.seed, index, 17);
+    const name = index === HIGH_FANOUT_INDEX
+      ? SEARCH_TERMS.linkedArtistName
+      : `Synthetic Artist ${number.toString().padStart(4, "0")}`;
+    const artistType = artistTypes[randomInt(options.seed, index, 3, artistTypes.length)];
     return {
       id: stableUuid("artist", number, options.seed),
       vocadbId: 2_000_000 + number,
-      name: index === HIGH_FANOUT_INDEX
-        ? SEARCH_TERMS.linkedArtistName
-        : `Synthetic Artist ${number.toString().padStart(4, "0")}`,
-      artistType: artistTypes[randomInt(options.seed, index, 3, artistTypes.length)],
+      name,
+      defaultName: name,
+      defaultNameLanguage: "English",
+      additionalNames: [],
+      artistType,
       sourceStatus: "Finished",
       sourceVersion: 1 + randomInt(options.seed, index, 5, 12),
       sourceDeleted: false,
       sourceUpdatedAt: updatedAt,
       lastSyncedAt: updatedAt,
       syncStatus: SyncStatus.SYNCED,
+      summaryName: name,
+      summaryArtistType: artistType,
+      summaryAdditionalNames: [],
+      summarySourceStatus: "Finished",
+      summarySourceVersion: 1 + randomInt(options.seed, index, 5, 12),
+      summarySourceDeleted: false,
+      summaryObservedAt: updatedAt,
       createdAt: updatedAt,
       updatedAt,
     };

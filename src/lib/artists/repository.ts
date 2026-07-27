@@ -35,27 +35,70 @@ export async function getArtistDetailById(
 ): Promise<ArtistDetailDto | null> {
   if (!isUuid(id)) return null;
 
-  const artist = await getDb().artist.findFirst({
-    where: { id, ...PUBLIC_ARTIST_WHERE },
-    select: {
-      id: true,
-      vocadbId: true,
-      name: true,
-      artistType: true,
-      sourceVersion: true,
-      sourceUpdatedAt: true,
-      lastSyncedAt: true,
-    },
-  });
+  const db = getDb();
+  const [artist, worksCount] = await db.$transaction(
+    [
+      db.artist.findFirst({
+        where: { id, ...PUBLIC_ARTIST_WHERE },
+        select: {
+          id: true,
+          vocadbId: true,
+          name: true,
+          defaultName: true,
+          defaultNameLanguage: true,
+          additionalNames: true,
+          description: true,
+          artistType: true,
+          pictureUrlOriginal: true,
+          pictureUrlThumb: true,
+          pictureUrlSmallThumb: true,
+          pictureUrlTinyThumb: true,
+          pictureMime: true,
+          names: {
+            orderBy: { position: "asc" },
+            select: { language: true, value: true },
+          },
+          webLinks: {
+            where: { disabled: false },
+            orderBy: { position: "asc" },
+            select: {
+              id: true,
+              url: true,
+              description: true,
+              category: true,
+            },
+          },
+          sourceVersion: true,
+          sourceUpdatedAt: true,
+          lastSyncedAt: true,
+        },
+      }),
+      db.song.count({
+        where: {
+          ...PUBLIC_SONG_WHERE,
+          artistCredits: { some: { artistId: id } },
+        },
+      }),
+    ],
+    { isolationLevel: "RepeatableRead" },
+  );
 
   if (!artist) return null;
-
-  const worksCount = await countDistinctPublicWorks(artist.id);
 
   return {
     id: artist.id,
     vocadbId: artist.vocadbId,
     name: artist.name,
+    defaultName: artist.defaultName,
+    defaultNameLanguage: artist.defaultNameLanguage,
+    description: artist.description,
+    aliases: mapArtistAliases(
+      artist.name,
+      artist.names,
+      artist.additionalNames,
+    ),
+    avatar: mapArtistAvatar(artist),
+    webLinks: artist.webLinks,
     artistType: artist.artistType,
     worksCount,
     source: {
@@ -115,13 +158,40 @@ export async function listArtistWorks(
   };
 }
 
-async function countDistinctPublicWorks(artistId: string): Promise<number> {
-  return getDb().song.count({
-    where: {
-      ...PUBLIC_SONG_WHERE,
-      artistCredits: { some: { artistId } },
-    },
-  });
+function mapArtistAliases(
+  name: string,
+  localized: Array<{ language: string; value: string }>,
+  additional: string[],
+) {
+  const seen = new Set([name]);
+  const aliases: Array<{ language: string | null; value: string }> = [];
+  for (const alias of [
+    ...localized.map((entry) => ({ language: entry.language, value: entry.value })),
+    ...additional.map((value) => ({ language: null, value })),
+  ]) {
+    const value = alias.value.trim();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    aliases.push({ ...alias, value });
+  }
+  return aliases;
+}
+
+function mapArtistAvatar(artist: {
+  pictureUrlOriginal: string | null;
+  pictureUrlThumb: string | null;
+  pictureUrlSmallThumb: string | null;
+  pictureUrlTinyThumb: string | null;
+  pictureMime: string | null;
+}) {
+  const avatar = {
+    urlOriginal: artist.pictureUrlOriginal,
+    urlThumb: artist.pictureUrlThumb,
+    urlSmallThumb: artist.pictureUrlSmallThumb,
+    urlTinyThumb: artist.pictureUrlTinyThumb,
+    mime: artist.pictureMime,
+  };
+  return Object.values(avatar).some(Boolean) ? avatar : null;
 }
 
 function mapArtistWork(row: ArtistWorkRow, artistId: string) {

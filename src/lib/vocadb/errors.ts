@@ -36,8 +36,15 @@ export class VocaDbError extends Error {
 }
 
 export class VocaDbNotFoundError extends VocaDbError {
-  constructor(songId: number) {
-    super("NOT_FOUND", `VocaDB song ${songId} was not found`, { status: 404 });
+  readonly entity: "song" | "artist";
+  readonly vocadbId: number;
+
+  constructor(vocadbId: number, entity: "song" | "artist" = "song") {
+    super("NOT_FOUND", `VocaDB ${entity} ${vocadbId} was not found`, {
+      status: 404,
+    });
+    this.entity = entity;
+    this.vocadbId = vocadbId;
   }
 }
 
