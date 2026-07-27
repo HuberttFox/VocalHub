@@ -39,13 +39,25 @@ export const SONG_LIST_SELECT = {
 
 type SongListRow = Prisma.SongGetPayload<{ select: typeof SONG_LIST_SELECT }>;
 
-export type SongListDb = Pick<ReturnType<typeof getDb>, "$transaction" | "song">;
+type SongListTransactionDb = Pick<Prisma.TransactionClient, "$queryRaw" | "song">;
+
+export type SongListDb = Pick<ReturnType<typeof getDb>, "$transaction" | "song"> & {
+  $transaction<T>(
+    operation: (tx: SongListTransactionDb) => Promise<T>,
+    options?: { isolationLevel?: Prisma.TransactionIsolationLevel },
+  ): Promise<T>;
+};
 
 export async function listSongs(
   query: SongListQuery,
   db: SongListDb = getDb(),
 ): Promise<SongListDto> {
-  const where = buildSongListWhere(query.q);
+  if (query.q) {
+    const { listSongsWithDecomposedSearch } = await import("@/lib/songs/search-query");
+    return listSongsWithDecomposedSearch(query, db);
+  }
+
+  const where = PUBLIC_SONG_WHERE;
   const skip = (query.page - 1) * query.pageSize;
 
   const [totalItems, songs] = await db.$transaction(
@@ -62,6 +74,36 @@ export async function listSongs(
     { isolationLevel: "RepeatableRead" },
   );
 
+  return songListDto(query, totalItems, songs);
+}
+
+export async function listSongsWithBroadSearch(
+  query: SongListQuery,
+  db: SongListDb,
+): Promise<SongListDto> {
+  const where = buildSongListWhere(query.q);
+  const skip = (query.page - 1) * query.pageSize;
+  const [totalItems, songs] = await db.$transaction(
+    [
+      db.song.count({ where }),
+      db.song.findMany({
+        where,
+        orderBy: buildSongListOrder(query.sort),
+        skip,
+        take: query.pageSize,
+        select: SONG_LIST_SELECT,
+      }),
+    ],
+    { isolationLevel: "RepeatableRead" },
+  );
+  return songListDto(query, totalItems, songs);
+}
+
+function songListDto(
+  query: SongListQuery,
+  totalItems: number,
+  songs: SongListRow[],
+): SongListDto {
   return {
     items: songs.map(mapSongListItem),
     query: { q: query.q ?? null, sort: query.sort },

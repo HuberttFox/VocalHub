@@ -260,18 +260,26 @@ npm run benchmark:catalog -- run --output=.benchmark-results/catalog-5000.json
 
 标准规模为 5k、10k 和 20k，默认每场景 3 次 warmup、15 次 measured run。`run` 调用真实 `listSongs()` / `listArtistWorks()` repository，记录完整调用时延、Prisma emitted SQL 和 `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`；原始 JSON 输出位于 ignored `.benchmark-results/`，不加入普通 CI。
 
-候选索引只在 benchmark DB 比较：
+`compare-search-shape` 使用相邻 `A→B` / `B→A` 成对样本比较现有 broad Prisma `OR` 与 relation-branch `UNION` 候选：
+
+```bash
+npm run benchmark:catalog -- compare-search-shape --warmups=3 --repeats=15 \
+  --output=.benchmark-results/catalog-search-shape.json
+```
+
+候选索引只在 benchmark DB 比较。`compare` 使用交错 baseline/candidate state cycles，并在计时结束后单独生成 EXPLAIN：
 
 ```bash
 npm run benchmark:catalog -- compare --candidate=credit-artist \
+  --cycles=8 --block-repeats=3 --warmups=1 \
   --confirm-reset=vocalhub_benchmark
 ```
 
-compare 执行 baseline A、candidate B 和 drop 后 baseline A2，并精确删除所有 `bench_` index。只有 10k/20k 计划证明 PostgreSQL 实际使用候选，且 scan/sort/buffer 与时延改善超过基线波动后，才另建生产 migration；“当前规模无需索引”也是合法结论。当前脱敏结论记录于 [`docs/performance/catalog-index-baseline.md`](docs/performance/catalog-index-baseline.md)。
+compare 精确删除所有 `bench_` index；paired result digest 不一致时立即失败。只有 10k/20k 计划证明 PostgreSQL 实际使用候选，且 scan/sort/buffer 与成对时延改善超过执行顺序波动后，才另建生产 migration；“当前规模无需索引”也是合法结论。当前脱敏结论记录于 [`docs/performance/catalog-index-baseline.md`](docs/performance/catalog-index-baseline.md)。
 
 ## 路线图
 
-1. 根据 5k/10k/20k benchmark 证据决定是否加入 `pg_trgm`、关系方向索引或公开目录排序索引。
+1. 为已通过两次 20k 交错 benchmark 的 `SongArtistCredit(artistId, songId)` 候选建立独立 production migration，并审查锁影响与回滚。
 2. 独立同步 artist detail，再扩展作者别名、简介、资料图片和可信头像字段。
 3. 按部署需求评估图片服务端代理、持久缓存与 CDN，而非开放任意 URL 代理。
 4. 接入 Auth.js，设计 User/Favorite/Playlist 模型和功能。
