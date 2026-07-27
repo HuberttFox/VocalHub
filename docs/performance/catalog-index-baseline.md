@@ -76,7 +76,7 @@ Interleaved 20k state blocks (8 AB/BA cycles, 1 warmup and 3 measured calls per 
 
 A second independent 20k invocation confirmed the result: 18.72–50.05% median paired improvement, 75–100% B wins, and both run-order strata improved for all scenarios.
 
-Decision: **promote to a separate migration candidate**. This benchmark branch still makes no schema or migration change; production DDL needs its own migration, lock-impact, and rollback review.
+Decision: **promoted to production** as migration `20260727120000_add_song_artist_credit_artist_song_partial_index`. Production creates `SongArtistCredit_artistId_songId_idx` on `(artistId, songId) WHERE artistId IS NOT NULL`. `prisma/schema.prisma` intentionally omits it because Prisma's ordinary `@@index` cannot represent the partial predicate. The integration suite verifies the physical catalog contract; deployment lock impact, failure recovery, and rollback are documented in README.
 
 ### `public-latest`
 
@@ -124,4 +124,4 @@ Decision: **adopt relation-branch `UNION` for searched repository requests**. Ke
 
 ## Current decision
 
-Search query decomposition adds no production index or migration. The bundled trigram and public-latest candidates remain rejected. Reverse artist-credit index now has repeatable interleaved 20k evidence and is promoted to a separate migration candidate; production DDL remains outside this branch and needs its own lock-impact and rollback review.
+Search query decomposition adds no production index or migration. The bundled trigram and public-latest candidates remain rejected, and pending candidates remain unevaluated. Reverse artist-credit index alone has repeatable interleaved 20k evidence and is promoted by migration `20260727120000_add_song_artist_credit_artist_song_partial_index`; no other benchmark candidate enters production.

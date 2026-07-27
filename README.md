@@ -106,6 +106,32 @@ docker compose -f compose.production.yaml --profile worker run --rm --no-deps wo
 
 发布新版本时先暂停 scheduler 并等待 active worker 退出，再运行 `migrate`、部署 `app`，最后恢复 scheduler；advisory lock 不负责协调 migration。多个 `RUNNING` run 表示状态歧义，worker 会拒绝自动恢复；应先检查 `SyncRun`/`SyncItem`。`PARTIAL`/`FAILED` run 已终结，需根据 item error 修复后发起新 run。`ACTIVITY_INTERVAL_SATURATED` 需重新执行完整 seed。production app 不接收 `VOCADB_*`，且 lint 禁止请求路径导入 VocaDB 模块。
 
+### 生产索引 migration
+
+`SongArtistCredit_artistId_songId_idx` 是 partial index，`prisma/schema.prisma` 无法准确表达其 predicate，因此只存在于 committed SQL migration。部署前确认数据库备份/恢复能力和索引磁盘余量，暂停 incremental/reconcile scheduler，并等待所有 active worker 进程完全退出。普通 `CREATE INDEX` 在 build 期间对 `SongArtistCredit` 持有 `SHARE` lock：`SELECT` 可继续，但 `INSERT`、`UPDATE`、`DELETE` 会等待；它也可能等待已有未提交 writer。应在低写入窗口运行现有 migrate container，app 可保持只读服务：
+
+```bash
+docker compose -f compose.production.yaml --profile migrate run --rm migrate
+docker compose -f compose.production.yaml up -d app
+```
+
+可通过 `pg_stat_progress_create_index` 和 PostgreSQL lock views 观察 build。migrate 成功后检查索引位于 `SongArtistCredit`、key 顺序为 `artistId, songId`、predicate 为 `artistId IS NOT NULL`，且 `indisvalid` / `indisready` 均为 true；确认后再恢复 scheduler。
+
+若 build 失败且 catalog 中索引不存在，先标记 migration rolled back，再重跑 deploy：
+
+```bash
+npx prisma migrate resolve --rolled-back 20260727120000_add_song_artist_credit_artist_song_partial_index
+npm run db:deploy
+```
+
+若进程在 PostgreSQL 已提交索引、Prisma 尚未记录完成的窗口退出，只有 catalog 显示上述定义完全一致且 valid/ready 时，才执行：
+
+```bash
+npx prisma migrate resolve --applied 20260727120000_add_song_artist_credit_artist_song_partial_index
+```
+
+索引缺失或定义冲突时不得标记 applied，也不得恢复 scheduler，必须先解决物理状态与 migration history 的歧义。应用版本回滚应保留该 additive index。若索引本身必须删除，使用单独审核的 forward migration；紧急手工 `DROP INDEX CONCURRENTLY "SongArtistCredit_artistId_songId_idx"` 必须在 transaction 外执行、记录操作，并随后用 corrective migration 修复 migration history 与物理状态差异。
+
 ## 架构边界
 
 ```text
@@ -279,8 +305,7 @@ compare 精确删除所有 `bench_` index；paired result digest 不一致时立
 
 ## 路线图
 
-1. 为已通过两次 20k 交错 benchmark 的 `SongArtistCredit(artistId, songId)` 候选建立独立 production migration，并审查锁影响与回滚。
-2. 独立同步 artist detail，再扩展作者别名、简介、资料图片和可信头像字段。
-3. 按部署需求评估图片服务端代理、持久缓存与 CDN，而非开放任意 URL 代理。
-4. 接入 Auth.js，设计 User/Favorite/Playlist 模型和功能。
-5. 在真实数据和用户行为基础上评估标签页、推荐、Redis、AI 与社区能力。
+1. 独立同步 artist detail，再扩展作者别名、简介、资料图片和可信头像字段。
+2. 按部署需求评估图片服务端代理、持久缓存与 CDN，而非开放任意 URL 代理。
+3. 接入 Auth.js，设计 User/Favorite/Playlist 模型和功能。
+4. 在真实数据和用户行为基础上评估标签页、推荐、Redis、AI 与社区能力。
