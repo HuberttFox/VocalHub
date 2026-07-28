@@ -137,6 +137,8 @@ export async function loadCatalogBenchmark(
 export async function resetCatalogTables(db: PrismaClient): Promise<void> {
   await db.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "PlaylistSong",
+      "Favorite",
       "SongPV",
       "SongTag",
       "SongArtistCredit",

@@ -15,14 +15,16 @@
 - 歌曲目录、基础搜索、最新/热门排序、分页与歌曲详情。
 - 歌曲卡片与详情封面、公开 PV 缩略图展示；远程图片失败时保留稳定占位。
 - 作者详情和分页作品列表；作者 profile 可由独立 VocaDB detail refresh 补充别名、简介、头像和公开外链。
+- GitHub OAuth 登录、PostgreSQL database sessions、用户私有收藏与 owner-only 有序歌单。
+- 媒体交付架构评估：当前继续浏览器 direct hotlink，待对象存储/CDN 就绪后由 worker 执行受控持久缓存；不开放任意 URL 代理。
 - 单元测试和真实 PostgreSQL 集成测试。
 
 尚未实现：
 
 - 定时任务和部署级 worker service。
-- 图片服务端代理、对象存储或 CDN 持久缓存。
+- 图片对象存储/CDN 持久缓存（需先提供部署级 S3-compatible storage 与稳定 delivery base URL）。
 - 作者索引、独立跨歌曲/作者/标签的全站搜索。
-- Auth.js、收藏、歌单、Redis、推荐、评论、投稿或 AI 功能。
+- 密码/邮件登录、公开或协作歌单、账号管理、Redis、推荐、评论、投稿或 AI 功能。
 
 ## 快速开始
 
@@ -37,6 +39,27 @@ npm run db:deploy
 ```
 
 `db:deploy` 应用仓库已提交 migration；修改 Prisma schema 时使用 `npm run db:migrate` 创建开发 migration。
+
+### GitHub 登录配置
+
+Auth.js 使用 GitHub OAuth 和 PostgreSQL database session。创建 GitHub OAuth App，并将 callback 配置为：
+
+```text
+http://localhost:3000/api/auth/callback/github
+```
+
+在 `.env` 设置：
+
+```env
+AUTH_SECRET="使用密码学随机值"
+AUTH_URL="http://localhost:3000"
+AUTH_GITHUB_ID="GitHub OAuth Client ID"
+AUTH_GITHUB_SECRET="GitHub OAuth Client Secret"
+```
+
+生产 callback 使用 `https://<canonical-host>/api/auth/callback/github`，必须启用 HTTPS，并将相同 canonical origin 写入 `AUTH_URL`。只有可信 reverse proxy 会覆盖并严格约束 forwarded host headers 时才设置 `AUTH_TRUST_HOST=true`；不要默认启用。Auth secrets 只提供给 app，不提供给 VocaDB worker 或 migrate。
+
+公开目录和 API 不要求登录。登录后可在歌曲详情加入“我的收藏”，并创建最多 100 个私有歌单、每个最多 500 首。歌单没有公开分享或协作能力；收藏和歌单只引用 local Song UUID，不写回 VocaDB。歌曲变为不可公开时，用户 relation 会保留为不泄露元数据的 unavailable placeholder，并可移除。
 
 先执行完整 seed。该命令从 VocaDB `/api/songs/ids` 获取完整非删除 ID 集合，建立 durable manifest，再以并发 2 获取 canonical song detail：
 
@@ -93,7 +116,7 @@ npm run dev
 
 仓库提供同一版本的三个 Docker target：
 
-- `app`：Next.js standalone server，只需要 `DATABASE_URL`。
+- `app`：Next.js standalone server，需要 `DATABASE_URL` 和 `AUTH_*` runtime 配置。
 - `worker`：一次性 VocaDB sync job，需要 `DATABASE_URL` 和 `VOCADB_*` 配置。
 - `migrate`：只执行 committed migration，不启动 app 或 worker。
 
@@ -184,6 +207,8 @@ GET /api/artists/{localUuid}/songs?page=1&pageSize=24&sort=latest
 
 歌曲搜索返回歌曲结果。`q` 最长 100 字符，大小写不敏感地 substring 匹配主标题、默认标题、多语言标题、artist string、结构化或 custom credit、标签名；Tag `additionalNames` 是精确且大小写敏感的数组成员匹配。当前没有模糊匹配、分词、转写或相关度排序。
 
+`Song.favoritedTimes` 是 VocaDB 上游收藏聚合值，继续用于“热门”排序；它与 VocalHub 登录用户的 `Favorite` 完全独立。本地收藏和私有歌单不加入公开 catalog DTO，也不改变现有匿名 GET API contract。
+
 作者作品只包含通过 `artistId` 结构化关联的公开歌曲。Custom credit 没有 Artist 实体，因此保留歌曲署名，但不生成作者页面。
 
 ## 实际数据模型
@@ -197,8 +222,11 @@ GET /api/artists/{localUuid}/songs?page=1&pageSize=24&sort=latest
 - `SongPV`：外部播放入口。
 - `SyncRun` / `SyncItem`：mode、durable manifest、运行边界、尝试和单项结果。
 - `VocaDbSongSyncState`：Song activity checkpoint、seed/reconciliation 完成时间和 compare-and-swap version。
+- `User` / `Account` / `Session`：Auth.js GitHub identity 与 database session；provider token 不进入公开 DTO。
+- `Favorite`：User 与 local Song UUID 的 set-like 私有关系；不改变 `Song.favoritedTimes`。
+- `Playlist` / `PlaylistSong`：owner-only 私有歌单和稳定 position；hidden Song relation 可保留但不公开 catalog fields。
 
-声库角色当前通过通用 Artist credit 的 `categories`、`roles` 和 `effectiveRoles` 表示，没有独立 `Vocal` 模型。未来用户、收藏和歌单模型尚未创建。
+声库角色当前通过通用 Artist credit 的 `categories`、`roles` 和 `effectiveRoles` 表示，没有独立 `Vocal` 模型。公开/协作歌单、角色权限与账号管理尚未实现。
 
 ## VocaDB client 与同步行为
 
@@ -227,7 +255,18 @@ GET /api/artists/{localUuid}/songs?page=1&pageSize=24&sort=latest
 
 VocalHub 已获得可追溯书面许可，允许展示 VocaDB 提供的歌曲封面、作者头像和 PV 缩略图，并允许热链、服务端代理与持久缓存；许可原件不提交到公开仓库。当前版本展示歌曲封面、公开 PV 缩略图和独立 artist detail 提供的作者头像。
 
-当前页面使用浏览器直连远程图片源，不经过 VocalHub 图片代理、`/_next/image`、对象存储或 CDN 持久缓存。图片元素使用 `referrerPolicy="no-referrer"`，加载失败时显示等尺寸占位；远程主机仍可获得访客 IP、User-Agent 等连接信息。页面 footer 统一标明 VocaDB 来源，歌曲和作者详情继续链接对应原条目，图片权利归各权利人。
+当前页面使用浏览器直连远程图片源，不经过 VocalHub 图片代理、`/_next/image`、对象存储或 CDN 持久缓存。图片元素使用 `referrerPolicy="no-referrer"`，按用途依次尝试已保存的 rendition，加载失败时显示等尺寸占位；远程主机仍可获得访客 IP、User-Agent 等连接信息。页面 footer 统一标明 VocaDB 来源，歌曲和作者详情继续链接对应原条目，图片权利归各权利人。
+
+当前部署继续 direct hotlink。VocaDB URL 只在 worker 中经过 `normalizeHttpUrl()` 的展示级校验后写入 PostgreSQL；该校验只保证 URL 是无 credentials 的 HTTP/HTTPS 地址，不验证目标 IP、DNS 或 redirect，因此不是 server-side fetch 授权器。当前不会增加接收 caller URL 的 `/api/image?url=...`、任意 hostname proxy、request-time cache miss 回源、容器本地磁盘持久 cache 或数据库 blob。app 保持无状态，用户请求路径不访问 VocaDB。
+
+持久缓存将在部署可提供 S3-compatible object storage、稳定 first-party/CDN base URL、bucket lifecycle/CORS、容量预算、凭证注入和监控后单独实施。目标设计如下：
+
+- worker 只从歌曲、作者和 PV 的结构化媒体字段建立 curated asset manifest；不接受客户端 URL，也不让用户请求触发下载。
+- media registry 使用 opaque local asset ID，保留 source URL，并记录 rendition、source fingerprint、object key、MIME、bytes、checksum、ETag/Last-Modified、状态、错误和 fetch timestamps。
+- 专用 fetch policy 只允许批准的 VocaDB 媒体 host；每次 DNS 解析与 redirect 都重验 scheme、host 和 IP，拒绝 credentials、loopback、private、link-local 和 reserved targets，并限制 timeout、redirect、响应 bytes、解码像素及允许 MIME。文件 magic bytes 必须与允许类型一致。
+- 对象 key 使用 immutable content hash。worker 先上传并完成 DB 状态切换，再公开新对象；source 删除、merged 或失效时先停止引用，旧对象按保留期异步 GC。
+- CDN 或 first-party media route 只接受 opaque asset ID/object key，永不接受远端 URL，也不做代理回源。成功对象使用 immutable long-lived cache headers；pending/failed 返回稳定占位或现有 source fallback 策略。
+- 后续 DTO 采用 additive contract：保留原始 source URL用于来源追踪与失效，新增 cached/delivery URL；UI 优先 cached URL。不会直接破坏现有 raw URL 字段。
 
 作者 detail 可公开四档头像 URL、plain-text description、稳定去重别名和 enabled web links。description 由 React 转义并保留换行，不作为 HTML/Markdown 执行；unsafe/credential-bearing URL 被丢弃，disabled link 不进入 API 或页面。
 
@@ -322,6 +361,8 @@ compare 精确删除所有 `bench_` index；paired result digest 不一致时立
 
 ## 路线图
 
-1. 按部署需求评估图片服务端代理、持久缓存与 CDN，而非开放任意 URL 代理。
-2. 接入 Auth.js，设计 User/Favorite/Playlist 模型和功能。
-3. 在真实数据和用户行为基础上评估标签页、推荐、Redis、AI 与社区能力。
+媒体代理、持久缓存与 CDN 的部署评估已完成：当前保留 direct hotlink；object storage/CDN 基础设施就绪后再按上述 worker-curated 方案实施，不开放任意 URL 代理。Auth.js、私有收藏和 owner-only 歌单 MVP 已实现。
+
+1. 在真实数据和用户行为基础上评估标签页、推荐、Redis、AI 与社区能力。
+2. 设计账号管理、公开/协作歌单与内容治理后，再扩展当前 private library。
+3. S3-compatible object storage、CDN 和隔离测试 bucket 可用后，实施 worker-time media hydration 与 additive delivery URL。

@@ -6,6 +6,11 @@ import { PageContainer } from "@/components/page-container";
 import { RemoteImage } from "@/components/remote-image";
 import { SongMeta } from "@/components/song-meta";
 import { TagList } from "@/components/tag-list";
+import { getViewer } from "@/lib/auth/session";
+import { setFavoriteAction } from "@/lib/favorites/actions";
+import { isFavorite } from "@/lib/favorites/repository";
+import { addPlaylistSongAction } from "@/lib/playlists/actions";
+import { listPlaylists } from "@/lib/playlists/repository";
 import { formatDate } from "@/lib/songs/format";
 import { getSongDetailById, isUuid } from "@/lib/songs/repository";
 
@@ -36,6 +41,10 @@ export default async function SongPage({
   const song = await loadSong(id);
   if (!song) notFound();
   const names = song.names.filter((name) => name.value !== song.title);
+  const viewer = await getViewer();
+  const [favorite, playlists] = viewer
+    ? await Promise.all([isFavorite(viewer.id, song.id), listPlaylists(viewer.id)])
+    : [false, []];
 
   return (
     <main id="main-content">
@@ -165,7 +174,41 @@ export default async function SongPage({
               )}
             </div>
             <aside>
-              <section>
+              <section className="surface p-5">
+                <p className="eyebrow">My Library</p>
+                {viewer ? (
+                  <>
+                    <form action={setFavoriteAction} className="mt-4">
+                      <input name="songId" type="hidden" value={song.id} />
+                      <input name="desired" type="hidden" value={favorite ? "false" : "true"} />
+                      <button className={favorite ? "button-secondary" : "button-primary"} type="submit">
+                        {favorite ? "取消我的收藏" : "加入我的收藏"}
+                      </button>
+                    </form>
+                    {playlists.length > 0 ? (
+                      <form action={addPlaylistSongAction} className="mt-4">
+                        <input name="songId" type="hidden" value={song.id} />
+                        <label className="block text-sm text-[var(--text-secondary)]" htmlFor="playlistId">加入歌单</label>
+                        <select className="field mt-2" id="playlistId" name="playlistId" required>
+                          {playlists.map((playlist) => (
+                            <option key={playlist.id} value={playlist.id}>{playlist.name}</option>
+                          ))}
+                        </select>
+                        <button className="button-secondary mt-3" type="submit">加入</button>
+                      </form>
+                    ) : (
+                      <p className="mt-4 text-sm text-[var(--text-muted)]">
+                        <Link className="text-[var(--accent-soft)]" href="/playlists">先创建歌单</Link>
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <Link className="button-secondary mt-4" href={`/signin?callbackUrl=${encodeURIComponent(`/songs/${song.id}`)}`}>
+                    登录后收藏
+                  </Link>
+                )}
+              </section>
+              <section className="mt-8">
                 <h2 className="text-lg font-semibold">标签</h2>
                 <TagList tags={song.tags} />
               </section>

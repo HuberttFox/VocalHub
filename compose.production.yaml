@@ -5,6 +5,10 @@ services:
       target: app
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+      AUTH_URL: ${AUTH_URL:?AUTH_URL is required}
+      AUTH_GITHUB_ID: ${AUTH_GITHUB_ID:?AUTH_GITHUB_ID is required}
+      AUTH_GITHUB_SECRET: ${AUTH_GITHUB_SECRET:?AUTH_GITHUB_SECRET is required}
       HOSTNAME: 0.0.0.0
       PORT: 3000
     ports:
