@@ -16,6 +16,8 @@
 - 歌曲卡片与详情封面、公开 PV 缩略图展示；远程图片失败时保留稳定占位。
 - 作者详情和分页作品列表；作者 profile 可由独立 VocaDB detail refresh 补充别名、简介、头像和公开外链。
 - GitHub OAuth 登录、PostgreSQL database sessions、用户私有收藏与 owner-only 有序歌单。
+- 账号设置、全设备 session 撤销、primary database hard delete 与公开隐私/数据保留说明。
+- OAuth token 仅用于 callback，不持久化；每日 one-shot maintenance 清理 expired Session rows。
 - 媒体交付架构评估：当前继续浏览器 direct hotlink，待对象存储/CDN 就绪后由 worker 执行受控持久缓存；不开放任意 URL 代理。
 - 单元测试和真实 PostgreSQL 集成测试。
 
@@ -24,7 +26,7 @@
 - 定时任务和部署级 worker service。
 - 图片对象存储/CDN 持久缓存（需先提供部署级 S3-compatible storage 与稳定 delivery base URL）。
 - 作者索引、独立跨歌曲/作者/标签的全站搜索。
-- 密码/邮件登录、公开或协作歌单、账号管理、Redis、推荐、评论、投稿或 AI 功能。
+- 密码/邮件登录、provider disconnect、数据导出、公开或协作歌单、Redis、推荐、评论、投稿或 AI 功能。
 
 ## 快速开始
 
@@ -60,6 +62,8 @@ AUTH_GITHUB_SECRET="GitHub OAuth Client Secret"
 生产 callback 使用 `https://<canonical-host>/api/auth/callback/github`，必须启用 HTTPS，并将相同 canonical origin 写入 `AUTH_URL`。只有可信 reverse proxy 会覆盖并严格约束 forwarded host headers 时才设置 `AUTH_TRUST_HOST=true`；不要默认启用。Auth secrets 只提供给 app，不提供给 VocaDB worker 或 migrate。
 
 公开目录和 API 不要求登录。登录后可在歌曲详情加入“我的收藏”，并创建最多 100 个私有歌单、每个最多 500 首。歌单没有公开分享或协作能力；收藏和歌单只引用 local Song UUID，不写回 VocaDB。歌曲变为不可公开时，用户 relation 会保留为不泄露元数据的 unavailable placeholder，并可移除。
+
+账号设置支持普通当前 session 退出、撤销账号全部 database sessions，以及输入精确确认词后永久删除账号。Hard delete 从 live primary database 清除 User、GitHub provider identity、Sessions、Favorites、Playlists 与 PlaylistSongs，但保留公共 VocaDB catalog；重新登录会创建空账号。VocalHub 不持久化 GitHub OAuth token，旧 token columns 由 committed migration 清空。删除 VocalHub 账号不会自动撤销 GitHub OAuth App authorization；完整边界见 `/privacy`。
 
 先执行完整 seed。该命令从 VocaDB `/api/songs/ids` 获取完整非删除 ID 集合，建立 durable manifest，再以并发 2 获取 canonical song detail：
 
@@ -114,11 +118,12 @@ npm run dev
 
 ## 生产部署与调度
 
-仓库提供同一版本的三个 Docker target：
+仓库提供同一版本的四个 Docker target：
 
 - `app`：Next.js standalone server，需要 `DATABASE_URL` 和 `AUTH_*` runtime 配置。
 - `worker`：一次性 VocaDB sync job，需要 `DATABASE_URL` 和 `VOCADB_*` 配置。
-- `migrate`：只执行 committed migration，不启动 app 或 worker。
+- `maintenance`：一次性 expired Auth.js Session cleanup，只需要 `DATABASE_URL`。
+- `migrate`：只执行 committed migration，不启动 app、worker 或 maintenance。
 
 `compose.production.yaml` 不提供生产 PostgreSQL，也不在容器内运行 cron。首次部署顺序：
 
@@ -137,6 +142,15 @@ docker compose -f compose.production.yaml --profile worker run --rm --no-deps wo
 ```
 
 建议 incremental 每 15 分钟，reconcile 每日低峰运行，artist refresh 每日错峰调用；seed 只用于首次部署或人工重建 baseline。scheduler 应禁止重叠，但 PostgreSQL advisory lock 仍是所有 VocaDB worker 的最终保护。worker 收到 `SIGTERM`/`SIGINT` 后停止领取新 item、取消 HTTP 等待、等所有 lane 收束再释放 DB 连接；未完成 item 保持 `PENDING`，run 保持 `RUNNING`，下次对应 entity 的 `auto` 恢复。容器至少保留 60 秒 termination grace period。
+
+Auth.js 已在请求时立即拒绝 expired Session。为了删除长期未再访问的过期数据库 row，外部 scheduler 应每日错峰执行：
+
+```bash
+docker compose -f compose.production.yaml \
+  --profile maintenance run --rm --no-deps session-cleanup
+```
+
+maintenance 只接收 `DATABASE_URL`，不接收 OAuth/VocaDB secrets，也不占用 VocaDB advisory lock。它以 PostgreSQL `CURRENT_TIMESTAMP` 计算 cutoff，删除严格早于 database time `- 5 minutes` 的 Session；5 分钟仅是物理 cleanup race grace，不延长认证有效期。重复执行 idempotent，operator 应捕获 JSON summary 和 exit status，并对 nonzero 或每日成功缺失告警。
 
 发布新版本时先暂停 scheduler 并等待 active worker 退出，再运行 `migrate`、部署 `app`，最后恢复 scheduler；advisory lock 不负责协调 migration。同一 entity 出现多个 `RUNNING` run 表示状态歧义，对应 worker 会拒绝自动恢复；应先检查 `SyncRun`/`SyncItem`。`PARTIAL`/`FAILED` run 已终结，需根据 item error 修复后发起新 run。`ACTIVITY_INTERVAL_SATURATED` 需重新执行完整 song seed。production app 不接收 `VOCADB_*`，且 lint 禁止请求路径导入 VocaDB 模块。
 
@@ -222,7 +236,7 @@ GET /api/artists/{localUuid}/songs?page=1&pageSize=24&sort=latest
 - `SongPV`：外部播放入口。
 - `SyncRun` / `SyncItem`：mode、durable manifest、运行边界、尝试和单项结果。
 - `VocaDbSongSyncState`：Song activity checkpoint、seed/reconciliation 完成时间和 compare-and-swap version。
-- `User` / `Account` / `Session`：Auth.js GitHub identity 与 database session；provider token 不进入公开 DTO。
+- `User` / `Account` / `Session`：Auth.js GitHub identity 与 database session；OAuth token 不持久化，provider token/session/email 不进入公开 DTO。
 - `Favorite`：User 与 local Song UUID 的 set-like 私有关系；不改变 `Song.favoritedTimes`。
 - `Playlist` / `PlaylistSong`：owner-only 私有歌单和稳定 position；hidden Song relation 可保留但不公开 catalog fields。
 

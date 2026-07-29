@@ -32,6 +32,15 @@ services:
     restart: "no"
     stop_grace_period: 60s
 
+  session-cleanup:
+    profiles: ["maintenance"]
+    build:
+      context: .
+      target: maintenance
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    restart: "no"
+
   migrate:
     profiles: ["migrate"]
     build:
