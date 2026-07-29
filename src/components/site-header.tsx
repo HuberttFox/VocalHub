@@ -32,7 +32,7 @@ async function AccountNavigation() {
     <>
       <Link className="nav-link" href="/favorites">我的收藏</Link>
       <Link className="nav-link" href="/playlists">我的歌单</Link>
-      <span className="nav-link" title={viewer.name ?? "已登录"}>{viewer.name ?? "已登录"}</span>
+      <Link className="nav-link" href="/settings" title={viewer.name ?? "账号设置"}>{viewer.name ?? "账号设置"}</Link>
       <form
         action={async () => {
           "use server";
