@@ -20,3 +20,9 @@ export const PUBLIC_ARTIST_WHERE = {
     some: { song: { is: PUBLIC_SONG_WHERE } },
   },
 } satisfies Prisma.ArtistWhereInput;
+
+export const PUBLIC_TAG_WHERE = {
+  songs: {
+    some: { song: { is: PUBLIC_SONG_WHERE } },
+  },
+} satisfies Prisma.TagWhereInput;

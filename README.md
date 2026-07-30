@@ -14,7 +14,8 @@
 - 歌曲、标题、artist credits、Artists、Tags、PVs 和同步记录幂等写入。
 - 歌曲目录、基础搜索、最新/热门排序、分页与歌曲详情。
 - 歌曲卡片与详情封面、公开 PV 缩略图展示；远程图片失败时保留稳定占位。
-- 作者详情和分页作品列表；作者 profile 可由独立 VocaDB detail refresh 补充别名、简介、头像和公开外链。
+- 作者详情、作者索引与搜索，以及分页公开作品列表；作者 profile 可由独立 VocaDB detail refresh 补充别名、简介、头像和公开外链。
+- 标签索引、搜索与标签详情页；只关联公开歌曲的标签才对外可见，详情页只展示公开歌曲。
 - GitHub OAuth 登录、PostgreSQL database sessions、用户私有收藏与 owner-only 有序歌单。
 - 账号设置、全设备 session 撤销、primary database hard delete 与公开隐私/数据保留说明。
 - OAuth token 仅用于 callback，不持久化；每日 one-shot maintenance 清理 expired Session rows。
@@ -25,7 +26,7 @@
 
 - 定时任务和部署级 worker service。
 - 图片对象存储/CDN 持久缓存（需先提供部署级 S3-compatible storage 与稳定 delivery base URL）。
-- 作者索引、独立跨歌曲/作者/标签的全站搜索。
+- 独立跨歌曲/作者/标签的全站搜索。
 - 密码/邮件登录、provider disconnect、数据导出、公开或协作歌单、Redis、推荐、评论、投稿或 AI 功能。
 
 ## 快速开始
@@ -114,7 +115,10 @@ npm run dev
 - `http://localhost:3000/`：目录首页
 - `http://localhost:3000/songs`：歌曲浏览与搜索
 - `/songs/{localUuid}`：歌曲详情
+- `/artists`：作者浏览与搜索
 - `/artists/{localUuid}`：作者详情与公开作品
+- `/tags`：标签浏览与搜索
+- `/tags/{localUuid}`：标签详情与公开歌曲
 
 ## 生产部署与调度
 
@@ -156,7 +160,7 @@ maintenance 只接收 `DATABASE_URL`，不接收 OAuth/VocaDB secrets，也不�
 
 ### 生产索引 migration
 
-`SongArtistCredit_artistId_songId_idx` 是 partial index，`prisma/schema.prisma` 无法准确表达其 predicate，因此只存在于 committed SQL migration。部署前确认数据库备份/恢复能力和索引磁盘余量，暂停 incremental/reconcile scheduler，并等待所有 active worker 进程完全退出。普通 `CREATE INDEX` 在 build 期间对 `SongArtistCredit` 持有 `SHARE` lock：`SELECT` 可继续，但 `INSERT`、`UPDATE`、`DELETE` 会等待；它也可能等待已有未提交 writer。应在低写入窗口运行现有 migrate container，app 可保持只读服务：
+`SongArtistCredit_artistId_songId_idx` 是 partial index，`prisma/schema.prisma` 无法准确表达其 predicate，因此只存在于 committed SQL migration。Stage A 未新增生产索引；Tag 反向关系、trigram 和数组候选索引仍须在 Stage C 通过隔离 benchmark 取得证据后再决定。部署前确认数据库备份/恢复能力和索引磁盘余量，暂停 incremental/reconcile scheduler，并等待所有 active worker 进程完全退出。普通 `CREATE INDEX` 在 build 期间对 `SongArtistCredit` 持有 `SHARE` lock：`SELECT` 可继续，但 `INSERT`、`UPDATE`、`DELETE` 会等待；它也可能等待已有未提交 writer。应在低写入窗口运行现有 migrate container，app 可保持只读服务：
 
 ```bash
 docker compose -f compose.production.yaml --profile migrate run --rm migrate
@@ -202,24 +206,31 @@ VocaDB API 访问只发生在 `worker/sync-vocadb.ts` 经 `src/lib/vocadb/` 调�
 - `SYNCED` 可公开；刷新暂时失败后的 `FAILED` 保留最后好快照。
 - `PENDING`、`SOURCE_MISSING`、`SOURCE_DELETED` 不公开。
 - 作者还必须关联至少一首公开歌曲。
+- 标签还必须关联至少一首公开歌曲。
 
 ## 当前 API
 
 ```http
 GET /api/songs?q=miku&page=1&pageSize=24&sort=latest
 GET /api/songs/{localUuid}
+GET /api/artists?q=miku&page=1&pageSize=24
 GET /api/artists/{localUuid}
 GET /api/artists/{localUuid}/songs?page=1&pageSize=24&sort=latest
+GET /api/tags?q=rock&page=1&pageSize=24
+GET /api/tags/{localUuid}
+GET /api/tags/{localUuid}/songs?page=1&pageSize=24&sort=latest
 ```
 
 通用规则：
 
 - 路径 ID 是本地 UUID；VocaDB 数字 ID 只作为来源标识，不是公开业务主键。
 - `page` 默认 `1`、最大 `10000`；`pageSize` 默认 `24`、最大 `50`。
-- `sort` 为 `latest` 或 `popular`。
+- `sort=latest|popular` 只适用于歌曲集合及 Artist/Tag 的歌曲列表端点。
+- Artist/Tag 集合索引只接受 `q`、`page`、`pageSize`，并固定按公开歌曲数降序、名称和本地 UUID 升序排列；未知参数（包括 `sort`）忽略。
 - 错误结构为 `{ "error": { "code": "...", "message": "..." } }`。
+- 非法 Tag UUID 返回 `400 INVALID_TAG_ID`；不存在或只关联隐藏歌曲的 Tag 返回 `404 TAG_NOT_FOUND`。
 
-歌曲搜索返回歌曲结果。`q` 最长 100 字符，大小写不敏感地 substring 匹配主标题、默认标题、多语言标题、artist string、结构化或 custom credit、标签名；Tag `additionalNames` 是精确且大小写敏感的数组成员匹配。当前没有模糊匹配、分词、转写或相关度排序。
+歌曲搜索返回歌曲结果。Artist、Tag 和 Song 的标量名称均以大小写不敏感 literal substring 匹配；Artist 与 Tag 的 `additionalNames` 别名均为大小写敏感的精确数组成员匹配。`q` 最长 100 字符，`%`、`_` 和反斜杠按普通字符处理。当前没有模糊匹配、分词、转写或相关度排序。独立跨实体全站搜索仍在 Stage B，尚未提供 `/search` 或 `/api/search`。
 
 `Song.favoritedTimes` 是 VocaDB 上游收藏聚合值，继续用于“热门”排序；它与 VocalHub 登录用户的 `Favorite` 完全独立。本地收藏和私有歌单不加入公开 catalog DTO，也不改变现有匿名 GET API contract。
 

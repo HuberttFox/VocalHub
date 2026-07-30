@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { isUuid, UUID_PATTERN } from "@/lib/catalog/id";
+import { escapeLikePattern } from "@/lib/catalog/literal-search";
 import { PUBLIC_SONG_WHERE } from "@/lib/catalog/visibility";
 import { getDb } from "@/lib/db";
 import type { SongDetailDto, SongListDto, SongListItemDto } from "@/lib/songs/dto";
@@ -296,8 +297,4 @@ function isPublicArtistSnapshot(artist: {
     artist.lastSyncedAt !== null &&
     (artist.syncStatus === "SYNCED" || artist.syncStatus === "FAILED")
   );
-}
-
-function escapeLikePattern(value: string): string {
-  return value.replace(/[\\%_]/g, "\\$&");
 }

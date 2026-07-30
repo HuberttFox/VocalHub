@@ -157,7 +157,7 @@ export async function listArtistWorks(
   };
 }
 
-function mapArtistAliases(
+export function mapArtistAliases(
   name: string,
   localized: Array<{ language: string; value: string }>,
   additional: string[],
@@ -176,7 +176,7 @@ function mapArtistAliases(
   return aliases;
 }
 
-function mapArtistAvatar(artist: {
+export function mapArtistAvatar(artist: {
   pictureUrlOriginal: string | null;
   pictureUrlThumb: string | null;
   pictureUrlSmallThumb: string | null;

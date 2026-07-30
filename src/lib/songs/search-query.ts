@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { SyncStatus } from "@/generated/prisma/enums";
 import { PUBLIC_SONG_WHERE } from "@/lib/catalog/visibility";
+import { escapeLikePattern } from "@/lib/catalog/literal-search";
 import type { SongListDto } from "@/lib/songs/dto";
 import type { SongListQuery } from "@/lib/songs/list-query";
 import {
@@ -130,8 +131,4 @@ function toSafeNumber(value: bigint | number, name: string): number {
   const parsed = typeof value === "bigint" ? Number(value) : value;
   if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error(`${name} is invalid`);
   return parsed;
-}
-
-function escapeLikePattern(value: string): string {
-  return value.replace(/[\\%_]/g, "\\$&");
 }
