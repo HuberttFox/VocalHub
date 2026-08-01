@@ -4,7 +4,11 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { SyncStatus } from "@/generated/prisma/enums";
 import { GET } from "@/app/api/songs/route";
-import { listSongsWithBroadSearch } from "@/lib/songs/repository";
+import {
+  listSongs,
+  listSongsInTransaction,
+  listSongsWithBroadSearch,
+} from "@/lib/songs/repository";
 import { listSongsWithDecomposedSearch } from "@/lib/songs/search-query";
 import { vocaDbSongSchema } from "@/lib/vocadb/contract";
 import { normalizeVocaDbSong } from "@/lib/vocadb/normalize";
@@ -363,6 +367,34 @@ describe("GET /api/songs", () => {
     const deep = { q: "overlap", sort: "latest" as const, page: 9, pageSize: 1 };
     expect(await listSongsWithDecomposedSearch(deep, db))
       .toEqual(await listSongsWithBroadSearch(deep, db));
+  });
+
+  it("runs unsearched lists inside a caller-owned transaction", async () => {
+    await seedSong({ id: 124, name: "Low", defaultName: "Low", favoritedTimes: 1 });
+    await seedSong({ id: 125, name: "High", defaultName: "High", favoritedTimes: 99 });
+    const query = { sort: "popular" as const, page: 2, pageSize: 1 };
+
+    const expected = await listSongs(query, db);
+    const actual = await db.$transaction(
+      (tx) => listSongsInTransaction(query, tx),
+      { isolationLevel: "RepeatableRead" },
+    );
+
+    expect(actual).toEqual(expected);
+  });
+
+  it("runs searched lists inside a caller-owned transaction", async () => {
+    await seedSong({ id: 124, name: "100% Match", defaultName: "100% Match" });
+    await seedSong({ id: 125, name: "100x Match", defaultName: "100x Match" });
+    const query = { q: "100%", sort: "latest" as const, page: 1, pageSize: 1 };
+
+    const expected = await listSongsWithBroadSearch(query, db);
+    const actual = await db.$transaction(
+      (tx) => listSongsInTransaction(query, tx),
+      { isolationLevel: "RepeatableRead" },
+    );
+
+    expect(actual).toEqual(expected);
   });
 
   it("paginates and supports popular sorting", async () => {

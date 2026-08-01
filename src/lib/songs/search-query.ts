@@ -8,6 +8,7 @@ import {
   SONG_LIST_SELECT,
   mapSongListItem,
   type SongListDb,
+  type SongListTransaction,
 } from "@/lib/songs/repository";
 
 type SongListRow = Prisma.SongGetPayload<{ select: typeof SONG_LIST_SELECT }>;
@@ -28,30 +29,43 @@ export async function listSongsWithDecomposedSearch(
     throw new Error("Decomposed search requires a query");
   }
 
-  return db.$transaction(async (tx) => {
-    const [page] = await tx.$queryRaw<SearchPageRow[]>(searchPageQuery(query, literalQuery));
-    if (!page) throw new Error("Search query did not return pagination metadata");
+  return db.$transaction(
+    (tx) => listSongsWithDecomposedSearchInTransaction(query, tx),
+    { isolationLevel: "RepeatableRead", timeout: 15_000 },
+  );
+}
 
-    const rows = page.ids.length === 0
-      ? []
-      : await tx.song.findMany({
-          where: { id: { in: page.ids }, ...PUBLIC_SONG_WHERE },
-          select: SONG_LIST_SELECT,
-        });
-    const songs = orderHydratedRows(page.ids, rows);
-    const totalItems = toSafeNumber(page.totalItems, "search totalItems");
+export async function listSongsWithDecomposedSearchInTransaction(
+  query: SongListQuery,
+  tx: SongListTransaction,
+): Promise<SongListDto> {
+  const literalQuery = query.q;
+  if (!literalQuery) {
+    throw new Error("Decomposed search requires a query");
+  }
 
-    return {
-      items: songs.map(mapSongListItem),
-      query: { q: literalQuery, sort: query.sort },
-      pagination: {
-        page: query.page,
-        pageSize: query.pageSize,
-        totalItems,
-        totalPages: Math.ceil(totalItems / query.pageSize),
-      },
-    };
-  }, { isolationLevel: "RepeatableRead" });
+  const [page] = await tx.$queryRaw<SearchPageRow[]>(searchPageQuery(query, literalQuery));
+  if (!page) throw new Error("Search query did not return pagination metadata");
+
+  const rows = page.ids.length === 0
+    ? []
+    : await tx.song.findMany({
+        where: { id: { in: page.ids }, ...PUBLIC_SONG_WHERE },
+        select: SONG_LIST_SELECT,
+      });
+  const songs = orderHydratedRows(page.ids, rows);
+  const totalItems = toSafeNumber(page.totalItems, "search totalItems");
+
+  return {
+    items: songs.map(mapSongListItem),
+    query: { q: literalQuery, sort: query.sort },
+    pagination: {
+      page: query.page,
+      pageSize: query.pageSize,
+      totalItems,
+      totalPages: Math.ceil(totalItems / query.pageSize),
+    },
+  };
 }
 
 function searchPageQuery(query: SongListQuery, literalQuery: string): Prisma.Sql {

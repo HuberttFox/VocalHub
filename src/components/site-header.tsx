@@ -14,6 +14,7 @@ export function SiteHeader() {
         <nav aria-label="主导航" className="flex flex-wrap items-center gap-1">
           <Link className="nav-link" href="/">首页</Link>
           <Link className="nav-link" href="/songs">歌曲目录</Link>
+          <Link className="nav-link" href="/search">全站搜索</Link>
           <Suspense fallback={<span className="nav-link">账号</span>}>
             <AccountNavigation />
           </Suspense>

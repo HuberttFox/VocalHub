@@ -16,6 +16,7 @@
 - 歌曲卡片与详情封面、公开 PV 缩略图展示；远程图片失败时保留稳定占位。
 - 作者详情、作者索引与搜索，以及分页公开作品列表；作者 profile 可由独立 VocaDB detail refresh 补充别名、简介、头像和公开外链。
 - 标签索引、搜索与标签详情页；只关联公开歌曲的标签才对外可见，详情页只展示公开歌曲。
+- 全站搜索页面：一次查询本地 PostgreSQL 快照中的歌曲、作者和标签，按组展示预览与准确总数。
 - GitHub OAuth 登录、PostgreSQL database sessions、用户私有收藏与 owner-only 有序歌单。
 - 账号设置、全设备 session 撤销、primary database hard delete 与公开隐私/数据保留说明。
 - OAuth token 仅用于 callback，不持久化；每日 one-shot maintenance 清理 expired Session rows。
@@ -26,7 +27,7 @@
 
 - 定时任务和部署级 worker service。
 - 图片对象存储/CDN 持久缓存（需先提供部署级 S3-compatible storage 与稳定 delivery base URL）。
-- 独立跨歌曲/作者/标签的全站搜索。
+- 全站搜索所需的 Stage C 候选生产索引；须先通过隔离 benchmark 取得证据。
 - 密码/邮件登录、provider disconnect、数据导出、公开或协作歌单、Redis、推荐、评论、投稿或 AI 功能。
 
 ## 快速开始
@@ -114,6 +115,7 @@ npm run dev
 
 - `http://localhost:3000/`：目录首页
 - `http://localhost:3000/songs`：歌曲浏览与搜索
+- `/search`：跨歌曲、作者和标签的全站搜索
 - `/songs/{localUuid}`：歌曲详情
 - `/artists`：作者浏览与搜索
 - `/artists/{localUuid}`：作者详情与公开作品
@@ -230,7 +232,9 @@ GET /api/tags/{localUuid}/songs?page=1&pageSize=24&sort=latest
 - 错误结构为 `{ "error": { "code": "...", "message": "..." } }`。
 - 非法 Tag UUID 返回 `400 INVALID_TAG_ID`；不存在或只关联隐藏歌曲的 Tag 返回 `404 TAG_NOT_FOUND`。
 
-歌曲搜索返回歌曲结果。Artist、Tag 和 Song 的标量名称均以大小写不敏感 literal substring 匹配；Artist 与 Tag 的 `additionalNames` 别名均为大小写敏感的精确数组成员匹配。`q` 最长 100 字符，`%`、`_` 和反斜杠按普通字符处理。当前没有模糊匹配、分词、转写或相关度排序。独立跨实体全站搜索仍在 Stage B，尚未提供 `/search` 或 `/api/search`。
+歌曲搜索返回歌曲结果。Artist、Tag 和 Song 的标量名称均以大小写不敏感 literal substring 匹配；Artist 与 Tag 的 `additionalNames` 别名均为大小写敏感的精确数组成员匹配。`q` 最长 100 字符，`%`、`_` 和反斜杠按普通字符处理。当前没有模糊匹配、分词、转写或相关度排序。
+
+`/search` 接受同样最长 100 字符的 `q`，trim 后为空时仅显示搜索引导且不访问数据库；合法非空 `q` 直接查询本地 PostgreSQL，在同一快照中返回歌曲、作者和标签的分组预览、准确总数与按需“查看全部”链接。该功能不提供 `/api/search`，Server Component 也不经本站 HTTP API 或 VocaDB。Stage C trigram、数组和反向关系候选生产索引仍待隔离 benchmark 证明后决定。
 
 `Song.favoritedTimes` 是 VocaDB 上游收藏聚合值，继续用于“热门”排序；它与 VocalHub 登录用户的 `Favorite` 完全独立。本地收藏和私有歌单不加入公开 catalog DTO，也不改变现有匿名 GET API contract。
 
