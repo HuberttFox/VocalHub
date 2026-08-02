@@ -127,6 +127,8 @@ npm run dev
 
 ## 生产部署与调度
 
+完整 operator checklist 见 [`docs/production-deployment-runbook.md`](docs/production-deployment-runbook.md)。
+
 仓库提供同一版本的四个 Docker target：
 
 - `app`：Next.js standalone server，需要 `DATABASE_URL` 和 `AUTH_*` runtime 配置。

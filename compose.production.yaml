@@ -9,6 +9,7 @@ services:
       AUTH_URL: ${AUTH_URL:?AUTH_URL is required}
       AUTH_GITHUB_ID: ${AUTH_GITHUB_ID:?AUTH_GITHUB_ID is required}
       AUTH_GITHUB_SECRET: ${AUTH_GITHUB_SECRET:?AUTH_GITHUB_SECRET is required}
+      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-false}
       HOSTNAME: 0.0.0.0
       PORT: 3000
     ports:
