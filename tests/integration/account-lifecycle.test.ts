@@ -2,7 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaClient } from "@/generated/prisma/client";
 import { SyncStatus } from "@/generated/prisma/enums";
-import { deleteUserAccount, revokeUserSessions } from "@/lib/account/repository";
+import { deleteUserAccount, getAccountExport, revokeUserSessions } from "@/lib/account/repository";
 import {
   databaseSessionCleanupCutoff,
   deleteExpiredSessions,
@@ -99,6 +99,75 @@ describe("account lifecycle", () => {
     });
   });
 
+  it("exports only the user's private data without OAuth tokens", async () => {
+    const target = await seedUser("export@example.com");
+    const other = await seedUser("export-other@example.com");
+    const publicSong = await seedSong(9002);
+    const hiddenSong = await seedSong(9003);
+    await db.song.update({
+      where: { id: hiddenSong.id },
+      data: { syncStatus: SyncStatus.PENDING },
+    });
+    await db.account.create({
+      data: {
+        userId: target.id,
+        type: "oauth",
+        provider: "github",
+        providerAccountId: "export-github",
+        access_token: "must-not-export",
+        refresh_token: "must-not-export",
+        id_token: "must-not-export",
+      },
+    });
+    await db.account.create({
+      data: {
+        userId: other.id,
+        type: "oauth",
+        provider: "github",
+        providerAccountId: "other-github",
+      },
+    });
+    await db.favorite.create({ data: { userId: other.id, songId: publicSong.id } });
+    const otherPlaylist = await db.playlist.create({
+      data: { userId: other.id, name: "Other private list" },
+    });
+    await db.playlistSong.create({
+      data: { playlistId: otherPlaylist.id, songId: publicSong.id, position: 0 },
+    });
+    await db.favorite.create({ data: { userId: target.id, songId: hiddenSong.id } });
+    await db.favorite.create({ data: { userId: target.id, songId: publicSong.id } });
+    const playlist = await db.playlist.create({
+      data: { userId: target.id, name: "Export picks", description: "Private" },
+    });
+    await db.playlistSong.createMany({
+      data: [
+        { playlistId: playlist.id, songId: hiddenSong.id, position: 1 },
+        { playlistId: playlist.id, songId: publicSong.id, position: 0 },
+      ],
+    });
+
+    const exported = await getAccountExport(target.id);
+
+    expect(exported).not.toBeNull();
+    expect(exported?.account.id).toBe(target.id);
+    expect(exported?.account.providers).toEqual([
+      { provider: "github", providerAccountId: "export-github" },
+    ]);
+    expect(exported?.account.image).toBeNull();
+    expect(JSON.stringify(exported)).not.toContain("other-github");
+    expect(JSON.stringify(exported)).not.toContain("Other private list");
+    expect(JSON.stringify(exported)).not.toContain("must-not-export");
+    expect(exported?.favorites.map((favorite) => [favorite.songId, favorite.available])).toEqual([
+      [hiddenSong.id, false],
+      [publicSong.id, true],
+    ]);
+    expect(exported?.playlists[0]?.entries.map((entry) => [entry.position, entry.songId])).toEqual([
+      [0, publicSong.id],
+      [1, hiddenSong.id],
+    ]);
+    expect(exported?.playlists[0]?.entries[1]?.song).toBeNull();
+    expect(exported?.playlists[0]?.entries[0]?.song?.title).toBe("Song 9002");
+  });
   it("revokes only one user's sessions idempotently", async () => {
     const target = await seedUser("sessions@example.com");
     const other = await seedUser("sessions-other@example.com");

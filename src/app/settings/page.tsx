@@ -30,6 +30,12 @@ export default async function SettingsPage() {
           <p className="mt-5 text-sm text-[var(--text-muted)]">
             详情参见 <Link className="text-[var(--accent-soft)]" href="/privacy">隐私与数据保留</Link>。
           </p>
+          <a className="button-secondary mt-5 inline-flex" download href="/api/account/export">
+            下载我的数据
+          </a>
+          <p className="mt-3 text-sm text-[var(--text-muted)]">
+            导出包含账号资料、收藏和私有歌单，不包含 OAuth token。
+          </p>
         </section>
 
         <section className="surface mt-8 p-6">

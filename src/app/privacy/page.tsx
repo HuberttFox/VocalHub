@@ -19,6 +19,9 @@ export default function PrivacyPage() {
           <Policy title="Database sessions">
             Session 最长有效 30 天，活跃时约每日滚动更新。到达 expires 后立即视为无效；每日 maintenance job 以 5 分钟物理清理 grace 删除旧数据库记录。账号设置可随时撤销所有设备 session。
           </Policy>
+          <Policy title="账号导出">
+            账号设置提供 JSON 数据导出，包含账号基本资料（包括已保存的头像 URL）、GitHub provider 标识、收藏和私有歌单及其顺序。OAuth token 永不导出；已不可公开的歌曲只保留本地 Song UUID 和不可用标记，不包含隐藏歌曲元数据。
+          </Policy>
           <Policy title="收藏与歌单">
             收藏和歌单是 owner-only 私有数据，保留到用户主动删除或删除账号。它们只引用本地 Song UUID，不写回 VocaDB。
           </Policy>
