@@ -193,6 +193,7 @@ model SongTag {
 
   @@id([songId, tagId])
   @@index([songId, position])
+  @@index([tagId, songId])
 }
 
 model SongPV {

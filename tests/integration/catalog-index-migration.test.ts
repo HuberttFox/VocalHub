@@ -63,4 +63,45 @@ describe("catalog index migrations", () => {
     });
     expect(indexes[0]?.predicate?.replace(/[()"\s]/g, "")).toBe("artistIdISNOTNULL");
   });
+
+  it("installs the reverse tag-song index", async () => {
+    const indexes = await db.$queryRaw<IndexMetadata[]>`
+      SELECT
+        access_method."amname"::text AS "accessMethod",
+        index_metadata."indisunique" AS "isUnique",
+        index_metadata."indisvalid" AS "isValid",
+        index_metadata."indisready" AS "isReady",
+        ARRAY(
+          SELECT attribute."attname"::text
+          FROM unnest(index_metadata."indkey") WITH ORDINALITY AS key("attnum", "position")
+          JOIN pg_attribute AS attribute
+            ON attribute."attrelid" = table_relation.oid
+           AND attribute."attnum" = key."attnum"
+          ORDER BY key."position"
+        ) AS "keyColumns",
+        pg_get_expr(index_metadata."indpred", index_metadata."indrelid")::text AS "predicate"
+      FROM pg_class AS index_relation
+      JOIN pg_namespace AS namespace
+        ON namespace.oid = index_relation."relnamespace"
+      JOIN pg_index AS index_metadata
+        ON index_metadata."indexrelid" = index_relation.oid
+      JOIN pg_class AS table_relation
+        ON table_relation.oid = index_metadata."indrelid"
+      JOIN pg_am AS access_method
+        ON access_method.oid = index_relation."relam"
+      WHERE namespace."nspname" = current_schema()
+        AND table_relation."relname" = 'SongTag'
+        AND index_relation."relname" = 'SongTag_tagId_songId_idx'
+    `;
+
+    expect(indexes).toHaveLength(1);
+    expect(indexes[0]).toMatchObject({
+      accessMethod: "btree",
+      isUnique: false,
+      isValid: true,
+      isReady: true,
+      keyColumns: ["tagId", "songId"],
+      predicate: null,
+    });
+  });
 });

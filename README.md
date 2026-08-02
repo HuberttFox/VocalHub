@@ -162,29 +162,29 @@ maintenance 只接收 `DATABASE_URL`，不接收 OAuth/VocaDB secrets，也不�
 
 ### 生产索引 migration
 
-`SongArtistCredit_artistId_songId_idx` 是 partial index，`prisma/schema.prisma` 无法准确表达其 predicate，因此只存在于 committed SQL migration。Stage A 未新增生产索引；Tag 反向关系、trigram 和数组候选索引仍须在 Stage C 通过隔离 benchmark 取得证据后再决定。部署前确认数据库备份/恢复能力和索引磁盘余量，暂停 incremental/reconcile scheduler，并等待所有 active worker 进程完全退出。普通 `CREATE INDEX` 在 build 期间对 `SongArtistCredit` 持有 `SHARE` lock：`SELECT` 可继续，但 `INSERT`、`UPDATE`、`DELETE` 会等待；它也可能等待已有未提交 writer。应在低写入窗口运行现有 migrate container，app 可保持只读服务：
+`SongArtistCredit_artistId_songId_idx` 是 partial index，`prisma/schema.prisma` 无法准确表达其 predicate，因此只存在于 committed SQL migration。`SongTag_tagId_songId_idx` 是普通 btree reverse relation index，已在 `prisma/schema.prisma` 与 committed SQL migration 中声明。Stage C 仅推广这两个已有证据支持的 relation indexes；trigram 和数组候选索引不进入 production。部署前确认数据库备份/恢复能力和索引磁盘余量，暂停 incremental/reconcile scheduler，并等待所有 active worker 进程完全退出。普通 `CREATE INDEX` 在 build 期间对目标关系持有 `SHARE` lock：`SELECT` 可继续，但 `INSERT`、`UPDATE`、`DELETE` 会等待；它也可能等待已有未提交 writer。应在低写入窗口运行现有 migrate container，app 可保持只读服务：
 
 ```bash
 docker compose -f compose.production.yaml --profile migrate run --rm migrate
 docker compose -f compose.production.yaml up -d app
 ```
 
-可通过 `pg_stat_progress_create_index` 和 PostgreSQL lock views 观察 build。migrate 成功后检查索引位于 `SongArtistCredit`、key 顺序为 `artistId, songId`、predicate 为 `artistId IS NOT NULL`，且 `indisvalid` / `indisready` 均为 true；确认后再恢复 scheduler。
+可通过 `pg_stat_progress_create_index` 和 PostgreSQL lock views 观察 build。migrate 成功后检查 `SongArtistCredit_artistId_songId_idx` 位于 `SongArtistCredit`、key 顺序为 `artistId, songId`、predicate 为 `artistId IS NOT NULL`；同时检查 `SongTag_tagId_songId_idx` 位于 `SongTag`、key 顺序为 `tagId, songId`、predicate 为 null；两个 index 的 `indisvalid` / `indisready` 均应为 true。确认后再恢复 scheduler。
 
-若 build 失败且 catalog 中索引不存在，先标记 migration rolled back，再重跑 deploy：
+若 build 失败且 SongTag catalog 中索引不存在，先标记 migration rolled back，再重跑 deploy：
 
 ```bash
-npx prisma migrate resolve --rolled-back 20260727120000_add_song_artist_credit_artist_song_partial_index
+npx prisma migrate resolve --rolled-back 20260802090000_add_song_tag_tag_song_index
 npm run db:deploy
 ```
 
-若进程在 PostgreSQL 已提交索引、Prisma 尚未记录完成的窗口退出，只有 catalog 显示上述定义完全一致且 valid/ready 时，才执行：
+若进程在 PostgreSQL 已提交 SongTag index、Prisma 尚未记录完成的窗口退出，只有 catalog 显示上述定义完全一致且 valid/ready 时，才执行：
 
 ```bash
-npx prisma migrate resolve --applied 20260727120000_add_song_artist_credit_artist_song_partial_index
+npx prisma migrate resolve --applied 20260802090000_add_song_tag_tag_song_index
 ```
 
-索引缺失或定义冲突时不得标记 applied，也不得恢复 scheduler，必须先解决物理状态与 migration history 的歧义。应用版本回滚应保留该 additive index。若索引本身必须删除，使用单独审核的 forward migration；紧急手工 `DROP INDEX CONCURRENTLY "SongArtistCredit_artistId_songId_idx"` 必须在 transaction 外执行、记录操作，并随后用 corrective migration 修复 migration history 与物理状态差异。
+同理，Artist index 使用既有 migration `20260727120000_add_song_artist_credit_artist_song_partial_index` 的 resolve 命令。任一 index 缺失或定义冲突时不得标记 applied，也不得恢复 scheduler，必须先解决物理状态与 migration history 的歧义。应用版本回滚应保留这些 additive indexes。若 index 本身必须删除，使用单独审核的 forward migration；紧急手工 `DROP INDEX CONCURRENTLY` 必须在 transaction 外执行、记录操作，并随后用 corrective migration 修复 migration history 与物理状态差异。
 
 ## 架构边界
 

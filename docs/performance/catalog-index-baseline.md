@@ -2,7 +2,7 @@
 
 ## Scope
 
-This benchmark measures production `listSongs()`, `listArtistWorks()`, Artist/Tag list repositories, and aggregate `searchCatalog()` calls against deterministic synthetic PostgreSQL data. It does not call VocaDB. Candidate indexes use the `bench_catalog_` prefix and are created only in the disposable benchmark database; this record does not add a production migration.
+This benchmark measures production `listSongs()`, `listArtistWorks()`, Artist/Tag list repositories, and aggregate `searchCatalog()` calls against deterministic synthetic PostgreSQL data. It does not call VocaDB. Candidate indexes use the `bench_catalog_` prefix and are created only in the disposable benchmark database; this follow-up promotes only the independently reviewed `SongTag(tagId, songId)` relation index to production.
 
 Raw JSON reports remain local under ignored `.benchmark-results/`.
 
@@ -106,7 +106,7 @@ Target-scale candidate comparisons used 8 interleaved AB/BA state cycles, one wa
 
 | Candidate | Candidate plan use | Target paired result | Decision |
 | --- | ---: | --- | --- |
-| `tag-relation` | 36 candidate plan nodes in mixed suite; 15 candidate plan nodes in targeted Tag suite | Mixed full-suite Tag search medians improved 74.04–87.00%; corrected Tag works medians improved 10.35–86.66%, with 75–100% B wins and both order strata improving | Passes Tag-only benchmark gate; production migration requires separate review |
+| `tag-relation` | 36 candidate plan nodes in mixed suite; 15 candidate plan nodes in targeted Tag suite | Mixed full-suite Tag search medians improved 74.04–87.00%; corrected Tag works medians improved 10.35–86.66%, with 75–100% B wins and both order strata improving | Promote as independent production migration `20260802090000_add_song_tag_tag_song_index` |
 | `artist-alias-gin` | 0 candidate plan nodes | Full-suite mean change approximately 0%; Artist exact-alias and no-hit paths were not stable | Reject |
 | `artist-name-trigram` | 14 candidate plan nodes | Artist canonical/localized paths improved about 9–11%, but Song/aggregate paths mixed and several catalog paths regressed | Reject |
 | `tag-alias-gin` | 14 candidate plan nodes | Aggregate searches improved 3.63–8.68% in selected cases, but alias and ordering strata were inconsistent | Reject |
@@ -115,7 +115,7 @@ Target-scale candidate comparisons used 8 interleaved AB/BA state cycles, one wa
 | `public-popular` | 0 candidate plan nodes | Popular ordering result did not improve consistently; Song/aggregate paths regressed | Reject |
 | `credit-artist` regression | 36 candidate plan nodes | Existing reverse credit index remained used; duplicate-credit Artist works improved 61.38%, while unrelated paths were mixed | Existing production migration retained |
 
-`tag-relation` passes the targeted Tag works benchmark gate: PostgreSQL used `Index Only Scan` on the candidate for all five scenarios, result digests matched, B won 75–100% of pairs, and both AB/BA strata improved. This evidence supports a separate production migration review for Tag reverse lookup, including index size, write amplification, deployment lock behavior, and physical-catalog validation. It does not justify bundling the index with unrelated search candidates. No migration is created in this benchmark change.
+`tag-relation` passed its targeted Tag works gate and is promoted independently as migration `20260802090000_add_song_tag_tag_song_index`, creating `SongTag(tagId, songId)`. PostgreSQL used `Index Only Scan` on the candidate for all five scenarios, result digests matched, B won 75–100% of pairs, and both AB/BA strata improved. Production rollout remains subject to the documented backup, disk-space, scheduler pause, lock observation, and physical-catalog validation steps. This decision does not promote unrelated search candidates.
 
 
 The follow-up benchmark replaces fixed run-order comparisons with adjacent `A→B` / `B→A` pairs. A is the original broad Prisma relation `OR`; B is a parameterized relation-branch `UNION` that returns exact total plus ordered page IDs and then hydrates the existing DTO inside one repeatable-read transaction. Every measured pair requires equal result digest and marker cardinality.
@@ -146,4 +146,4 @@ Decision: **adopt relation-branch `UNION` for searched repository requests**. Ke
 
 ## Current decision
 
-Search query decomposition adds no production index or migration. The bundled trigram and public-ordering candidates remain rejected. At the 50k target, `tag-relation` passes only its targeted Tag works gate and remains pending separate production migration review. Reverse artist-credit index remains the only promoted production index through migration `20260727120000_add_song_artist_credit_artist_song_partial_index`; no production migration is created by this Stage C benchmark change.
+Search query decomposition adds no production index or migration. The bundled trigram and public-ordering candidates remain rejected. At the 50k target, `tag-relation` is promoted independently through migration `20260802090000_add_song_tag_tag_song_index`; reverse artist-credit index remains promoted through migration `20260727120000_add_song_artist_credit_artist_song_partial_index`. No unrelated candidate migration is included.
