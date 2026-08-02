@@ -55,6 +55,7 @@ export async function leavePlaylistAction(formData: FormData): Promise<void> {
   const input = playlistTokenSchema.parse(Object.fromEntries(formData));
   if (!await leavePlaylist(viewer.id, input.playlistId)) throw new Error("PLAYLIST_NOT_FOUND");
   revalidatePath("/playlists");
+  revalidatePath(`/playlists/${input.playlistId}`);
 }
 export async function createPlaylistAction(formData: FormData): Promise<void> {
   const viewer = await requireViewerForMutation();

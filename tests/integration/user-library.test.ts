@@ -9,6 +9,7 @@ import {
   createPlaylist,
   getPlaylist,
   getPublicPlaylist,
+  leavePlaylist,
   listPlaylists,
   movePlaylistSong,
   removePlaylistCollaborator,
@@ -131,9 +132,20 @@ describe("user library persistence", () => {
     expect((await getPublicPlaylist(published.shareToken!))?.name).toBe("Shared set");
     expect(await getPlaylist(stranger.id, playlist.id)).toBeNull();
     expect((await listPlaylists(editor.id))[0]?.role).toBe("EDITOR");
+    const editorDetail = await getPlaylist(owner.id, playlist.id);
+    expect(editorDetail?.collaborators[0]).toMatchObject({
+      name: null,
+      email: "share-editor@example.com",
+      role: "EDITOR",
+    });
+    expect(JSON.stringify(editorDetail?.collaborators)).toContain("share-editor@example.com");
     expect(await addPlaylistSong(editor.id, playlist.id, song.id)).toBe("UPDATED");
     expect((await setPlaylistVisibility(editor.id, playlist.id, "PRIVATE")).status).toBe("NOT_FOUND");
     expect(await removePlaylistCollaborator(stranger.id, playlist.id, editor.id)).toBe(false);
+    expect(await leavePlaylist(editor.id, playlist.id)).toBe(true);
+    expect(await getPlaylist(editor.id, playlist.id)).toBeNull();
+    expect(await leavePlaylist(editor.id, playlist.id)).toBe(false);
+    expect(await addPlaylistCollaborator(owner.id, playlist.id, "share-editor@example.com")).toBe("ADDED");
     expect(await removePlaylistCollaborator(owner.id, playlist.id, editor.id)).toBe(true);
     expect(await getPlaylist(editor.id, playlist.id)).toBeNull();
     const oldToken = published.shareToken!;
