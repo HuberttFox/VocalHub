@@ -7,6 +7,7 @@ import { requireViewer } from "@/lib/auth/session";
 import { isUuid } from "@/lib/catalog/id";
 import {
   addPlaylistCollaboratorAction,
+  leavePlaylistAction,
   movePlaylistSongAction,
   removePlaylistCollaboratorAction,
   removePlaylistSongAction,
@@ -59,7 +60,7 @@ export default async function PlaylistPage({ params }: { params: Promise<{ id: s
                 <ul className="mt-4 space-y-2 text-sm text-[var(--text-secondary)]">
                   {playlist.collaborators.map((collaborator) => (
                     <li className="flex items-center justify-between gap-3" key={collaborator.userId}>
-                      <span>{collaborator.userId} · 编辑者</span>
+                      <span>{collaborator.name ?? collaborator.email ?? "未提供资料"} · 编辑者</span>
                       <form action={removePlaylistCollaboratorAction}>
                         <input name="playlistId" type="hidden" value={playlist.id} />
                         <input name="userId" type="hidden" value={collaborator.userId} />
@@ -71,6 +72,16 @@ export default async function PlaylistPage({ params }: { params: Promise<{ id: s
               )}
             </section>
           </>
+        )}
+        {playlist.role === "EDITOR" && (
+          <form action={leavePlaylistAction} className="surface mt-8 flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
+              <h2 className="text-xl font-semibold">离开歌单</h2>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">离开后将无法继续编辑此歌单。</p>
+            </div>
+            <input name="playlistId" type="hidden" value={playlist.id} />
+            <button className="button-secondary" type="submit">离开协作</button>
+          </form>
         )}
         <form action={updatePlaylistAction} className="surface mt-8 grid gap-4 p-6 sm:grid-cols-2">
           <input name="playlistId" type="hidden" value={playlist.id} />

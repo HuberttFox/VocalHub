@@ -22,7 +22,12 @@ const playlistSelect = {
   shareToken: true,
   userId: true,
   collaborators: {
-    select: { userId: true, role: true, createdAt: true },
+    select: {
+      userId: true,
+      role: true,
+      createdAt: true,
+      user: { select: { name: true, email: true } },
+    },
     orderBy: { userId: "asc" },
   },
   _count: { select: { songs: true } },
@@ -68,6 +73,8 @@ export async function getPlaylist(
       ...mapPlaylist(playlist, playlist.userId === userId ? "OWNER" : "EDITOR"),
       collaborators: playlist.collaborators.map((collaborator) => ({
         userId: collaborator.userId,
+        name: collaborator.user.name,
+        email: collaborator.user.email,
         role: collaborator.role,
         createdAt: collaborator.createdAt.toISOString(),
       })),
