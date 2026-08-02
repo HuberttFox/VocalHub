@@ -234,7 +234,7 @@ GET /api/tags/{localUuid}/songs?page=1&pageSize=24&sort=latest
 
 歌曲搜索返回歌曲结果。Artist、Tag 和 Song 的标量名称均以大小写不敏感 literal substring 匹配；Artist 与 Tag 的 `additionalNames` 别名均为大小写敏感的精确数组成员匹配。`q` 最长 100 字符，`%`、`_` 和反斜杠按普通字符处理。当前没有模糊匹配、分词、转写或相关度排序。
 
-`/search` 接受同样最长 100 字符的 `q`，trim 后为空时仅显示搜索引导且不访问数据库；合法非空 `q` 直接查询本地 PostgreSQL，在同一快照中返回歌曲、作者和标签的分组预览、准确总数与按需“查看全部”链接。该功能不提供 `/api/search`，Server Component 也不经本站 HTTP API 或 VocaDB。Stage C trigram、数组和反向关系候选生产索引仍待隔离 benchmark 证明后决定。
+`/search` 接受同样最长 100 字符的 `q`，trim 后为空时仅显示搜索引导且不访问数据库；合法非空 `q` 直接查询本地 PostgreSQL，在同一快照中返回歌曲、作者和标签的分组预览、准确总数与按需“查看全部”链接。该功能不提供 `/api/search`，Server Component 也不经本站 HTTP API 或 VocaDB。Stage C 已推广 `SongArtistCredit` 与 `SongTag` 反向关系索引；trigram 和数组候选索引仍不进入 production。
 
 `Song.favoritedTimes` 是 VocaDB 上游收藏聚合值，继续用于“热门”排序；它与 VocalHub 登录用户的 `Favorite` 完全独立。本地收藏和私有歌单不加入公开 catalog DTO，也不改变现有匿名 GET API contract。
 

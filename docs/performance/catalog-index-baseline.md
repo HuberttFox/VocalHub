@@ -98,7 +98,7 @@ Decision: **reject bundled trigram migration**. Broad repository SQL still evalu
 
 ### Tag relation, alias GIN, and popular ordering
 
-Evidence collection remains pending or incomplete. No production recommendation yet.
+`tag-relation` is promoted independently through migration `20260802090000_add_song_tag_tag_song_index`; alias GIN and popular-ordering candidates remain rejected or unpromoted pending separate evidence.
 
 ### Stage C target candidate comparisons
 
