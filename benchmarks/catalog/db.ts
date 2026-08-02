@@ -1,9 +1,10 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type Prisma } from "@/generated/prisma/client";
-import type { ArtistWorksDb } from "@/lib/artists/repository";
-import type { SongListDb } from "@/lib/songs/repository";
+import type { ArtistListDb } from "@/lib/artists/list-repository";
+import type { TagListDb, TagSongsTransactionDb } from "@/lib/tags/repository";
+import type { SearchDb } from "@/lib/search/repository";
 
-export type CatalogBenchmarkDb = SongListDb & ArtistWorksDb;
+export type CatalogBenchmarkDb = ArtistListDb & TagListDb & TagSongsTransactionDb & SearchDb & Pick<PrismaClient, "$transaction" | "song" | "artist" | "tag">;
 
 export type CatalogQueryEvent = {
   timestamp: string;

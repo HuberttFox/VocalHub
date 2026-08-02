@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import {
   assertBenchmarkDatabaseName,
   assertResetConfirmation,
@@ -11,6 +11,7 @@ import {
   generateCatalogBenchmarkArtists,
   generateCatalogBenchmarkChunk,
   generateCatalogBenchmarkTags,
+  generateArtistNames,
   assertCatalogBenchmarkDatasetOptions,
 } from "./dataset";
 import {
@@ -28,6 +29,7 @@ type CatalogTableCounts = {
   artistCount: number;
   tagCount: number;
   nameCount: number;
+  artistNameCount: number;
   creditCount: number;
   songTagCount: number;
 };
@@ -108,6 +110,10 @@ export async function loadCatalogBenchmark(
     await createManyInChunks(artists, chunkSize, (data) =>
       db.artist.createMany({ data }),
     );
+    const artistNames = generateArtistNames(options);
+    await createManyInChunks(artistNames, chunkSize, (data: Prisma.ArtistNameCreateManyInput[]) =>
+      db.artistName.createMany({ data }),
+    );
     await createManyInChunks(tags, chunkSize, (data) =>
       db.tag.createMany({ data }),
     );
@@ -123,7 +129,7 @@ export async function loadCatalogBenchmark(
         await tx.songName.createMany({ data: chunk.names });
         await tx.songArtistCredit.createMany({ data: chunk.credits });
         await tx.songTag.createMany({ data: chunk.songTags });
-      });
+      }, { timeout: 120_000 });
     }
 
     const actual = await readCatalogTableCounts(db);
@@ -196,6 +202,7 @@ async function readCatalogTableCounts(db: PrismaClient): Promise<CatalogTableCou
       (SELECT count(*)::integer FROM "Artist") AS "artistCount",
       (SELECT count(*)::integer FROM "Tag") AS "tagCount",
       (SELECT count(*)::integer FROM "SongName") AS "nameCount",
+      (SELECT count(*)::integer FROM "ArtistName") AS "artistNameCount",
       (SELECT count(*)::integer FROM "SongArtistCredit") AS "creditCount",
       (SELECT count(*)::integer FROM "SongTag") AS "songTagCount"
   `;
@@ -213,6 +220,7 @@ function assertMarkerCounts(
     artistCount: marker.artistCount,
     tagCount: marker.tagCount,
     nameCount: marker.nameCount,
+    artistNameCount: marker.artistNameCount,
     creditCount: marker.creditCount,
     songTagCount: marker.songTagCount,
   };
@@ -227,7 +235,7 @@ function assertMarkerCounts(
 
 async function analyzeCatalogTables(db: PrismaClient): Promise<void> {
   await db.$executeRawUnsafe(`
-    ANALYZE "Song", "SongName", "Artist", "SongArtistCredit", "Tag", "SongTag"
+    ANALYZE "Song", "SongName", "Artist", "ArtistName", "SongArtistCredit", "Tag", "SongTag"
   `);
 }
 
@@ -252,11 +260,13 @@ function isMarker(value: unknown): value is CatalogBenchmarkMarker {
     typeof marker.artistCount === "number" &&
     typeof marker.tagCount === "number" &&
     typeof marker.nameCount === "number" &&
+    typeof marker.artistNameCount === "number" &&
     typeof marker.creditCount === "number" &&
     typeof marker.songTagCount === "number" &&
     isRecord(marker.visibility) &&
     isRecord(marker.searchMarkers) &&
     isRecord(marker.artistMarkers) &&
+    isRecord(marker.tagMarkers) &&
     typeof marker.checksum === "string"
   );
 }

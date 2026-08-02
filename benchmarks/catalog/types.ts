@@ -1,8 +1,9 @@
 import type { Prisma } from "@/generated/prisma/client";
 
-export const CATALOG_BENCHMARK_DATASET_VERSION = 3;
+export const CATALOG_BENCHMARK_DATASET_VERSION = 4;
 export const CATALOG_BENCHMARK_MIN_SONGS = 5_000;
-export const CATALOG_BENCHMARK_MAX_SONGS = 20_000;
+export const CATALOG_BENCHMARK_MAX_SONGS = 50_000;
+export const CATALOG_BENCHMARK_TARGET_SONGS = 50_000;
 
 export type CatalogBenchmarkDatasetOptions = {
   songCount: number;
@@ -21,6 +22,9 @@ export type CatalogBenchmarkSearchBranch =
   | "artistString"
   | "artistCredits.name"
   | "artistCredits.artist.name"
+  | "artist.name"
+  | "artist.additionalNames"
+  | "artist.names.value"
   | "tags.name"
   | "tags.additionalNames"
   | "none";
@@ -35,6 +39,11 @@ export type CatalogBenchmarkArtistMarker = {
   artistId: string;
   expectedPublicSongCount: number;
   expectedCreditCount: number;
+};
+
+export type CatalogBenchmarkTagMarker = {
+  tagId: string;
+  expectedPublicSongCount: number;
 };
 
 export type CatalogBenchmarkVisibilityCounts = {
@@ -57,6 +66,7 @@ export type CatalogBenchmarkMarker = {
   nameCount: number;
   creditCount: number;
   songTagCount: number;
+  artistNameCount: number;
   visibility: CatalogBenchmarkVisibilityCounts;
   searchMarkers: {
     rareTitle: CatalogBenchmarkSearchMarker;
@@ -69,11 +79,23 @@ export type CatalogBenchmarkMarker = {
     mediumTagAlias: CatalogBenchmarkSearchMarker;
     noHit: CatalogBenchmarkSearchMarker;
   };
+  artistSearchMarkers: {
+    canonicalName: CatalogBenchmarkSearchMarker;
+    localizedName: CatalogBenchmarkSearchMarker;
+    exactAlias: CatalogBenchmarkSearchMarker;
+    aliasSubstringNoHit: CatalogBenchmarkSearchMarker;
+    noHit: CatalogBenchmarkSearchMarker;
+  };
   artistMarkers: {
     highFanout: CatalogBenchmarkArtistMarker;
     mediumFanout: CatalogBenchmarkArtistMarker;
     sparseFanout: CatalogBenchmarkArtistMarker;
     duplicateCredits: CatalogBenchmarkArtistMarker;
+  };
+  tagMarkers: {
+    highFanout: CatalogBenchmarkTagMarker;
+    mediumFanout: CatalogBenchmarkTagMarker;
+    sparseFanout: CatalogBenchmarkTagMarker;
   };
   checksum: string;
 };
@@ -87,6 +109,7 @@ export type CatalogBenchmarkRelations = {
 
 export type CatalogBenchmarkDataset = CatalogBenchmarkRelations & {
   artists: Prisma.ArtistCreateManyInput[];
+  artistNames: Prisma.ArtistNameCreateManyInput[];
   tags: Prisma.TagCreateManyInput[];
   marker: CatalogBenchmarkMarker;
 };

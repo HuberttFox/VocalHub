@@ -369,7 +369,7 @@ npm run benchmark:catalog -- load --songs=5000 --seed=20260720 --confirm-reset=v
 npm run benchmark:catalog -- run --output=.benchmark-results/catalog-5000.json
 ```
 
-标准规模为 5k、10k 和 20k，默认每场景 3 次 warmup、15 次 measured run。`run` 调用真实 `listSongs()` / `listArtistWorks()` repository，记录完整调用时延、Prisma emitted SQL 和 `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`；原始 JSON 输出位于 ignored `.benchmark-results/`，不加入普通 CI。
+标准规模为 5k、10k、20k 和当前 Stage C target 50k；20k 仅作为固定对照，不能替代 target 证据。默认每场景 3 次 warmup、15 次 measured run。`run` 调用真实 `listSongs()` / `listArtistWorks()` / Artist、Tag list repository 与 `searchCatalog()`，记录完整调用时延、Prisma emitted SQL 和 `EXPLAIN (ANALYZE, BUFFERS, SETTINGS, FORMAT JSON, TIMING FALSE)`；原始 JSON 输出位于 ignored `.benchmark-results/`，不加入普通 CI。`matrix` 默认要求 5k、10k、20k 和 50k target 全部运行；显式 `--sizes` 也必须包含至少 50k。
 
 `compare-search-shape` 使用相邻 `A→B` / `B→A` 成对样本比较现有 broad Prisma `OR` 与 relation-branch `UNION` 候选：
 

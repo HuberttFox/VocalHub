@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { Prisma } from "@/generated/prisma/client";
 import { SyncStatus } from "@/generated/prisma/enums";
 import {
   CATALOG_BENCHMARK_DATASET_VERSION,
@@ -25,8 +26,13 @@ const SPARSE_FANOUT_INDEX = 2;
 const DUPLICATE_CREDIT_INDEX = 3;
 const HIGH_FANOUT_DIVISOR = 10;
 const MEDIUM_FANOUT_DIVISOR = 50;
+const HIGH_TAG_WORK_DIVISOR = 10;
+const MEDIUM_TAG_WORK_DIVISOR = 50;
 const RARE_TAG_INDEX = 0;
 const MEDIUM_TAG_INDEX = 1;
+const HIGH_TAG_INDEX = 2;
+const MEDIUM_WORK_TAG_INDEX = 3;
+const SPARSE_TAG_INDEX = 4;
 
 const SEARCH_TERMS = {
   rareTitle: "BenchRareTitleZXQ",
@@ -35,6 +41,10 @@ const SEARCH_TERMS = {
   commonArtistString: "BenchCommonArtistNVR",
   literalCredit: "Bench%Literal_Credit",
   linkedArtistName: "BenchLinkedArtistRVT",
+  artistLocalizedName: "BenchArtistLocalizedLQD",
+  artistExactAlias: "BenchArtistAliasKPX",
+  artistAliasSubstring: "BenchArtistAlias",
+  artistNoHit: "BenchArtistNoHitZZZ",
   rareTagName: "BenchRareTagPLX",
   mediumTagAlias: "BenchMediumAliasWQZ",
   noHit: "BenchNoHitZZZ999",
@@ -83,6 +93,7 @@ export function generateCatalogBenchmarkDataset(
     artists: generateCatalogBenchmarkArtists(options),
     tags: generateCatalogBenchmarkTags(options),
     ...chunk,
+    artistNames: generateArtistNames(options),
     marker,
   };
 }
@@ -97,6 +108,9 @@ export function generateCatalogBenchmarkArtists(
     const name = index === HIGH_FANOUT_INDEX
       ? SEARCH_TERMS.linkedArtistName
       : `Synthetic Artist ${number.toString().padStart(4, "0")}`;
+    const additionalNames = index === MEDIUM_FANOUT_INDEX
+      ? [SEARCH_TERMS.artistExactAlias, `alias-${number}`]
+      : [`artist-${number}`];
     const artistType = artistTypes[randomInt(options.seed, index, 3, artistTypes.length)];
     return {
       id: stableUuid("artist", number, options.seed),
@@ -104,7 +118,7 @@ export function generateCatalogBenchmarkArtists(
       name,
       defaultName: name,
       defaultNameLanguage: "English",
-      additionalNames: [],
+      additionalNames,
       artistType,
       sourceStatus: "Finished",
       sourceVersion: 1 + randomInt(options.seed, index, 5, 12),
@@ -161,7 +175,12 @@ export function generateCatalogBenchmarkChunk(
     throw new Error("chunk range must be within the requested songCount");
   }
 
-  const result: CatalogBenchmarkRelations = { songs: [], names: [], credits: [], songTags: [] };
+  const result: CatalogBenchmarkRelations = {
+    songs: [],
+    names: [],
+    credits: [],
+    songTags: [],
+  };
   const artists = artistCount(options.songCount);
   const tags = tagCount(options.songCount);
 
@@ -258,6 +277,25 @@ export function generateCatalogBenchmarkChunk(
   return result;
 }
 
+export function generateArtistNames(
+  options: CatalogBenchmarkDatasetOptions,
+): Prisma.ArtistNameCreateManyInput[] {
+  const artists = artistCount(options.songCount);
+  return Array.from({ length: artists }, (_, index) => {
+    const number = index + 1;
+    const value = index === MEDIUM_FANOUT_INDEX
+      ? SEARCH_TERMS.artistLocalizedName
+      : `Synthetic Artist Alias ${number.toString().padStart(4, "0")}`;
+    return {
+      id: stableUuid("artist-name", number, options.seed),
+      artistId: stableUuid("artist", number, options.seed),
+      language: "English",
+      value,
+      position: 0,
+    };
+  });
+}
+
 export function createCatalogBenchmarkMarker(
   options: CatalogBenchmarkDatasetOptions,
 ): CatalogBenchmarkMarker {
@@ -271,6 +309,7 @@ export function createCatalogBenchmarkMarker(
     artistCount: artistCount(options.songCount),
     tagCount: tagCount(options.songCount),
     nameCount: expectedNameCount(options),
+    artistNameCount: artistCount(options.songCount),
     creditCount: expectedCreditCount(options),
     songTagCount: expectedSongTagCount(options),
     visibility: visibilityCounts(options.songCount),
@@ -280,14 +319,17 @@ export function createCatalogBenchmarkMarker(
       cjkAlternateName: searchMarker(SEARCH_TERMS.cjkAlternateName, "names.value", 1),
       commonArtistString: searchMarker(SEARCH_TERMS.commonArtistString, "artistString", commonCount(options.songCount)),
       literalCredit: searchMarker(SEARCH_TERMS.literalCredit, "artistCredits.name", 1),
-      linkedArtistName: searchMarker(
-        SEARCH_TERMS.linkedArtistName,
-        "artistCredits.artist.name",
-        highFanout.expectedPublicSongCount,
-      ),
+      linkedArtistName: searchMarker(SEARCH_TERMS.linkedArtistName, "artistCredits.artist.name", highFanout.expectedPublicSongCount),
       rareTagName: searchMarker(SEARCH_TERMS.rareTagName, "tags.name", 1),
       mediumTagAlias: searchMarker(SEARCH_TERMS.mediumTagAlias, "tags.additionalNames", mediumTagCount(options.songCount)),
       noHit: searchMarker(SEARCH_TERMS.noHit, "none", 0),
+    },
+    artistSearchMarkers: {
+      canonicalName: searchMarker(SEARCH_TERMS.linkedArtistName, "artist.name", 1),
+      localizedName: searchMarker(SEARCH_TERMS.artistLocalizedName, "artist.names.value", 1),
+      exactAlias: searchMarker(SEARCH_TERMS.artistExactAlias, "artist.additionalNames", 1),
+      aliasSubstringNoHit: searchMarker(SEARCH_TERMS.artistAliasSubstring, "artist.additionalNames", 0),
+      noHit: searchMarker(SEARCH_TERMS.artistNoHit, "none", 0),
     },
     artistMarkers: {
       highFanout,
@@ -295,12 +337,15 @@ export function createCatalogBenchmarkMarker(
       sparseFanout: artistMarker(options, SPARSE_FANOUT_INDEX),
       duplicateCredits: artistMarker(options, DUPLICATE_CREDIT_INDEX),
     },
+    tagMarkers: {
+      highFanout: tagMarker(options, HIGH_TAG_INDEX),
+      mediumFanout: tagMarker(options, MEDIUM_WORK_TAG_INDEX),
+      sparseFanout: tagMarker(options, SPARSE_TAG_INDEX),
+    },
   };
   return {
     ...markerWithoutChecksum,
-    checksum: createHash("sha256")
-      .update(JSON.stringify(markerWithoutChecksum))
-      .digest("hex"),
+    checksum: createHash("sha256").update(JSON.stringify(markerWithoutChecksum)).digest("hex"),
   };
 }
 
@@ -310,6 +355,20 @@ function searchMarker(
   expectedPublicSongCount: number,
 ) {
   return { term, branch, expectedPublicSongCount };
+}
+
+function tagMarker(options: CatalogBenchmarkDatasetOptions, tagIndex: number) {
+  let expectedPublicSongCount = 0;
+  for (let index = 0; index < options.songCount; index += 1) {
+    if (!isPublicIndex(index)) continue;
+    if (relationTagIndexes(index, options.songCount, options.seed, tagCount(options.songCount), 3 + randomInt(options.seed, index, 83, 4)).includes(tagIndex)) {
+      expectedPublicSongCount += 1;
+    }
+  }
+  return {
+    tagId: stableUuid("tag", tagIndex + 1, options.seed),
+    expectedPublicSongCount,
+  };
 }
 
 function artistMarker(options: CatalogBenchmarkDatasetOptions, artistIndex: number) {
@@ -407,16 +466,21 @@ function relationTagIndexes(
 ): number[] {
   const forced = index === HIDDEN_CASES + 4
     ? [RARE_TAG_INDEX]
-    : isMediumTagMarker(index, songCount) ? [MEDIUM_TAG_INDEX] : [];
+    : index === HIDDEN_CASES + 5
+      ? [SPARSE_TAG_INDEX]
+      : isMediumTagMarker(index, songCount) ? [MEDIUM_TAG_INDEX] : [];
   const used = new Set(forced);
-  let candidate = 2 + randomInt(seed, index, 89, tags - 2);
+  if (index >= 6 && index % HIGH_TAG_WORK_DIVISOR === 0) used.add(HIGH_TAG_INDEX);
+  if (index >= 6 && index % MEDIUM_TAG_WORK_DIVISOR === 2) used.add(MEDIUM_WORK_TAG_INDEX);
+  const candidateTags = tags - 5;
+  let candidate = 5 + randomInt(seed, index, 89, candidateTags);
   const step = coprimeStep(
-    1 + randomInt(seed, index, 97, tags - 3),
-    tags - 2,
+    1 + randomInt(seed, index, 97, candidateTags - 1),
+    candidateTags,
   );
   while (used.size < count) {
     used.add(candidate);
-    candidate = 2 + ((candidate - 2 + step) % (tags - 2));
+    candidate = 5 + ((candidate - 5 + step) % (tags - 5));
   }
   return [...used];
 }
