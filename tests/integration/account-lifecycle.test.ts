@@ -2,7 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaClient } from "@/generated/prisma/client";
 import { SyncStatus } from "@/generated/prisma/enums";
-import { deleteUserAccount, getAccountExport, revokeUserSessions } from "@/lib/account/repository";
+import { deleteUserAccount, disconnectAccountProvider, getAccountExport, revokeUserSessions } from "@/lib/account/repository";
 import {
   databaseSessionCleanupCutoff,
   deleteExpiredSessions,
@@ -169,6 +169,42 @@ describe("account lifecycle", () => {
     expect(exported?.playlists[0]?.entries[1]?.song).toBeNull();
     expect(exported?.playlists[0]?.entries[0]?.song?.title).toBe("Song 9002");
   });
+  it("disconnects one provider and all sessions without affecting other users", async () => {
+    const target = await seedUser("disconnect@example.com");
+    const other = await seedUser("disconnect-other@example.com");
+    await db.account.createMany({
+      data: [
+        { userId: target.id, type: "oauth", provider: "github", providerAccountId: "disconnect-github" },
+        { userId: target.id, type: "oauth", provider: "github", providerAccountId: "disconnect-github-alt" },
+        { userId: target.id, type: "oauth", provider: "gitlab", providerAccountId: "disconnect-gitlab" },
+        { userId: other.id, type: "oauth", provider: "github", providerAccountId: "other-github" },
+      ],
+    });
+    await seedSession(target.id, "disconnect-target", new Date("2026-08-02T00:00:00Z"));
+    await seedSession(other.id, "disconnect-other", new Date("2026-08-02T00:00:00Z"));
+
+    expect(await disconnectAccountProvider(target.id, " GITHUB ")).toBe("DISCONNECTED");
+    expect(await db.account.findMany({ where: { userId: target.id }, select: { provider: true } })).toEqual([
+      { provider: "gitlab" },
+    ]);
+    expect(await db.session.count({ where: { userId: target.id } })).toBe(0);
+    expect(await db.session.count({ where: { userId: other.id } })).toBe(1);
+    expect(await disconnectAccountProvider(target.id, "github")).toBe("NOT_FOUND");
+  });
+
+  it("rejects disconnecting the last provider without changing account state", async () => {
+    const target = await seedUser("last-provider@example.com");
+    await db.account.create({
+      data: { userId: target.id, type: "oauth", provider: "github", providerAccountId: "last-github" },
+    });
+    await seedSession(target.id, "last-provider-session", new Date("2026-08-02T00:00:00Z"));
+
+    expect(await disconnectAccountProvider(target.id, "github")).toBe("LAST_PROVIDER");
+    expect(await db.account.count({ where: { userId: target.id } })).toBe(1);
+    expect(await db.session.count({ where: { userId: target.id } })).toBe(1);
+    expect(await disconnectAccountProvider("00000000-0000-0000-0000-000000000000", "github")).toBe("NOT_FOUND");
+  });
+
   it("revokes only one user's sessions idempotently", async () => {
     const target = await seedUser("sessions@example.com");
     const other = await seedUser("sessions-other@example.com");
