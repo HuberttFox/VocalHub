@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
+import { AccountProviderDisconnectForm } from "@/components/account-provider-disconnect-form";
 import { requireViewer } from "@/lib/auth/session";
 import { ACCOUNT_DELETE_CONFIRMATION } from "@/lib/auth/account-policy";
 import { deleteAccountAction, revokeAllSessionsAction } from "@/lib/account/actions";
@@ -39,6 +40,25 @@ export default async function SettingsPage() {
         </section>
 
         <section className="surface mt-8 p-6">
+          <h2 className="text-2xl font-semibold">登录来源</h2>
+          <p className="mt-3 text-[var(--text-secondary)]">
+            断开登录来源会删除 VocalHub 本地 provider identity 和全部 database sessions；不会撤销 GitHub OAuth App authorization。
+          </p>
+          <div className="mt-5 space-y-3">
+            {account.providers.map((provider) => (
+              <div className="flex flex-wrap items-center justify-between gap-3" key={provider}>
+                <span>{provider}</span>
+                {account.providers.length > 1 ? (
+                  <AccountProviderDisconnectForm provider={provider} />
+                ) : (
+                  <span className="text-sm text-[var(--text-muted)]">最后一个登录来源不可断开</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="surface mt-8 p-6">
           <h2 className="text-2xl font-semibold">撤销所有设备登录</h2>
           <p className="mt-3 text-[var(--text-secondary)]">
             删除当前账号的全部 database sessions。当前浏览器也会退出；收藏和歌单不受影响。
@@ -52,7 +72,7 @@ export default async function SettingsPage() {
           <p className="eyebrow text-red-300">Danger zone</p>
           <h2 className="mt-3 text-2xl font-semibold">永久删除账号</h2>
           <p className="mt-3 text-red-100/80">
-            立即删除 primary database 中的 GitHub identity、全部 sessions、收藏与歌单。操作不可恢复；公共 VocaDB catalog 不受影响。
+            立即删除 primary database 中的全部 provider identity、全部 sessions、收藏与歌单。操作不可恢复；公共 VocaDB catalog 不受影响。
           </p>
           <form action={deleteAccountAction} className="mt-6 max-w-lg">
             <label className="block" htmlFor="confirmation">

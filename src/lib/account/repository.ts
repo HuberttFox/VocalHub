@@ -124,6 +124,32 @@ export async function getAccountExport(userId: string): Promise<AccountExport | 
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
 
+export async function disconnectAccountProvider(
+  userId: string,
+  provider: string,
+): Promise<"DISCONNECTED" | "LAST_PROVIDER" | "NOT_FOUND"> {
+  const normalizedProvider = provider.trim().toLowerCase();
+  return getDb().$transaction(async (tx) => {
+    const users = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE
+    `);
+    if (users.length === 0) return "NOT_FOUND";
+
+    const accounts = await tx.account.findMany({
+      where: { userId },
+      select: { provider: true },
+      orderBy: { provider: "asc" },
+    });
+    const providers = new Set(accounts.map((account) => account.provider));
+    if (!providers.has(normalizedProvider)) return "NOT_FOUND";
+    if (providers.size <= 1) return "LAST_PROVIDER";
+
+    await tx.account.deleteMany({ where: { userId, provider: normalizedProvider } });
+    await tx.session.deleteMany({ where: { userId } });
+    return "DISCONNECTED";
+  });
+}
+
 export async function revokeUserSessions(userId: string): Promise<number> {
   return (await getDb().session.deleteMany({ where: { userId } })).count;
 }

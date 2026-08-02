@@ -18,7 +18,7 @@
 - 标签索引、搜索与标签详情页；只关联公开歌曲的标签才对外可见，详情页只展示公开歌曲。
 - 全站搜索页面：一次查询本地 PostgreSQL 快照中的歌曲、作者和标签，按组展示预览与准确总数。
 - GitHub OAuth 登录、PostgreSQL database sessions、用户私有收藏与可公开分享、可协作编辑的有序歌单。
-- 账号设置、全设备 session 撤销、primary database hard delete、账号 JSON 数据导出与公开隐私/数据保留说明。
+- 账号设置、全设备 session 撤销、provider disconnect、primary database hard delete、账号 JSON 数据导出与公开隐私/数据保留说明。
 - OAuth token 仅用于 callback，不持久化；每日 one-shot maintenance 清理 expired Session rows。
 - 媒体交付架构评估：当前继续浏览器 direct hotlink，待对象存储/CDN 就绪后由 worker 执行受控持久缓存；不开放任意 URL 代理。
 - 单元测试和真实 PostgreSQL 集成测试。
@@ -28,7 +28,7 @@
 - 定时任务和部署级 worker service。
 - 图片对象存储/CDN 持久缓存（需先提供部署级 S3-compatible storage 与稳定 delivery base URL）。
 - 全站搜索所需的 Stage C 候选生产索引；须先通过隔离 benchmark 取得证据。
-- 密码/邮件登录、provider disconnect、Redis、推荐、评论、投稿或 AI 功能。
+- 密码/邮件登录、Redis、推荐、评论、投稿或 AI 功能。
 
 ## 快速开始
 
@@ -65,7 +65,7 @@ AUTH_GITHUB_SECRET="GitHub OAuth Client Secret"
 
 公开目录和 API 不要求登录。登录后可在歌曲详情加入“我的收藏”，并创建最多 100 个歌单、每个最多 500 首。歌单默认私有；owner 可通过随机 opaque share token 公开分享，并邀请已有账号作为 editor 协作。分享页不进入目录搜索或公开歌单索引；收藏和歌单只引用 local Song UUID，不写回 VocaDB。歌曲变为不可公开时，用户 relation 会保留为不泄露元数据的 unavailable placeholder，并可移除。
 
-账号设置支持普通当前 session 退出、撤销账号全部 database sessions、下载 JSON 账号数据，以及输入精确确认词后永久删除账号。导出只包含账号基本资料（包括已保存的头像 URL）、provider 标识、收藏、owned private playlist 内容和 collaborator membership（playlist ID、role、加入时间）；不会导出其他用户 private playlist metadata 或 collaborator identity。OAuth token 永不导出，不可公开歌曲只保留 local Song UUID 和 unavailable 标记。Hard delete 从 live primary database 清除 User、GitHub provider identity、Sessions、Favorites、Playlists 与 PlaylistSongs，但保留公共 VocaDB catalog；重新登录会创建空账号。VocalHub 不持久化 GitHub OAuth token，旧 token columns 由 committed migration 清空。删除 VocalHub 账号不会自动撤销 GitHub OAuth App authorization；完整边界见 `/privacy`。
+账号设置支持普通当前 session 退出、撤销账号全部 database sessions、断开 provider、下载 JSON 账号数据，以及输入精确确认词后永久删除账号。断开 provider 只删除 VocalHub 本地 identity 和 database sessions，不撤销 GitHub OAuth App authorization；最后一个 provider 必须通过账号删除流程处理。导出只包含账号基本资料（包括已保存的头像 URL）、provider 标识、收藏、owned private playlist 内容和 collaborator membership（playlist ID、role、加入时间）；不会导出其他用户 private playlist metadata 或 collaborator identity。OAuth token 永不导出，不可公开歌曲只保留 local Song UUID 和 unavailable 标记。Hard delete 从 live primary database 清除 User、全部 provider identity、Sessions、Favorites、Playlists 与 PlaylistSongs，但保留公共 VocaDB catalog；重新登录会创建空账号。VocalHub 不持久化 OAuth token，旧 token columns 由 committed migration 清空。删除 VocalHub 账号不会自动撤销 GitHub OAuth App authorization；完整边界见 `/privacy`。
 
 先执行完整 seed。该命令从 VocaDB `/api/songs/ids` 获取完整非删除 ID 集合，建立 durable manifest，再以并发 2 获取 canonical song detail：
 

@@ -14,7 +14,7 @@ export default function PrivacyPage() {
         <h1 className="mt-4 text-5xl font-bold">隐私与数据保留</h1>
         <div className="mt-10 space-y-6 text-[var(--text-secondary)]">
           <Policy title="GitHub 登录">
-            VocalHub 保存 GitHub 提供的名称、邮箱、头像 URL 和 provider identity，用于识别账号。头像当前不展示或代理。OAuth token 只在登录 callback 中短暂使用，不持久化。删除 VocalHub 账号不会自动撤销 GitHub OAuth App authorization；可在 GitHub settings 中另行撤销。
+            VocalHub 保存 GitHub 提供的名称、邮箱、头像 URL 和 provider identity，用于识别账号。账号设置可以断开已连接的 provider；断开会删除 VocalHub 本地 provider identity 和 database sessions，但不会撤销 GitHub OAuth App authorization。最后一个登录来源不可单独断开，必须使用账号删除流程。OAuth token 只在登录 callback 中短暂使用，不持久化。
           </Policy>
           <Policy title="Database sessions">
             Session 最长有效 30 天，活跃时约每日滚动更新。到达 expires 后立即视为无效；每日 maintenance job 以 5 分钟物理清理 grace 删除旧数据库记录。账号设置可随时撤销所有设备 session。
