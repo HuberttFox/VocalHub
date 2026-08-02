@@ -17,7 +17,7 @@
 - 作者详情、作者索引与搜索，以及分页公开作品列表；作者 profile 可由独立 VocaDB detail refresh 补充别名、简介、头像和公开外链。
 - 标签索引、搜索与标签详情页；只关联公开歌曲的标签才对外可见，详情页只展示公开歌曲。
 - 全站搜索页面：一次查询本地 PostgreSQL 快照中的歌曲、作者和标签，按组展示预览与准确总数。
-- GitHub OAuth 登录、PostgreSQL database sessions、用户私有收藏与 owner-only 有序歌单。
+- GitHub OAuth 登录、PostgreSQL database sessions、用户私有收藏与可公开分享、可协作编辑的有序歌单。
 - 账号设置、全设备 session 撤销、primary database hard delete、账号 JSON 数据导出与公开隐私/数据保留说明。
 - OAuth token 仅用于 callback，不持久化；每日 one-shot maintenance 清理 expired Session rows。
 - 媒体交付架构评估：当前继续浏览器 direct hotlink，待对象存储/CDN 就绪后由 worker 执行受控持久缓存；不开放任意 URL 代理。
@@ -28,7 +28,7 @@
 - 定时任务和部署级 worker service。
 - 图片对象存储/CDN 持久缓存（需先提供部署级 S3-compatible storage 与稳定 delivery base URL）。
 - 全站搜索所需的 Stage C 候选生产索引；须先通过隔离 benchmark 取得证据。
-- 密码/邮件登录、provider disconnect、公开或协作歌单、Redis、推荐、评论、投稿或 AI 功能。
+- 密码/邮件登录、provider disconnect、Redis、推荐、评论、投稿或 AI 功能。
 
 ## 快速开始
 
@@ -63,9 +63,9 @@ AUTH_GITHUB_SECRET="GitHub OAuth Client Secret"
 
 生产 callback 使用 `https://<canonical-host>/api/auth/callback/github`，必须启用 HTTPS，并将相同 canonical origin 写入 `AUTH_URL`。只有可信 reverse proxy 会覆盖并严格约束 forwarded host headers 时才设置 `AUTH_TRUST_HOST=true`；不要默认启用。Auth secrets 只提供给 app，不提供给 VocaDB worker 或 migrate。
 
-公开目录和 API 不要求登录。登录后可在歌曲详情加入“我的收藏”，并创建最多 100 个私有歌单、每个最多 500 首。歌单没有公开分享或协作能力；收藏和歌单只引用 local Song UUID，不写回 VocaDB。歌曲变为不可公开时，用户 relation 会保留为不泄露元数据的 unavailable placeholder，并可移除。
+公开目录和 API 不要求登录。登录后可在歌曲详情加入“我的收藏”，并创建最多 100 个歌单、每个最多 500 首。歌单默认私有；owner 可通过随机 opaque share token 公开分享，并邀请已有账号作为 editor 协作。分享页不进入目录搜索或公开歌单索引；收藏和歌单只引用 local Song UUID，不写回 VocaDB。歌曲变为不可公开时，用户 relation 会保留为不泄露元数据的 unavailable placeholder，并可移除。
 
-账号设置支持普通当前 session 退出、撤销账号全部 database sessions、下载 JSON 账号数据，以及输入精确确认词后永久删除账号。导出只包含账号基本资料（包括已保存的头像 URL）、provider 标识、收藏和私有歌单顺序；OAuth token 永不导出，不可公开歌曲只保留 local Song UUID 和 unavailable 标记。Hard delete 从 live primary database 清除 User、GitHub provider identity、Sessions、Favorites、Playlists 与 PlaylistSongs，但保留公共 VocaDB catalog；重新登录会创建空账号。VocalHub 不持久化 GitHub OAuth token，旧 token columns 由 committed migration 清空。删除 VocalHub 账号不会自动撤销 GitHub OAuth App authorization；完整边界见 `/privacy`。
+账号设置支持普通当前 session 退出、撤销账号全部 database sessions、下载 JSON 账号数据，以及输入精确确认词后永久删除账号。导出只包含账号基本资料（包括已保存的头像 URL）、provider 标识、收藏、owned private playlist 内容和 collaborator membership（playlist ID、role、加入时间）；不会导出其他用户 private playlist metadata 或 collaborator identity。OAuth token 永不导出，不可公开歌曲只保留 local Song UUID 和 unavailable 标记。Hard delete 从 live primary database 清除 User、GitHub provider identity、Sessions、Favorites、Playlists 与 PlaylistSongs，但保留公共 VocaDB catalog；重新登录会创建空账号。VocalHub 不持久化 GitHub OAuth token，旧 token columns 由 committed migration 清空。删除 VocalHub 账号不会自动撤销 GitHub OAuth App authorization；完整边界见 `/privacy`。
 
 先执行完整 seed。该命令从 VocaDB `/api/songs/ids` 获取完整非删除 ID 集合，建立 durable manifest，再以并发 2 获取 canonical song detail：
 
@@ -121,6 +121,9 @@ npm run dev
 - `/artists/{localUuid}`：作者详情与公开作品
 - `/tags`：标签浏览与搜索
 - `/tags/{localUuid}`：标签详情与公开歌曲
+- `/playlists`：我的歌单、公开状态与协作歌单
+- `/playlists/{localUuid}`：歌单管理
+- `/playlists/share/{opaqueToken}`：opaque token 公开只读分享页
 
 ## 生产部署与调度
 
@@ -253,7 +256,7 @@ GET /api/tags/{localUuid}/songs?page=1&pageSize=24&sort=latest
 - `VocaDbSongSyncState`：Song activity checkpoint、seed/reconciliation 完成时间和 compare-and-swap version。
 - `User` / `Account` / `Session`：Auth.js GitHub identity 与 database session；OAuth token 不持久化，provider token/session/email 不进入公开 DTO。
 - `Favorite`：User 与 local Song UUID 的 set-like 私有关系；不改变 `Song.favoritedTimes`。
-- `Playlist` / `PlaylistSong`：owner-only 私有歌单和稳定 position；hidden Song relation 可保留但不公开 catalog fields。
+- `Playlist` / `PlaylistSong` / `PlaylistCollaborator`：歌单 owner、private/public visibility、opaque share token、editor membership 和稳定 position；hidden Song relation 可保留但不公开 catalog fields。
 
 声库角色当前通过通用 Artist credit 的 `categories`、`roles` 和 `effectiveRoles` 表示，没有独立 `Vocal` 模型。公开/协作歌单、角色权限与账号管理尚未实现。
 
@@ -390,8 +393,8 @@ compare 精确删除所有 `bench_` index；paired result digest 不一致时立
 
 ## 路线图
 
-媒体代理、持久缓存与 CDN 的部署评估已完成：当前保留 direct hotlink；object storage/CDN 基础设施就绪后再按上述 worker-curated 方案实施，不开放任意 URL 代理。Auth.js、私有收藏和 owner-only 歌单 MVP 已实现。
+媒体代理、持久缓存与 CDN 的部署评估已完成：当前保留 direct hotlink；object storage/CDN 基础设施就绪后再按上述 worker-curated 方案实施，不开放任意 URL 代理。Auth.js、账号导出、私有收藏、公开分享与协作歌单 MVP 已实现。
 
 1. 在真实数据和用户行为基础上评估标签页、推荐、Redis、AI 与社区能力。
-2. 设计账号管理、公开/协作歌单与内容治理后，再扩展当前 private library。
+2. 在内容治理和用户行为证据基础上扩展公开/协作歌单能力。
 3. S3-compatible object storage、CDN 和隔离测试 bucket 可用后，实施 worker-time media hydration 与 additive delivery URL。

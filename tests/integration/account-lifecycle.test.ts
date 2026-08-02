@@ -154,6 +154,7 @@ describe("account lifecycle", () => {
       { provider: "github", providerAccountId: "export-github" },
     ]);
     expect(exported?.account.image).toBeNull();
+    expect(exported?.collaboratorMemberships).toEqual([]);
     expect(JSON.stringify(exported)).not.toContain("other-github");
     expect(JSON.stringify(exported)).not.toContain("Other private list");
     expect(JSON.stringify(exported)).not.toContain("must-not-export");

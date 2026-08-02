@@ -1,6 +1,12 @@
 import type { SongListItemDto } from "@/lib/songs/dto";
 
-export const ACCOUNT_EXPORT_VERSION = 1;
+export const ACCOUNT_EXPORT_VERSION = 2;
+
+export type AccountExportCollaborator = {
+  playlistId: string;
+  role: "EDITOR";
+  createdAt: string;
+};
 
 export type AccountExportSong = {
   songId: string;
@@ -21,6 +27,7 @@ export type AccountExport = {
     providers: Array<{ provider: string; providerAccountId: string }>;
   };
   favorites: Array<AccountExportSong & { createdAt: string }>;
+  collaboratorMemberships: AccountExportCollaborator[];
   playlists: Array<{
     id: string;
     name: string;

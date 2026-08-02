@@ -3,21 +3,59 @@
 import { revalidatePath } from "next/cache";
 import { requireViewerForMutation } from "@/lib/auth/session";
 import {
+  collaboratorIdSchema,
+  collaboratorSchema,
   playlistCreateSchema,
   playlistIdSchema,
+  playlistTokenSchema,
+  playlistVisibilitySchema,
   playlistMoveSchema,
   playlistSongSchema,
   playlistUpdateSchema,
 } from "@/lib/playlists/query";
 import {
   addPlaylistSong,
+  addPlaylistCollaborator,
   createPlaylist,
   deletePlaylist,
+  leavePlaylist,
   movePlaylistSong,
+  removePlaylistCollaborator,
   removePlaylistSong,
+  setPlaylistVisibility,
   updatePlaylist,
 } from "@/lib/playlists/repository";
 
+export async function setPlaylistVisibilityAction(formData: FormData): Promise<void> {
+  const viewer = await requireViewerForMutation();
+  const input = playlistVisibilitySchema.parse(Object.fromEntries(formData));
+  const result = await setPlaylistVisibility(viewer.id, input.playlistId, input.visibility);
+  if (result.status !== "UPDATED") throw new Error("PLAYLIST_NOT_FOUND");
+  revalidatePath("/playlists");
+  revalidatePath(`/playlists/${input.playlistId}`);
+}
+
+export async function addPlaylistCollaboratorAction(formData: FormData): Promise<void> {
+  const viewer = await requireViewerForMutation();
+  const input = collaboratorSchema.parse(Object.fromEntries(formData));
+  const result = await addPlaylistCollaborator(viewer.id, input.playlistId, input.email);
+  if (result !== "ADDED") throw new Error(result);
+  revalidatePath(`/playlists/${input.playlistId}`);
+}
+
+export async function removePlaylistCollaboratorAction(formData: FormData): Promise<void> {
+  const viewer = await requireViewerForMutation();
+  const input = collaboratorIdSchema.parse(Object.fromEntries(formData));
+  if (!await removePlaylistCollaborator(viewer.id, input.playlistId, input.userId)) throw new Error("PLAYLIST_NOT_FOUND");
+  revalidatePath(`/playlists/${input.playlistId}`);
+}
+
+export async function leavePlaylistAction(formData: FormData): Promise<void> {
+  const viewer = await requireViewerForMutation();
+  const input = playlistTokenSchema.parse(Object.fromEntries(formData));
+  if (!await leavePlaylist(viewer.id, input.playlistId)) throw new Error("PLAYLIST_NOT_FOUND");
+  revalidatePath("/playlists");
+}
 export async function createPlaylistAction(formData: FormData): Promise<void> {
   const viewer = await requireViewerForMutation();
   const input = playlistCreateSchema.parse({
@@ -29,6 +67,8 @@ export async function createPlaylistAction(formData: FormData): Promise<void> {
   }
   revalidatePath("/playlists");
 }
+
+
 
 export async function updatePlaylistAction(formData: FormData): Promise<void> {
   const viewer = await requireViewerForMutation();

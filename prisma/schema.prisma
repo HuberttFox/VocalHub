@@ -35,6 +35,15 @@ enum SyncEntity {
   ARTIST
 }
 
+enum PlaylistVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum PlaylistCollaboratorRole {
+  EDITOR
+}
+
 model Song {
   id                  String             @id @default(uuid()) @db.Uuid
   vocadbId            Int                @unique
@@ -230,6 +239,7 @@ model User {
   sessions      Session[]
   favorites     Favorite[]
   playlists     Playlist[]
+  collaborations PlaylistCollaborator[]
 }
 
 model Account {
@@ -289,10 +299,26 @@ model Playlist {
   description String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+  visibility  PlaylistVisibility @default(PRIVATE)
+  shareToken  String?        @unique
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   songs       PlaylistSong[]
+  collaborators PlaylistCollaborator[]
 
   @@index([userId, updatedAt, id])
+  @@index([visibility])
+}
+
+model PlaylistCollaborator {
+  playlistId String                    @db.Uuid
+  userId     String                    @db.Uuid
+  role       PlaylistCollaboratorRole  @default(EDITOR)
+  createdAt  DateTime                  @default(now())
+  playlist   Playlist                  @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  user       User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([playlistId, userId])
+  @@index([userId, playlistId])
 }
 
 model PlaylistSong {

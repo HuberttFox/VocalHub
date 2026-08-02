@@ -273,6 +273,40 @@ export type UuidNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedStringNullableFilter<$PrismaModel>
 }
 
+export type EnumPlaylistVisibilityFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistVisibility | Prisma.EnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistVisibility[] | Prisma.ListEnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistVisibility[] | Prisma.ListEnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel> | $Enums.PlaylistVisibility
+}
+
+export type EnumPlaylistVisibilityWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistVisibility | Prisma.EnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistVisibility[] | Prisma.ListEnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistVisibility[] | Prisma.ListEnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistVisibilityWithAggregatesFilter<$PrismaModel> | $Enums.PlaylistVisibility
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel>
+}
+
+export type EnumPlaylistCollaboratorRoleFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistCollaboratorRole | Prisma.EnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistCollaboratorRole[] | Prisma.ListEnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistCollaboratorRole[] | Prisma.ListEnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel> | $Enums.PlaylistCollaboratorRole
+}
+
+export type EnumPlaylistCollaboratorRoleWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistCollaboratorRole | Prisma.EnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistCollaboratorRole[] | Prisma.ListEnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistCollaboratorRole[] | Prisma.ListEnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistCollaboratorRoleWithAggregatesFilter<$PrismaModel> | $Enums.PlaylistCollaboratorRole
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel>
+}
+
 export type BigIntFilter<$PrismaModel = never> = {
   equals?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
   in?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
@@ -630,6 +664,40 @@ export type NestedUuidNullableWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
   _min?: Prisma.NestedStringNullableFilter<$PrismaModel>
   _max?: Prisma.NestedStringNullableFilter<$PrismaModel>
+}
+
+export type NestedEnumPlaylistVisibilityFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistVisibility | Prisma.EnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistVisibility[] | Prisma.ListEnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistVisibility[] | Prisma.ListEnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel> | $Enums.PlaylistVisibility
+}
+
+export type NestedEnumPlaylistVisibilityWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistVisibility | Prisma.EnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistVisibility[] | Prisma.ListEnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistVisibility[] | Prisma.ListEnumPlaylistVisibilityFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistVisibilityWithAggregatesFilter<$PrismaModel> | $Enums.PlaylistVisibility
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel>
+}
+
+export type NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistCollaboratorRole | Prisma.EnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistCollaboratorRole[] | Prisma.ListEnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistCollaboratorRole[] | Prisma.ListEnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel> | $Enums.PlaylistCollaboratorRole
+}
+
+export type NestedEnumPlaylistCollaboratorRoleWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistCollaboratorRole | Prisma.EnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistCollaboratorRole[] | Prisma.ListEnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistCollaboratorRole[] | Prisma.ListEnumPlaylistCollaboratorRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistCollaboratorRoleWithAggregatesFilter<$PrismaModel> | $Enums.PlaylistCollaboratorRole
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel>
 }
 
 export type NestedBigIntFilter<$PrismaModel = never> = {
