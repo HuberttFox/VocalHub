@@ -12,6 +12,7 @@ import {
 } from "../../benchmarks/catalog/scenarios";
 import type { SongListDto } from "@/lib/songs/dto";
 import type { CatalogBenchmarkMarker } from "../../benchmarks/catalog/types";
+import { createCatalogBenchmarkMarker } from "../../benchmarks/catalog/dataset";
 
 const ARTIST_IDS = {
   high: "00000000-0000-4000-8000-000000000001",
@@ -80,7 +81,7 @@ function songResult(scenario: CatalogBenchmarkScenario): SongListDto {
     }],
     query: {
       q: scenario.kind === "songs" ? scenario.query.q ?? null : null,
-      sort: scenario.query.sort,
+      sort: "sort" in scenario.query ? scenario.query.sort : "latest",
     },
     pagination: {
       page: scenario.query.page,
@@ -105,6 +106,10 @@ describe("catalog benchmark scenarios", () => {
       "songs-search-literal-credit", "songs-search-linked-artist-name",
       "songs-search-rare-tag-name",
       "songs-search-medium-tag-alias", "songs-search-no-hit",
+      "artists-search-canonical", "artists-search-localized", "artists-search-exact-alias",
+      "artists-search-alias-substring-no-hit", "artists-search-no-hit",
+      "tags-search-rare-name", "tags-search-exact-alias",
+      "search-catalog-no-hit", "search-catalog-cross-group", "search-catalog-tag-alias",
       "artist-works-high-latest-first-page", "artist-works-high-latest-deep-page",
       "artist-works-high-popular-first-page", "artist-works-medium-latest-first-page",
       "artist-works-sparse-latest-first-page", "artist-works-duplicate-latest-first-page",
@@ -118,6 +123,18 @@ describe("catalog benchmark scenarios", () => {
     ]);
   });
 
+  it("defines Tag works scenarios from real target markers", () => {
+    const scenarios = defineCatalogBenchmarkScenarios({
+      marker: createCatalogBenchmarkMarker({ songCount: 50_000, seed: 20_260_720 }),
+    });
+    expect(scenarios.filter(({ kind }) => kind === "tag-works").map(({ id }) => id)).toEqual([
+      "tag-works-high-latest-first-page",
+      "tag-works-high-latest-deep-page",
+      "tag-works-high-popular-first-page",
+      "tag-works-medium-latest-first-page",
+      "tag-works-sparse-latest-first-page",
+    ]);
+  });
   it("derives deep pages from marker public and per-artist counts", () => {
     const result = scenarios();
     const songDeepPage = Math.floor(
@@ -131,8 +148,9 @@ describe("catalog benchmark scenarios", () => {
         pageSize: CATALOG_BENCHMARK_PAGE_SIZE,
         sort: "latest",
       });
-    expect(result.find(({ id }) => id === "songs-search-common-artist-string-popular")?.query.sort)
-      .toBe("popular");
+    const popularSongScenario = result.find(({ id }) => id === "songs-search-common-artist-string-popular");
+    expect(popularSongScenario?.kind).toBe("songs");
+    if (popularSongScenario?.kind === "songs") expect(popularSongScenario.query.sort).toBe("popular");
     expect(result.find(({ id }) => id === "artist-works-high-latest-deep-page")?.query).toEqual({
       page: deepPageFor(123, CATALOG_BENCHMARK_ARTIST_PAGE_SIZE),
       pageSize: CATALOG_BENCHMARK_ARTIST_PAGE_SIZE,

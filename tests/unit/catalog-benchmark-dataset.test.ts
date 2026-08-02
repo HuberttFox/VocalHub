@@ -19,6 +19,10 @@ describe("catalog benchmark dataset", () => {
     expect(first.names).toHaveLength(first.marker.nameCount);
     expect(first.credits).toHaveLength(first.marker.creditCount);
     expect(first.songTags).toHaveLength(first.marker.songTagCount);
+    expect(first.artistNames).toHaveLength(first.marker.artistNameCount);
+    expect(first.marker.tagMarkers.highFanout.expectedPublicSongCount)
+      .toBeGreaterThan(first.marker.tagMarkers.mediumFanout.expectedPublicSongCount);
+    expect(first.marker.tagMarkers.sparseFanout.expectedPublicSongCount).toBe(1);
 
     expect(first.songs[6]).toMatchObject({
       vocadbId: 1_000_007,
@@ -63,7 +67,7 @@ describe("catalog benchmark dataset", () => {
       .not.toBe(base.marker.checksum);
     expect(base.marker).toMatchObject({
       kind: "vocalhub-catalog-benchmark",
-      version: 3,
+      version: 4,
       seed: options.seed,
       songCount: 5_000,
       artistCount: 625,
@@ -156,7 +160,7 @@ describe("catalog benchmark dataset", () => {
 
   it.each([
     { songCount: 4_999, seed: 1 },
-    { songCount: 20_001, seed: 1 },
+    { songCount: 50_001, seed: 1 },
     { songCount: 5_000.5, seed: 1 },
     { songCount: 5_000, seed: -1 },
   ])("rejects unsupported options %#", (invalid) => {

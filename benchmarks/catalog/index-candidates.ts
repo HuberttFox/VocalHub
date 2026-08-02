@@ -35,6 +35,32 @@ export const INDEX_CANDIDATES = {
       `CREATE INDEX ${PREFIX}tag_additional_names_gin ON "Tag" USING GIN ("additionalNames")`,
     ],
   },
+  "artist-alias-gin": {
+    name: "artist-alias-gin",
+    description: "Exact membership lookup for artist additional names",
+    indexes: [`${PREFIX}artist_additional_names_gin`],
+    statements: [
+      `CREATE INDEX ${PREFIX}artist_additional_names_gin ON "Artist" USING GIN ("additionalNames")`,
+    ],
+  },
+  "artist-name-trigram": {
+    name: "artist-name-trigram",
+    description: "Trigram acceleration for Artist canonical name search",
+    indexes: [`${PREFIX}artist_name_trgm_single`],
+    requiredExtensions: ["pg_trgm"],
+    statements: [
+      `CREATE INDEX ${PREFIX}artist_name_trgm_single ON "Artist" USING GIN ("name" gin_trgm_ops)`,
+    ],
+  },
+  "tag-name-trigram": {
+    name: "tag-name-trigram",
+    description: "Trigram acceleration for Tag canonical name search",
+    indexes: [`${PREFIX}tag_name_trgm_single`],
+    requiredExtensions: ["pg_trgm"],
+    statements: [
+      `CREATE INDEX ${PREFIX}tag_name_trgm_single ON "Tag" USING GIN ("name" gin_trgm_ops)`,
+    ],
+  },
   "public-latest": {
     name: "public-latest",
     description: "Public catalog visibility and latest ordering",

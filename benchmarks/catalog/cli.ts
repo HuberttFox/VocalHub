@@ -4,6 +4,9 @@ import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { Pool, type PoolClient } from "pg";
 import { listArtistWorks } from "@/lib/artists/repository";
+import { listArtists } from "@/lib/artists/list-repository";
+import { listTags, listTagSongs } from "@/lib/tags/repository";
+import { searchCatalog } from "@/lib/search/repository";
 import { listSongs, listSongsWithBroadSearch } from "@/lib/songs/repository";
 import { listSongsWithDecomposedSearch } from "@/lib/songs/search-query";
 import {
@@ -21,6 +24,7 @@ import {
   assertNoBenchmarkIndexes,
   cleanupBenchmarkIndexes,
   getIndexCandidate,
+  INDEX_CANDIDATES,
   installCandidate,
   type IndexCandidate,
 } from "./index-candidates";
@@ -46,14 +50,18 @@ import {
   type CatalogBenchmarkScenario,
   type CatalogBenchmarkScenarioResult,
 } from "./scenarios";
-import type { CatalogBenchmarkMarker } from "./types";
+import {
+  CATALOG_BENCHMARK_TARGET_SONGS,
+  type CatalogBenchmarkMarker,
+} from "./types";
 
 const DEFAULT_SEED = 20_260_720;
 const DEFAULT_WARMUPS = 3;
 const DEFAULT_REPEATS = 15;
 const DEFAULT_CYCLES = 8;
 const DEFAULT_BLOCK_REPEATS = 3;
-const DEFAULT_SIZES = [5_000, 10_000, 20_000] as const;
+const REQUIRED_MATRIX_SIZES = [5_000, 10_000, 20_000, 50_000] as const;
+const DEFAULT_SIZES = REQUIRED_MATRIX_SIZES;
 const CLI_LOCK_KEYS = [0x564f4341, 0x54434c49];
 
 interface Arguments {
@@ -159,6 +167,14 @@ async function runMatrix(
   const sizes = optionalStringOption(args, "sizes")
     ?.split(",")
     .map((value) => parseInteger(value, "sizes")) ?? [...DEFAULT_SIZES];
+  if (!sizes.some((size) => size >= CATALOG_BENCHMARK_TARGET_SONGS)) {
+    throw new Error(`matrix requires --sizes to include target scale >= ${CATALOG_BENCHMARK_TARGET_SONGS}`);
+  }
+  for (const requiredSize of REQUIRED_MATRIX_SIZES) {
+    if (!sizes.includes(requiredSize)) {
+      throw new Error(`matrix requires --sizes to include ${REQUIRED_MATRIX_SIZES.join(",")}`);
+    }
+  }
   const candidateName = optionalStringOption(args, "candidate");
   const outputDirectory = optionalStringOption(args, "output-dir") ?? ".benchmark-results";
   const seed = integerOption(args, "seed", DEFAULT_SEED);
@@ -578,12 +594,23 @@ async function executeRun(
 }
 
 async function runScenario(
-  db: Parameters<typeof listSongs>[1] & Parameters<typeof listArtistWorks>[2],
+  db: Parameters<typeof listSongs>[1] & Parameters<typeof listArtistWorks>[2] & Parameters<typeof listArtists>[1] & Parameters<typeof listTags>[1] & Parameters<typeof listTagSongs>[2],
   scenario: CatalogBenchmarkScenario,
 ): Promise<CatalogBenchmarkScenarioResult> {
-  return scenario.kind === "songs"
-    ? listSongs(scenario.query, db)
-    : listArtistWorks(scenario.artistId, scenario.query, db);
+  switch (scenario.kind) {
+    case "songs":
+      return listSongs(scenario.query, db);
+    case "artist-works":
+      return listArtistWorks(scenario.artistId, scenario.query, db);
+    case "tag-works":
+      return listTagSongs(scenario.tagId, scenario.query, db);
+    case "artist-list":
+      return listArtists(scenario.query, db);
+    case "tag-list":
+      return listTags(scenario.query, db);
+    case "search-catalog":
+      return searchCatalog(scenario.term, db);
+  }
 }
 
 function collectorCapture(
@@ -759,8 +786,8 @@ Commands:
   run [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
   compare-search-shape [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
   compare --candidate=NAME --confirm-reset=NAME [--cycles=${DEFAULT_CYCLES}] [--block-repeats=${DEFAULT_BLOCK_REPEATS}] [--scenarios=ID,...] [--output=FILE]
-  matrix --confirm-reset=NAME [--sizes=5000,10000,20000] [--candidate=NAME] [--scenarios=ID,...]\n
-Candidates: credit-artist, tag-relation, tag-alias-gin, public-latest, public-popular, catalog-trigram`);
+  matrix --confirm-reset=NAME [--sizes=5000,10000,20000,50000] [--candidate=NAME] [--scenarios=ID,...]\n
+Candidates: ${Object.keys(INDEX_CANDIDATES).join(", ")}`);
 }
 
 main().catch((error: unknown) => {

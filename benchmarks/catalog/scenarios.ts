@@ -1,4 +1,9 @@
 import { createHash } from "node:crypto";
+import type { ArtistListDto } from "@/lib/artists/list-dto";
+import type { EntityListQuery } from "@/lib/catalog/entity-list-query";
+import type { SearchResultsDto } from "@/lib/search/dto";
+import type { TagListDto } from "@/lib/tags/dto";
+import type { TagSongsDto } from "@/lib/tags/dto";
 import type { ArtistWorksDto } from "@/lib/artists/dto";
 import type { ArtistWorksQuery } from "@/lib/artists/works-query";
 import type { SongListDto } from "@/lib/songs/dto";
@@ -26,9 +31,47 @@ export type CatalogBenchmarkScenario =
       artistId: string;
       query: ArtistWorksQuery;
       expectedTotalItems: number;
+    }
+  | {
+      id: string;
+      kind: "tag-works";
+      tagId: string;
+      query: ArtistWorksQuery;
+      expectedTotalItems: number;
+    }
+  | {
+      id: string;
+      kind: "artist-list";
+      query: EntityListQuery;
+      expectedTotalItems: number;
+    }
+  | {
+      id: string;
+      kind: "tag-list";
+      query: EntityListQuery;
+      expectedTotalItems: number;
+    }
+  | {
+      id: string;
+      kind: "search-catalog";
+      term: string;
+      query: SongListQuery;
+      expectedTotalItems: number;
+      expectedGroupTotals: {
+        songs: number;
+        artists: number;
+        tags: number;
+      };
     };
 
-export type CatalogBenchmarkScenarioResult = SongListDto | ArtistWorksDto | null;
+export type CatalogBenchmarkScenarioResult =
+  | SongListDto
+  | ArtistWorksDto
+  | ArtistListDto
+  | TagListDto
+  | TagSongsDto
+  | SearchResultsDto
+  | null;
 
 export type CatalogBenchmarkResultCheck = {
   checksum: string;
@@ -39,7 +82,7 @@ export type CatalogBenchmarkResultCheck = {
 };
 
 export type CatalogBenchmarkScenarioContext = {
-  marker: Pick<CatalogBenchmarkMarker, "visibility" | "searchMarkers" | "artistMarkers">;
+  marker: Pick<CatalogBenchmarkMarker, "visibility" | "searchMarkers" | "artistMarkers"> & Partial<Pick<CatalogBenchmarkMarker, "artistSearchMarkers" | "tagMarkers">>;
 };
 
 export function defineCatalogBenchmarkScenarios(
@@ -47,8 +90,28 @@ export function defineCatalogBenchmarkScenarios(
   selectedIds?: ReadonlySet<string>,
 ): CatalogBenchmarkScenario[] {
   const marker = context.marker;
+  const artistSearchMarkers = marker.artistSearchMarkers ?? {
+    canonicalName: marker.searchMarkers.linkedArtistName,
+    localizedName: marker.searchMarkers.linkedArtistName,
+    exactAlias: marker.searchMarkers.linkedArtistName,
+    aliasSubstringNoHit: marker.searchMarkers.noHit,
+    noHit: marker.searchMarkers.noHit,
+  };
   const publicSongCount = marker.visibility.publicSynced + marker.visibility.publicFailed;
   const deepSongPage = deepPageFor(publicSongCount, CATALOG_BENCHMARK_PAGE_SIZE);
+
+  const tagScenarios = marker.tagMarkers ? [
+    tagScenario("tag-works-high-latest-first-page", marker.tagMarkers.highFanout, 1, "latest"),
+    tagScenario(
+      "tag-works-high-latest-deep-page",
+      marker.tagMarkers.highFanout,
+      deepPageFor(marker.tagMarkers.highFanout.expectedPublicSongCount, CATALOG_BENCHMARK_PAGE_SIZE),
+      "latest",
+    ),
+    tagScenario("tag-works-high-popular-first-page", marker.tagMarkers.highFanout, 1, "popular"),
+    tagScenario("tag-works-medium-latest-first-page", marker.tagMarkers.mediumFanout, 1, "latest"),
+    tagScenario("tag-works-sparse-latest-first-page", marker.tagMarkers.sparseFanout, 1, "latest"),
+  ] : [];
 
   const scenarios = [
     songScenario("songs-latest-first-page", { page: 1, pageSize: CATALOG_BENCHMARK_PAGE_SIZE, sort: "latest" }, publicSongCount),
@@ -78,6 +141,16 @@ export function defineCatalogBenchmarkScenarios(
     searchScenario("songs-search-rare-tag-name", marker.searchMarkers.rareTagName),
     searchScenario("songs-search-medium-tag-alias", marker.searchMarkers.mediumTagAlias),
     searchScenario("songs-search-no-hit", marker.searchMarkers.noHit),
+    entityScenario("artists-search-canonical", artistSearchMarkers.canonicalName, "artist-list"),
+    entityScenario("artists-search-localized", artistSearchMarkers.localizedName, "artist-list"),
+    entityScenario("artists-search-exact-alias", artistSearchMarkers.exactAlias, "artist-list"),
+    entityScenario("artists-search-alias-substring-no-hit", artistSearchMarkers.aliasSubstringNoHit, "artist-list"),
+    entityScenario("artists-search-no-hit", artistSearchMarkers.noHit, "artist-list"),
+    entityScenario("tags-search-rare-name", marker.searchMarkers.rareTagName, "tag-list"),
+    entityScenario("tags-search-exact-alias", marker.searchMarkers.mediumTagAlias, "tag-list"),
+    catalogSearchScenario("search-catalog-no-hit", marker.searchMarkers.noHit),
+    catalogSearchScenario("search-catalog-cross-group", marker.searchMarkers.linkedArtistName),
+    catalogSearchScenario("search-catalog-tag-alias", marker.searchMarkers.mediumTagAlias),
     artistScenario("artist-works-high-latest-first-page", marker.artistMarkers.highFanout, 1, "latest"),
     artistScenario(
       "artist-works-high-latest-deep-page",
@@ -92,6 +165,7 @@ export function defineCatalogBenchmarkScenarios(
     artistScenario("artist-works-medium-latest-first-page", marker.artistMarkers.mediumFanout, 1, "latest"),
     artistScenario("artist-works-sparse-latest-first-page", marker.artistMarkers.sparseFanout, 1, "latest"),
     artistScenario("artist-works-duplicate-latest-first-page", marker.artistMarkers.duplicateCredits, 1, "latest"),
+    ...tagScenarios,
   ];
   return selectedIds ? scenarios.filter(({ id }) => selectedIds.has(id)) : scenarios;
 }
@@ -101,6 +175,26 @@ export function checkCatalogBenchmarkResult(
   result: CatalogBenchmarkScenarioResult,
 ): CatalogBenchmarkResultCheck {
   if (result === null) throw new Error(`Scenario ${scenario.id} returned no artist`);
+  if (scenario.kind === "search-catalog") {
+    const aggregate = result as SearchResultsDto;
+    if (
+      aggregate.songs.totalItems !== scenario.expectedGroupTotals.songs
+      || aggregate.artists.totalItems !== scenario.expectedGroupTotals.artists
+      || aggregate.tags.totalItems !== scenario.expectedGroupTotals.tags
+    ) {
+      throw new Error(`Scenario ${scenario.id} returned unexpected group totals`);
+    }
+    return {
+      checksum: catalogBenchmarkResultChecksum(aggregate),
+      itemCount: aggregate.songs.items.length + aggregate.artists.items.length + aggregate.tags.items.length,
+      totalItems: aggregate.songs.totalItems + aggregate.artists.totalItems + aggregate.tags.totalItems,
+      page: 1,
+      pageSize: 6,
+    };
+  }
+  if (!("pagination" in result) || !("items" in result)) {
+    throw new Error(`Scenario ${scenario.id} returned an unexpected result shape`);
+  }
   if (result.pagination.page !== scenario.query.page || result.pagination.pageSize !== scenario.query.pageSize) {
     throw new Error(`Scenario ${scenario.id} returned unexpected pagination`);
   }
@@ -129,11 +223,17 @@ export function catalogBenchmarkResultChecksum(
   result: Exclude<CatalogBenchmarkScenarioResult, null>,
 ): string {
   return createHash("sha256")
-    .update(JSON.stringify({
-      ids: result.items.map((item) => item.id),
-      query: result.query,
-      pagination: result.pagination,
-    }))
+    .update(JSON.stringify("songs" in result && "artists" in result && "tags" in result
+      ? {
+          songs: { ids: result.songs.items.map(({ id }) => id), totalItems: result.songs.totalItems, hasMore: result.songs.hasMore },
+          artists: { ids: result.artists.items.map(({ id }) => id), totalItems: result.artists.totalItems, hasMore: result.artists.hasMore },
+          tags: { ids: result.tags.items.map(({ id }) => id), totalItems: result.tags.totalItems, hasMore: result.tags.hasMore },
+        }
+      : {
+          ids: result.items.map((item) => item.id),
+          query: result.query,
+          pagination: result.pagination,
+        }))
     .digest("hex");
 }
 
@@ -168,6 +268,59 @@ function searchScenario(
     pageSize: CATALOG_BENCHMARK_PAGE_SIZE,
     sort,
   }, marker.expectedPublicSongCount);
+}
+
+function entityScenario(
+  id: string,
+  marker: CatalogBenchmarkSearchMarker,
+  kind: "artist-list" | "tag-list",
+): CatalogBenchmarkScenario {
+  return {
+    id,
+    kind,
+    query: { q: marker.term, page: 1, pageSize: CATALOG_BENCHMARK_PAGE_SIZE },
+    expectedTotalItems: marker.expectedPublicSongCount > 0 ? 1 : 0,
+  };
+}
+
+function catalogSearchScenario(
+  id: string,
+  marker: CatalogBenchmarkSearchMarker,
+): CatalogBenchmarkScenario {
+  const expectedArtists = marker.branch === "artistCredits.artist.name"
+    || marker.branch === "artist.name"
+    || marker.branch === "artist.additionalNames"
+    || marker.branch === "artist.names.value"
+    ? 1
+    : 0;
+  const expectedTags = marker.branch === "tags.name" || marker.branch === "tags.additionalNames" ? 1 : 0;
+  return {
+    id,
+    kind: "search-catalog",
+    term: marker.term,
+    query: { q: marker.term, page: 1, pageSize: 6, sort: "latest" },
+    expectedTotalItems: marker.expectedPublicSongCount,
+    expectedGroupTotals: {
+      songs: marker.expectedPublicSongCount,
+      artists: expectedArtists,
+      tags: expectedTags,
+    },
+  };
+}
+
+function tagScenario(
+  id: string,
+  marker: NonNullable<CatalogBenchmarkMarker["tagMarkers"]>[keyof CatalogBenchmarkMarker["tagMarkers"]],
+  page: number,
+  sort: ArtistWorksQuery["sort"],
+): CatalogBenchmarkScenario {
+  return {
+    id,
+    kind: "tag-works",
+    tagId: marker.tagId,
+    query: { page, pageSize: CATALOG_BENCHMARK_PAGE_SIZE, sort },
+    expectedTotalItems: marker.expectedPublicSongCount,
+  };
 }
 
 function artistScenario(
