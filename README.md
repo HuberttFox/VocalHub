@@ -258,7 +258,7 @@ GET /api/tags/{localUuid}/songs?page=1&pageSize=24&sort=latest
 - `Favorite`：User 与 local Song UUID 的 set-like 私有关系；不改变 `Song.favoritedTimes`。
 - `Playlist` / `PlaylistSong` / `PlaylistCollaborator`：歌单 owner、private/public visibility、opaque share token、editor membership 和稳定 position；hidden Song relation 可保留但不公开 catalog fields。
 
-声库角色当前通过通用 Artist credit 的 `categories`、`roles` 和 `effectiveRoles` 表示，没有独立 `Vocal` 模型。公开/协作歌单、角色权限与账号管理尚未实现。
+声库角色当前通过通用 Artist credit 的 `categories`、`roles` 和 `effectiveRoles` 表示，没有独立 `Vocal` 模型。公开歌单、协作权限与账号管理边界已实现；更丰富的内容治理仍未实现。
 
 ## VocaDB client 与同步行为
 
@@ -396,5 +396,5 @@ compare 精确删除所有 `bench_` index；paired result digest 不一致时立
 媒体代理、持久缓存与 CDN 的部署评估已完成：当前保留 direct hotlink；object storage/CDN 基础设施就绪后再按上述 worker-curated 方案实施，不开放任意 URL 代理。Auth.js、账号导出、私有收藏、公开分享与协作歌单 MVP 已实现。
 
 1. 在真实数据和用户行为基础上评估标签页、推荐、Redis、AI 与社区能力。
-2. 在内容治理和用户行为证据基础上扩展公开/协作歌单能力。
+2. 在内容治理和用户行为证据基础上扩展歌单能力。
 3. S3-compatible object storage、CDN 和隔离测试 bucket 可用后，实施 worker-time media hydration 与 additive delivery URL。
