@@ -50,6 +50,10 @@ export async function getAccountExport(userId: string): Promise<AccountExport | 
           select: { songId: true, createdAt: true },
           orderBy: [{ createdAt: "asc" }, { songId: "asc" }],
         },
+        collaborations: {
+          select: { playlistId: true, role: true, createdAt: true },
+          orderBy: [{ playlistId: "asc" }],
+        },
         playlists: {
           select: {
             id: true,
@@ -98,6 +102,11 @@ export async function getAccountExport(userId: string): Promise<AccountExport | 
       favorites: user.favorites.map((favorite) => ({
         ...mapSong(favorite.songId),
         createdAt: favorite.createdAt.toISOString(),
+      })),
+      collaboratorMemberships: user.collaborations.map((collaboration) => ({
+        playlistId: collaboration.playlistId,
+        role: collaboration.role,
+        createdAt: collaboration.createdAt.toISOString(),
       })),
       playlists: user.playlists.map((playlist) => ({
         id: playlist.id,

@@ -23,7 +23,7 @@ export default function PrivacyPage() {
             账号设置提供 JSON 数据导出，包含账号基本资料（包括已保存的头像 URL）、GitHub provider 标识、收藏和私有歌单及其顺序。OAuth token 永不导出；已不可公开的歌曲只保留本地 Song UUID 和不可用标记，不包含隐藏歌曲元数据。
           </Policy>
           <Policy title="收藏与歌单">
-            收藏和歌单是 owner-only 私有数据，保留到用户主动删除或删除账号。它们只引用本地 Song UUID，不写回 VocaDB。
+            收藏和歌单默认私有。歌单 owner 可以通过随机 opaque share token 公开只读分享，也可以邀请已有账号作为 editor；分享页不公开账号或协作者资料。它们只引用本地 Song UUID，不写回 VocaDB。
           </Policy>
           <Policy title="账号删除">
             永久删除会从 live primary database 清除 User、GitHub Account identity、全部 Sessions、Favorites、Playlists 和 PlaylistSongs。公共 VocaDB-derived Song、Artist、Tag、PV 和同步数据继续保留。重新登录会创建新的空账号。

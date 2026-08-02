@@ -4,11 +4,15 @@ import { PrismaClient } from "@/generated/prisma/client";
 import { SyncStatus } from "@/generated/prisma/enums";
 import { listFavorites, setFavorite } from "@/lib/favorites/repository";
 import {
+  addPlaylistCollaborator,
   addPlaylistSong,
   createPlaylist,
   getPlaylist,
+  getPublicPlaylist,
   listPlaylists,
   movePlaylistSong,
+  removePlaylistCollaborator,
+  setPlaylistVisibility,
   removePlaylistSong,
 } from "@/lib/playlists/repository";
 
@@ -111,6 +115,31 @@ describe("user library persistence", () => {
     expect((await listPlaylists(owner.id))[0].id).toBe(older.id);
   });
 
+  it("shares by opaque token and lets editors mutate without owner controls", async () => {
+    const owner = await seedUser("share-owner@example.com");
+    const editor = await seedUser("share-editor@example.com");
+    const stranger = await seedUser("share-stranger@example.com");
+    const song = await seedSong(6, "Shared");
+    expect(await createPlaylist(owner.id, { name: "Shared set", description: null })).toBe("CREATED");
+    const playlist = await db.playlist.findFirstOrThrow({ where: { userId: owner.id } });
+
+    expect(await addPlaylistCollaborator(owner.id, playlist.id, "share-editor@example.com")).toBe("ADDED");
+    expect(await addPlaylistCollaborator(owner.id, playlist.id, "share-editor@example.com")).toBe("ALREADY_EXISTS");
+    expect((await setPlaylistVisibility(owner.id, playlist.id, "PUBLIC")).status).toBe("UPDATED");
+    const published = await db.playlist.findUniqueOrThrow({ where: { id: playlist.id } });
+    expect(published.shareToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect((await getPublicPlaylist(published.shareToken!))?.name).toBe("Shared set");
+    expect(await getPlaylist(stranger.id, playlist.id)).toBeNull();
+    expect((await listPlaylists(editor.id))[0]?.role).toBe("EDITOR");
+    expect(await addPlaylistSong(editor.id, playlist.id, song.id)).toBe("UPDATED");
+    expect((await setPlaylistVisibility(editor.id, playlist.id, "PRIVATE")).status).toBe("NOT_FOUND");
+    expect(await removePlaylistCollaborator(stranger.id, playlist.id, editor.id)).toBe(false);
+    expect(await removePlaylistCollaborator(owner.id, playlist.id, editor.id)).toBe(true);
+    expect(await getPlaylist(editor.id, playlist.id)).toBeNull();
+    const oldToken = published.shareToken!;
+    expect((await setPlaylistVisibility(owner.id, playlist.id, "PRIVATE")).shareToken).toBeNull();
+    expect(await getPublicPlaylist(oldToken)).toBeNull();
+  });
   it("keeps playlists private and reorders entries", async () => {
     const owner = await seedUser("owner@example.com");
     const stranger = await seedUser("stranger@example.com");

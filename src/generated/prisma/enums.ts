@@ -47,3 +47,18 @@ export const SyncEntity = {
 } as const
 
 export type SyncEntity = (typeof SyncEntity)[keyof typeof SyncEntity]
+
+
+export const PlaylistVisibility = {
+  PRIVATE: 'PRIVATE',
+  PUBLIC: 'PUBLIC'
+} as const
+
+export type PlaylistVisibility = (typeof PlaylistVisibility)[keyof typeof PlaylistVisibility]
+
+
+export const PlaylistCollaboratorRole = {
+  EDITOR: 'EDITOR'
+} as const
+
+export type PlaylistCollaboratorRole = (typeof PlaylistCollaboratorRole)[keyof typeof PlaylistCollaboratorRole]
