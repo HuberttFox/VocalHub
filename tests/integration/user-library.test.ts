@@ -172,6 +172,21 @@ describe("user library persistence", () => {
     expect(report.playlistId).toBeNull();
     expect(report.targetPlaylistId).toBe(playlist.id);
   });
+  it("returns one created and one duplicate result for concurrent reports", async () => {
+    const owner = await seedUser("concurrent-report-owner@example.com");
+    const reporter = await seedUser("concurrent-reporter@example.com");
+    expect(await createPlaylist(owner.id, { name: "Concurrent", description: null })).toBe("CREATED");
+    const playlist = await db.playlist.findFirstOrThrow({ where: { userId: owner.id } });
+    expect((await setPlaylistVisibility(owner.id, playlist.id, "PUBLIC")).status).toBe("UPDATED");
+    const published = await db.playlist.findUniqueOrThrow({ where: { id: playlist.id } });
+    const results = await Promise.all([
+      createPlaylistReport(reporter.id, playlist.id, "SPAM", "first", published.shareToken!),
+      createPlaylistReport(reporter.id, playlist.id, "SPAM", "second", published.shareToken!),
+    ]);
+
+    expect(results.sort()).toEqual(["ALREADY_REPORTED", "CREATED"]);
+    expect(await db.playlistReport.count({ where: { reporterId: reporter.id, playlistId: playlist.id, status: "OPEN" } })).toBe(1);
+  });
   it("keeps playlists private and reorders entries", async () => {
     const owner = await seedUser("owner@example.com");
     const stranger = await seedUser("stranger@example.com");

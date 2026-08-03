@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/page-container";
 import { SongCard } from "@/components/song-card";
 import { getPublicPlaylist } from "@/lib/playlists/repository";
 import { getViewer } from "@/lib/auth/session";
-import { reportPlaylistAction } from "@/lib/playlists/actions";
+import { PlaylistReportForm } from "@/components/playlist-report-form";
 
 export const metadata: Metadata = { title: "公开歌单" };
 export const dynamic = "force-dynamic";
@@ -43,19 +43,7 @@ export default async function SharedPlaylistPage({ params }: { params: Promise<{
           <section className="surface mt-10 p-6">
             <h2 className="text-xl font-semibold">报告公开歌单</h2>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">报告不会公开显示。请仅提交与此歌单相关的反馈。</p>
-            <form action={reportPlaylistAction} className="mt-4 grid gap-3">
-              <input name="playlistId" type="hidden" value={playlist.id} />
-              <input name="shareToken" type="hidden" value={token} />
-              <select className="field" defaultValue="OTHER" name="reason">
-                <option value="ILLEGAL">违法内容</option>
-                <option value="ABUSIVE">骚扰或仇恨</option>
-                <option value="PERSONAL_DATA">个人信息</option>
-                <option value="SPAM">垃圾内容</option>
-                <option value="OTHER">其他</option>
-              </select>
-              <textarea className="field min-h-24" maxLength={1000} name="note" placeholder="补充说明（可选）" />
-              <button className="button-secondary" type="submit">提交报告</button>
-            </form>
+            <PlaylistReportForm playlistId={playlist.id} shareToken={token} />
           </section>
         ) : (
           <p className="mt-10 text-sm text-[var(--text-muted)]"><Link href={`/signin?callbackUrl=${encodeURIComponent(`/playlists/share/${token}`)}`}>登录</Link> 后可报告此歌单。</p>

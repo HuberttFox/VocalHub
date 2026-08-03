@@ -118,20 +118,38 @@ export async function createPlaylistReport(
   note: string | null,
   shareToken: string,
 ): Promise<"CREATED" | "ALREADY_REPORTED" | "NOT_FOUND"> {
-  return getDb().$transaction(async (tx) => {
+  const createReport = () => getDb().$transaction(async (tx) => {
     const playlist = await tx.playlist.findFirst({
       where: { id: playlistId, shareToken, visibility: PlaylistVisibility.PUBLIC, moderationStatus: "ACTIVE" },
       select: { id: true },
     });
-    if (!playlist) return "NOT_FOUND";
+    if (!playlist) return "NOT_FOUND" as const;
     const existing = await tx.playlistReport.findFirst({
       where: { reporterId, playlistId, status: "OPEN" },
       select: { id: true },
     });
-    if (existing) return "ALREADY_REPORTED";
+    if (existing) return "ALREADY_REPORTED" as const;
     await tx.playlistReport.create({ data: { reporterId, playlistId, targetPlaylistId: playlistId, reason, note } });
-    return "CREATED";
+    return "CREATED" as const;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await createReport();
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const existing = await getDb().playlistReport.findFirst({
+          where: { reporterId, playlistId, status: "OPEN" },
+          select: { id: true },
+        });
+        if (existing) return "ALREADY_REPORTED";
+      }
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2034" || attempt === 2) {
+        throw error;
+      }
+    }
+  }
+  throw new Error("PLAYLIST_REPORT_RETRY_EXHAUSTED");
 }
 
 export async function setPlaylistModerationStatus(
