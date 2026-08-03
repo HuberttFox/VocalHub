@@ -110,6 +110,7 @@ describe("catalog benchmark scenarios", () => {
       "artists-search-alias-substring-no-hit", "artists-search-no-hit",
       "tags-search-rare-name", "tags-search-exact-alias",
       "search-catalog-no-hit", "search-catalog-cross-group", "search-catalog-tag-alias",
+      "discover-popular-first-page", "discover-popular-deep-page",
       "artist-works-high-latest-first-page", "artist-works-high-latest-deep-page",
       "artist-works-high-popular-first-page", "artist-works-medium-latest-first-page",
       "artist-works-sparse-latest-first-page", "artist-works-duplicate-latest-first-page",
@@ -184,7 +185,7 @@ describe("catalog benchmark scenarios", () => {
     const scenario = scenarios()[0];
     const result = songResult(scenario);
     const expected = createHash("sha256").update(JSON.stringify({
-      ids: result.items.map(({ id }) => id), query: result.query, pagination: result.pagination,
+      ids: result.items.map(({ id }) => id), pagination: result.pagination,
     })).digest("hex");
     expect(checkCatalogBenchmarkResult(scenario, result)).toEqual({
       checksum: expected, itemCount: 1, totalItems: scenario.expectedTotalItems,

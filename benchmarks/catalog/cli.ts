@@ -9,6 +9,7 @@ import { listTags, listTagSongs } from "@/lib/tags/repository";
 import { searchCatalog } from "@/lib/search/repository";
 import { listSongs, listSongsWithBroadSearch } from "@/lib/songs/repository";
 import { listSongsWithDecomposedSearch } from "@/lib/songs/search-query";
+import { getDiscovery } from "@/lib/discover/repository";
 import {
   measureAlternatingStateSuite,
   measurePairedAlternating,
@@ -610,6 +611,10 @@ async function runScenario(
       return listTags(scenario.query, db);
     case "search-catalog":
       return searchCatalog(scenario.term, db);
+    case "discovery":
+      return getDiscovery(null, scenario.query, db);
+    default:
+      throw new Error("Unsupported benchmark scenario kind");
   }
 }
 
