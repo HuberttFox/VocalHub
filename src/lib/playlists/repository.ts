@@ -19,6 +19,7 @@ const playlistSelect = {
   createdAt: true,
   updatedAt: true,
   visibility: true,
+  moderationStatus: true,
   shareToken: true,
   userId: true,
   collaborators: {
@@ -93,7 +94,7 @@ export async function getPublicPlaylist(shareToken: string): Promise<PublicPlayl
   if (!SHARE_TOKEN_PATTERN.test(shareToken)) return null;
   return getDb().$transaction(async (tx) => {
     const playlist = await tx.playlist.findFirst({
-      where: { shareToken, visibility: PlaylistVisibility.PUBLIC },
+      where: { shareToken, visibility: PlaylistVisibility.PUBLIC, moderationStatus: "ACTIVE" },
       select: playlistSelect,
     });
     if (!playlist) return null;
@@ -109,6 +110,63 @@ export async function getPublicPlaylist(shareToken: string): Promise<PublicPlayl
       entries: await mapEntries(tx, entries),
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+}
+export async function createPlaylistReport(
+  reporterId: string,
+  playlistId: string,
+  reason: "ILLEGAL" | "ABUSIVE" | "PERSONAL_DATA" | "SPAM" | "OTHER",
+  note: string | null,
+  shareToken: string,
+): Promise<"CREATED" | "ALREADY_REPORTED" | "NOT_FOUND"> {
+  const createReport = () => getDb().$transaction(async (tx) => {
+    const playlist = await tx.playlist.findFirst({
+      where: { id: playlistId, shareToken, visibility: PlaylistVisibility.PUBLIC, moderationStatus: "ACTIVE" },
+      select: { id: true },
+    });
+    if (!playlist) return "NOT_FOUND" as const;
+    const existing = await tx.playlistReport.findFirst({
+      where: { reporterId, playlistId, status: "OPEN" },
+      select: { id: true },
+    });
+    if (existing) return "ALREADY_REPORTED" as const;
+    await tx.playlistReport.create({ data: { reporterId, playlistId, targetPlaylistId: playlistId, reason, note } });
+    return "CREATED" as const;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await createReport();
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const existing = await getDb().playlistReport.findFirst({
+          where: { reporterId, playlistId, status: "OPEN" },
+          select: { id: true },
+        });
+        if (existing) return "ALREADY_REPORTED";
+      }
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2034" || attempt === 2) {
+        throw error;
+      }
+    }
+  }
+  throw new Error("PLAYLIST_REPORT_RETRY_EXHAUSTED");
+}
+
+export async function setPlaylistModerationStatus(
+  playlistId: string,
+  status: "ACTIVE" | "HIDDEN",
+  resolutionCode: string | null = null,
+): Promise<"UPDATED" | "NOT_FOUND"> {
+  return getDb().$transaction(async (tx) => {
+    const playlist = await tx.playlist.findUnique({ where: { id: playlistId }, select: { id: true } });
+    if (!playlist) return "NOT_FOUND";
+    await tx.playlist.update({ where: { id: playlistId }, data: { moderationStatus: status } });
+    await tx.playlistReport.updateMany({
+      where: { playlistId, status: "OPEN" },
+      data: { status: status === "HIDDEN" ? "RESOLVED" : "DISMISSED", resolutionCode, resolvedAt: new Date() },
+    });
+    return "UPDATED";
+  });
 }
 export async function createPlaylist(
   userId: string,
@@ -334,6 +392,7 @@ function mapPlaylist(row: PlaylistRow, role: PlaylistRole): PlaylistSummaryDto {
     updatedAt: row.updatedAt.toISOString(),
     itemCount: row._count.songs,
     visibility: row.visibility,
+    moderationStatus: row.moderationStatus,
     shareToken: role === "OWNER" ? row.shareToken : null,
     role,
   };

@@ -1,7 +1,16 @@
 import type { SongListItemDto } from "@/lib/songs/dto";
 
-export const ACCOUNT_EXPORT_VERSION = 2;
+export const ACCOUNT_EXPORT_VERSION = 3;
 
+export type AccountExportReport = {
+  id: string;
+  playlistId: string;
+  reason: "ILLEGAL" | "ABUSIVE" | "PERSONAL_DATA" | "SPAM" | "OTHER";
+  note: string | null;
+  status: "OPEN" | "RESOLVED" | "DISMISSED";
+  createdAt: string;
+  resolvedAt: string | null;
+};
 export type AccountExportCollaborator = {
   playlistId: string;
   role: "EDITOR";
@@ -28,6 +37,7 @@ export type AccountExport = {
   };
   favorites: Array<AccountExportSong & { createdAt: string }>;
   collaboratorMemberships: AccountExportCollaborator[];
+  reports: AccountExportReport[];
   playlists: Array<{
     id: string;
     name: string;

@@ -22,7 +22,10 @@ export default function PrivacyPage() {
           <Policy title="账号导出">
             账号设置提供 JSON 数据导出，包含账号基本资料（包括已保存的头像 URL）、GitHub provider 标识、收藏和私有歌单及其顺序。OAuth token 永不导出；已不可公开的歌曲只保留本地 Song UUID 和不可用标记，不包含隐藏歌曲元数据。
           </Policy>
-          <Policy title="收藏与歌单">
+          <Policy title="报告与内容治理">
+            登录用户可以举报公开歌单。报告只保存目标 Playlist UUID、受控 reason、可选 note、状态和生命周期时间，不复制 share token、歌曲元数据或其他用户资料；报告不会公开显示。已处理报告保留 180 天后由 maintenance cleanup 删除。账号删除会解除 reporter 关联，但为运营记录保留报告字段；仍有关联的本人报告会出现在账号导出中。
+          </Policy>
+          <Policy title="收藏和歌单">
             收藏和歌单默认私有。歌单 owner 可以通过随机 opaque share token 公开只读分享，也可以邀请已有账号作为 editor；分享页不公开账号或协作者资料。它们只引用本地 Song UUID，不写回 VocaDB。
           </Policy>
           <Policy title="账号删除">

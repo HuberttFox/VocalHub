@@ -35,6 +35,9 @@ export default async function PlaylistPage({ params }: { params: Promise<{ id: s
         <p className="mt-3 text-sm text-[var(--text-muted)]">
           {playlist.role === "OWNER" ? "所有者" : "协作者"} · {playlist.visibility === "PUBLIC" ? "公开分享" : "私有"}
         </p>
+        {playlist.role === "OWNER" && playlist.moderationStatus === "HIDDEN" && (
+          <p className="state-panel mt-4 text-sm text-[var(--text-secondary)]">此公开歌单当前不可通过分享链接访问。你仍可以编辑、设为私有或删除歌单。</p>
+        )}
         {playlist.role === "OWNER" && (
           <>
             <section className="surface mt-8 p-6">

@@ -47,3 +47,10 @@ export const collaboratorIdSchema = z.object({
 export const playlistTokenSchema = z.object({
   playlistId: z.string().regex(UUID_PATTERN),
 });
+
+export const playlistReportSchema = z.object({
+  playlistId: z.string().regex(UUID_PATTERN),
+  shareToken: z.string().regex(SHARE_TOKEN_PATTERN),
+  reason: z.enum(["ILLEGAL", "ABUSIVE", "PERSONAL_DATA", "SPAM", "OTHER"]),
+  note: z.string().trim().max(1000).transform((value) => value || null),
+});

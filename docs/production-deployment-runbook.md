@@ -33,12 +33,13 @@ docker compose -f compose.production.yaml up -d app
 docker compose -f compose.production.yaml --profile worker run --rm worker seed
 ```
 
+For governance releases, the two migrations `20260803100000_add_playlist_governance` and `20260803110000_retain_playlist_report_targets` are one indivisible deployment unit. Before starting migration 1, disable Playlist/User deletion writes and keep that gate until both migrations and post-migration catalog checks pass. Do not start the new app image, route traffic, or resume schedulers during the intermediate state. Verify `PlaylistReport.targetPlaylistId` is populated and `NOT NULL`, `PlaylistReport.playlistId` is nullable, both `playlistId` and `reporterId` foreign keys use `ON DELETE SET NULL`, and the corresponding columns accept NULL.
 Verify app health, login callback, public catalog reads, and seed summary before enabling scheduled jobs.
 
 ## Normal release
 
 1. Pause all schedulers and wait for active worker processes to exit.
-2. Deploy the new app image or container definition without changing database target.
+2. Keep the current app serving only if the migration is backward-compatible; for governance releases, stop new app traffic and Playlist/User deletion writes until both governance migrations finish.
 3. Run the migration container once:
 
 ```bash
@@ -46,9 +47,11 @@ docker compose -f compose.production.yaml --profile migrate run --rm migrate
 ```
 
 4. Check migration output and application startup logs. Keep scheduler paused until app health checks pass.
-5. Run a read-only smoke check against `/`, `/songs`, `/search`, `/api/songs`, and `/privacy`.
-6. Resume schedulers only after migration and smoke checks pass.
+5. Deploy the new app image or container definition without changing database target.
+6. Run a read-only smoke check against `/`, `/songs`, `/search`, `/api/songs`, and `/privacy`.
+7. Resume schedulers only after migration and smoke checks pass.
 
+For governance releases, also verify an active public share resolves, a hidden public share returns 404, and an authenticated report can be submitted. Test Playlist deletion and account reporter SetNull behavior only with disposable staging fixtures or the isolated integration database; do not delete a real production Playlist during smoke checks. Confirm the fixture leaves `PlaylistReport.playlistId = NULL` and `reporterId = NULL` while retaining `targetPlaylistId`.
 Migration failure is a stop condition. Do not mark a migration applied manually unless PostgreSQL catalog state exactly matches the committed migration and the operator has reviewed the recovery path.
 
 ## Catalog index rollout
@@ -71,9 +74,15 @@ docker compose -f compose.production.yaml --profile worker run --rm --no-deps wo
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker auto reconcile
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker artists auto refresh
 docker compose -f compose.production.yaml --profile maintenance run --rm --no-deps session-cleanup
+# After governance migration is deployed:
+docker compose -f compose.production.yaml --profile maintenance run --rm --no-deps playlist-report-cleanup
+# Operator-only, explicit target and action:
+node build/maintenance/governance/moderate-playlist.js hide <playlist-uuid>
 ```
 
 Recommended cadence: incremental every 15 minutes, reconcile daily during low traffic, artist refresh daily at a separate time, and session cleanup daily. Capture exit status and JSON output. Alert on nonzero exit, missing daily success, multiple `RUNNING` runs, or repeated `FAILED` items.
+
+Playlist report cleanup removes only `RESOLVED`/`DISMISSED` reports older than 180 days. It must not remove `OPEN` reports. The moderation command is deployment-only, requires operator shell/database access, accepts one explicit Playlist UUID, and never prints report notes, share tokens, or identity fields.
 
 A worker receiving `SIGTERM` or `SIGINT` stops accepting new work and leaves resumable state. Keep at least 60 seconds termination grace period. `ACTIVITY_INTERVAL_SATURATED` requires a full seed rebuild, not repeated incremental retries.
 
@@ -81,4 +90,5 @@ A worker receiving `SIGTERM` or `SIGINT` stops accepting new work and leaves res
 
 Application image rollback is allowed only after confirming schema compatibility. Additive migrations and indexes remain in the database during app rollback. Do not roll back a committed migration by deleting rows from `_prisma_migrations` or manually reversing SQL. Use a reviewed forward corrective migration after catalog inspection.
 
+After either governance migration has been applied, do not roll back to an app image that does not filter public shares by `moderationStatus`; that can re-expose `HIDDEN` playlists. Roll forward to a moderation-aware image or use a reviewed compatibility release. If the first governance migration succeeded but the retention migration did not, keep traffic and Playlist/User deletion writes disabled until the second migration is repaired and verified.
 If migration history and physical catalog state disagree, stop deployment, keep schedulers paused, preserve logs, and have the database operator reconcile state before resuming traffic.

@@ -41,6 +41,7 @@ FROM base AS maintenance
 ENV NODE_ENV=production
 COPY --from=production-deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/build/maintenance/cleanup-auth-sessions.mjs ./build/maintenance/cleanup-auth-sessions.mjs
+COPY --from=builder --chown=node:node /app/build/maintenance/governance ./build/maintenance/governance
 COPY --from=builder --chown=node:node /app/prisma ./prisma
 USER node
 ENTRYPOINT ["node", "/app/build/maintenance/cleanup-auth-sessions.mjs"]

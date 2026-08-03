@@ -40,6 +40,25 @@ enum PlaylistVisibility {
   PUBLIC
 }
 
+enum PlaylistModerationStatus {
+  ACTIVE
+  HIDDEN
+}
+
+enum PlaylistReportReason {
+  ILLEGAL
+  ABUSIVE
+  PERSONAL_DATA
+  SPAM
+  OTHER
+}
+
+enum PlaylistReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
 enum PlaylistCollaboratorRole {
   EDITOR
 }
@@ -240,6 +259,7 @@ model User {
   favorites     Favorite[]
   playlists     Playlist[]
   collaborations PlaylistCollaborator[]
+  reportsSubmitted PlaylistReport[] @relation("PlaylistReportReporter")
 }
 
 model Account {
@@ -300,13 +320,35 @@ model Playlist {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   visibility  PlaylistVisibility @default(PRIVATE)
+  moderationStatus PlaylistModerationStatus @default(ACTIVE)
   shareToken  String?        @unique
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   songs       PlaylistSong[]
   collaborators PlaylistCollaborator[]
+  reports     PlaylistReport[]
 
   @@index([userId, updatedAt, id])
   @@index([visibility])
+  @@index([moderationStatus])
+}
+
+model PlaylistReport {
+  id             String                @id @default(uuid()) @db.Uuid
+  reporterId     String?               @db.Uuid
+  playlistId     String?
+  targetPlaylistId String                @db.Uuid
+  reason         PlaylistReportReason
+  note           String?
+  status         PlaylistReportStatus   @default(OPEN)
+  resolutionCode String?
+  createdAt      DateTime              @default(now())
+  resolvedAt     DateTime?
+  reporter       User?                 @relation("PlaylistReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  playlist       Playlist?             @relation(fields: [playlistId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([playlistId, status])
+  @@index([reporterId, createdAt])
 }
 
 model PlaylistCollaborator {

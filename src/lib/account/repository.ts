@@ -54,6 +54,10 @@ export async function getAccountExport(userId: string): Promise<AccountExport | 
           select: { playlistId: true, role: true, createdAt: true },
           orderBy: [{ playlistId: "asc" }],
         },
+        reportsSubmitted: {
+          select: { id: true, targetPlaylistId: true, reason: true, note: true, status: true, createdAt: true, resolvedAt: true },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        },
         playlists: {
           select: {
             id: true,
@@ -107,6 +111,15 @@ export async function getAccountExport(userId: string): Promise<AccountExport | 
         playlistId: collaboration.playlistId,
         role: collaboration.role,
         createdAt: collaboration.createdAt.toISOString(),
+      })),
+      reports: user.reportsSubmitted.map((report) => ({
+        id: report.id,
+        playlistId: report.targetPlaylistId,
+        reason: report.reason,
+        note: report.note,
+        status: report.status,
+        createdAt: report.createdAt.toISOString(),
+        resolvedAt: report.resolvedAt?.toISOString() ?? null,
       })),
       playlists: user.playlists.map((playlist) => ({
         id: playlist.id,

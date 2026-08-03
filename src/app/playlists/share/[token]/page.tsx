@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { SongCard } from "@/components/song-card";
 import { getPublicPlaylist } from "@/lib/playlists/repository";
+import { getViewer } from "@/lib/auth/session";
+import { PlaylistReportForm } from "@/components/playlist-report-form";
 
 export const metadata: Metadata = { title: "公开歌单" };
 export const dynamic = "force-dynamic";
@@ -35,6 +38,15 @@ export default async function SharedPlaylistPage({ params }: { params: Promise<{
         </div>
         {playlist.entries.length === 0 && (
           <p className="state-panel mt-10 text-[var(--text-secondary)]">此歌单暂时没有歌曲。</p>
+        )}
+        {await getViewer() ? (
+          <section className="surface mt-10 p-6">
+            <h2 className="text-xl font-semibold">报告公开歌单</h2>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">报告不会公开显示。请仅提交与此歌单相关的反馈。</p>
+            <PlaylistReportForm playlistId={playlist.id} shareToken={token} />
+          </section>
+        ) : (
+          <p className="mt-10 text-sm text-[var(--text-muted)]"><Link href={`/signin?callbackUrl=${encodeURIComponent(`/playlists/share/${token}`)}`}>登录</Link> 后可报告此歌单。</p>
         )}
       </PageContainer>
     </main>

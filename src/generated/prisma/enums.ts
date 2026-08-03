@@ -57,6 +57,34 @@ export const PlaylistVisibility = {
 export type PlaylistVisibility = (typeof PlaylistVisibility)[keyof typeof PlaylistVisibility]
 
 
+export const PlaylistModerationStatus = {
+  ACTIVE: 'ACTIVE',
+  HIDDEN: 'HIDDEN'
+} as const
+
+export type PlaylistModerationStatus = (typeof PlaylistModerationStatus)[keyof typeof PlaylistModerationStatus]
+
+
+export const PlaylistReportReason = {
+  ILLEGAL: 'ILLEGAL',
+  ABUSIVE: 'ABUSIVE',
+  PERSONAL_DATA: 'PERSONAL_DATA',
+  SPAM: 'SPAM',
+  OTHER: 'OTHER'
+} as const
+
+export type PlaylistReportReason = (typeof PlaylistReportReason)[keyof typeof PlaylistReportReason]
+
+
+export const PlaylistReportStatus = {
+  OPEN: 'OPEN',
+  RESOLVED: 'RESOLVED',
+  DISMISSED: 'DISMISSED'
+} as const
+
+export type PlaylistReportStatus = (typeof PlaylistReportStatus)[keyof typeof PlaylistReportStatus]
+
+
 export const PlaylistCollaboratorRole = {
   EDITOR: 'EDITOR'
 } as const

@@ -32,6 +32,7 @@ export type PlaylistMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   visibility: $Enums.PlaylistVisibility | null
+  moderationStatus: $Enums.PlaylistModerationStatus | null
   shareToken: string | null
 }
 
@@ -43,6 +44,7 @@ export type PlaylistMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   visibility: $Enums.PlaylistVisibility | null
+  moderationStatus: $Enums.PlaylistModerationStatus | null
   shareToken: string | null
 }
 
@@ -54,6 +56,7 @@ export type PlaylistCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   visibility: number
+  moderationStatus: number
   shareToken: number
   _all: number
 }
@@ -67,6 +70,7 @@ export type PlaylistMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   visibility?: true
+  moderationStatus?: true
   shareToken?: true
 }
 
@@ -78,6 +82,7 @@ export type PlaylistMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   visibility?: true
+  moderationStatus?: true
   shareToken?: true
 }
 
@@ -89,6 +94,7 @@ export type PlaylistCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   visibility?: true
+  moderationStatus?: true
   shareToken?: true
   _all?: true
 }
@@ -173,6 +179,7 @@ export type PlaylistGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   visibility: $Enums.PlaylistVisibility
+  moderationStatus: $Enums.PlaylistModerationStatus
   shareToken: string | null
   _count: PlaylistCountAggregateOutputType | null
   _min: PlaylistMinAggregateOutputType | null
@@ -205,10 +212,12 @@ export type PlaylistWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Playlist"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Playlist"> | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFilter<"Playlist"> | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFilter<"Playlist"> | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.StringNullableFilter<"Playlist"> | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   songs?: Prisma.PlaylistSongListRelationFilter
   collaborators?: Prisma.PlaylistCollaboratorListRelationFilter
+  reports?: Prisma.PlaylistReportListRelationFilter
 }
 
 export type PlaylistOrderByWithRelationInput = {
@@ -219,10 +228,12 @@ export type PlaylistOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   visibility?: Prisma.SortOrder
+  moderationStatus?: Prisma.SortOrder
   shareToken?: Prisma.SortOrderInput | Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
   songs?: Prisma.PlaylistSongOrderByRelationAggregateInput
   collaborators?: Prisma.PlaylistCollaboratorOrderByRelationAggregateInput
+  reports?: Prisma.PlaylistReportOrderByRelationAggregateInput
 }
 
 export type PlaylistWhereUniqueInput = Prisma.AtLeast<{
@@ -237,9 +248,11 @@ export type PlaylistWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Playlist"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Playlist"> | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFilter<"Playlist"> | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFilter<"Playlist"> | $Enums.PlaylistModerationStatus
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   songs?: Prisma.PlaylistSongListRelationFilter
   collaborators?: Prisma.PlaylistCollaboratorListRelationFilter
+  reports?: Prisma.PlaylistReportListRelationFilter
 }, "id" | "shareToken">
 
 export type PlaylistOrderByWithAggregationInput = {
@@ -250,6 +263,7 @@ export type PlaylistOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   visibility?: Prisma.SortOrder
+  moderationStatus?: Prisma.SortOrder
   shareToken?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.PlaylistCountOrderByAggregateInput
   _max?: Prisma.PlaylistMaxOrderByAggregateInput
@@ -267,6 +281,7 @@ export type PlaylistScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Playlist"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Playlist"> | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityWithAggregatesFilter<"Playlist"> | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusWithAggregatesFilter<"Playlist"> | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.StringNullableWithAggregatesFilter<"Playlist"> | string | null
 }
 
@@ -277,10 +292,12 @@ export type PlaylistCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
   shareToken?: string | null
   user: Prisma.UserCreateNestedOneWithoutPlaylistsInput
   songs?: Prisma.PlaylistSongCreateNestedManyWithoutPlaylistInput
   collaborators?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutPlaylistInput
+  reports?: Prisma.PlaylistReportCreateNestedManyWithoutPlaylistInput
 }
 
 export type PlaylistUncheckedCreateInput = {
@@ -291,9 +308,11 @@ export type PlaylistUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
   shareToken?: string | null
   songs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutPlaylistInput
   collaborators?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutPlaylistInput
+  reports?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutPlaylistInput
 }
 
 export type PlaylistUpdateInput = {
@@ -303,10 +322,12 @@ export type PlaylistUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutPlaylistsNestedInput
   songs?: Prisma.PlaylistSongUpdateManyWithoutPlaylistNestedInput
   collaborators?: Prisma.PlaylistCollaboratorUpdateManyWithoutPlaylistNestedInput
+  reports?: Prisma.PlaylistReportUpdateManyWithoutPlaylistNestedInput
 }
 
 export type PlaylistUncheckedUpdateInput = {
@@ -317,9 +338,11 @@ export type PlaylistUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   songs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutPlaylistNestedInput
   collaborators?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutPlaylistNestedInput
+  reports?: Prisma.PlaylistReportUncheckedUpdateManyWithoutPlaylistNestedInput
 }
 
 export type PlaylistCreateManyInput = {
@@ -330,6 +353,7 @@ export type PlaylistCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
   shareToken?: string | null
 }
 
@@ -340,6 +364,7 @@ export type PlaylistUpdateManyMutationInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
@@ -351,6 +376,7 @@ export type PlaylistUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
@@ -372,6 +398,7 @@ export type PlaylistCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   visibility?: Prisma.SortOrder
+  moderationStatus?: Prisma.SortOrder
   shareToken?: Prisma.SortOrder
 }
 
@@ -383,6 +410,7 @@ export type PlaylistMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   visibility?: Prisma.SortOrder
+  moderationStatus?: Prisma.SortOrder
   shareToken?: Prisma.SortOrder
 }
 
@@ -394,7 +422,13 @@ export type PlaylistMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   visibility?: Prisma.SortOrder
+  moderationStatus?: Prisma.SortOrder
   shareToken?: Prisma.SortOrder
+}
+
+export type PlaylistNullableScalarRelationFilter = {
+  is?: Prisma.PlaylistWhereInput | null
+  isNot?: Prisma.PlaylistWhereInput | null
 }
 
 export type PlaylistScalarRelationFilter = {
@@ -448,6 +482,26 @@ export type EnumPlaylistVisibilityFieldUpdateOperationsInput = {
   set?: $Enums.PlaylistVisibility
 }
 
+export type EnumPlaylistModerationStatusFieldUpdateOperationsInput = {
+  set?: $Enums.PlaylistModerationStatus
+}
+
+export type PlaylistCreateNestedOneWithoutReportsInput = {
+  create?: Prisma.XOR<Prisma.PlaylistCreateWithoutReportsInput, Prisma.PlaylistUncheckedCreateWithoutReportsInput>
+  connectOrCreate?: Prisma.PlaylistCreateOrConnectWithoutReportsInput
+  connect?: Prisma.PlaylistWhereUniqueInput
+}
+
+export type PlaylistUpdateOneWithoutReportsNestedInput = {
+  create?: Prisma.XOR<Prisma.PlaylistCreateWithoutReportsInput, Prisma.PlaylistUncheckedCreateWithoutReportsInput>
+  connectOrCreate?: Prisma.PlaylistCreateOrConnectWithoutReportsInput
+  upsert?: Prisma.PlaylistUpsertWithoutReportsInput
+  disconnect?: Prisma.PlaylistWhereInput | boolean
+  delete?: Prisma.PlaylistWhereInput | boolean
+  connect?: Prisma.PlaylistWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PlaylistUpdateToOneWithWhereWithoutReportsInput, Prisma.PlaylistUpdateWithoutReportsInput>, Prisma.PlaylistUncheckedUpdateWithoutReportsInput>
+}
+
 export type PlaylistCreateNestedOneWithoutCollaboratorsInput = {
   create?: Prisma.XOR<Prisma.PlaylistCreateWithoutCollaboratorsInput, Prisma.PlaylistUncheckedCreateWithoutCollaboratorsInput>
   connectOrCreate?: Prisma.PlaylistCreateOrConnectWithoutCollaboratorsInput
@@ -483,9 +537,11 @@ export type PlaylistCreateWithoutUserInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
   shareToken?: string | null
   songs?: Prisma.PlaylistSongCreateNestedManyWithoutPlaylistInput
   collaborators?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutPlaylistInput
+  reports?: Prisma.PlaylistReportCreateNestedManyWithoutPlaylistInput
 }
 
 export type PlaylistUncheckedCreateWithoutUserInput = {
@@ -495,9 +551,11 @@ export type PlaylistUncheckedCreateWithoutUserInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
   shareToken?: string | null
   songs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutPlaylistInput
   collaborators?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutPlaylistInput
+  reports?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutPlaylistInput
 }
 
 export type PlaylistCreateOrConnectWithoutUserInput = {
@@ -537,7 +595,80 @@ export type PlaylistScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Playlist"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Playlist"> | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFilter<"Playlist"> | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFilter<"Playlist"> | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.StringNullableFilter<"Playlist"> | string | null
+}
+
+export type PlaylistCreateWithoutReportsInput = {
+  id?: string
+  name: string
+  description?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
+  shareToken?: string | null
+  user: Prisma.UserCreateNestedOneWithoutPlaylistsInput
+  songs?: Prisma.PlaylistSongCreateNestedManyWithoutPlaylistInput
+  collaborators?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutPlaylistInput
+}
+
+export type PlaylistUncheckedCreateWithoutReportsInput = {
+  id?: string
+  userId: string
+  name: string
+  description?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
+  shareToken?: string | null
+  songs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutPlaylistInput
+  collaborators?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutPlaylistInput
+}
+
+export type PlaylistCreateOrConnectWithoutReportsInput = {
+  where: Prisma.PlaylistWhereUniqueInput
+  create: Prisma.XOR<Prisma.PlaylistCreateWithoutReportsInput, Prisma.PlaylistUncheckedCreateWithoutReportsInput>
+}
+
+export type PlaylistUpsertWithoutReportsInput = {
+  update: Prisma.XOR<Prisma.PlaylistUpdateWithoutReportsInput, Prisma.PlaylistUncheckedUpdateWithoutReportsInput>
+  create: Prisma.XOR<Prisma.PlaylistCreateWithoutReportsInput, Prisma.PlaylistUncheckedCreateWithoutReportsInput>
+  where?: Prisma.PlaylistWhereInput
+}
+
+export type PlaylistUpdateToOneWithWhereWithoutReportsInput = {
+  where?: Prisma.PlaylistWhereInput
+  data: Prisma.XOR<Prisma.PlaylistUpdateWithoutReportsInput, Prisma.PlaylistUncheckedUpdateWithoutReportsInput>
+}
+
+export type PlaylistUpdateWithoutReportsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
+  shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  user?: Prisma.UserUpdateOneRequiredWithoutPlaylistsNestedInput
+  songs?: Prisma.PlaylistSongUpdateManyWithoutPlaylistNestedInput
+  collaborators?: Prisma.PlaylistCollaboratorUpdateManyWithoutPlaylistNestedInput
+}
+
+export type PlaylistUncheckedUpdateWithoutReportsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
+  shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  songs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutPlaylistNestedInput
+  collaborators?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutPlaylistNestedInput
 }
 
 export type PlaylistCreateWithoutCollaboratorsInput = {
@@ -547,9 +678,11 @@ export type PlaylistCreateWithoutCollaboratorsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
   shareToken?: string | null
   user: Prisma.UserCreateNestedOneWithoutPlaylistsInput
   songs?: Prisma.PlaylistSongCreateNestedManyWithoutPlaylistInput
+  reports?: Prisma.PlaylistReportCreateNestedManyWithoutPlaylistInput
 }
 
 export type PlaylistUncheckedCreateWithoutCollaboratorsInput = {
@@ -560,8 +693,10 @@ export type PlaylistUncheckedCreateWithoutCollaboratorsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
   shareToken?: string | null
   songs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutPlaylistInput
+  reports?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutPlaylistInput
 }
 
 export type PlaylistCreateOrConnectWithoutCollaboratorsInput = {
@@ -587,9 +722,11 @@ export type PlaylistUpdateWithoutCollaboratorsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutPlaylistsNestedInput
   songs?: Prisma.PlaylistSongUpdateManyWithoutPlaylistNestedInput
+  reports?: Prisma.PlaylistReportUpdateManyWithoutPlaylistNestedInput
 }
 
 export type PlaylistUncheckedUpdateWithoutCollaboratorsInput = {
@@ -600,8 +737,10 @@ export type PlaylistUncheckedUpdateWithoutCollaboratorsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   songs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutPlaylistNestedInput
+  reports?: Prisma.PlaylistReportUncheckedUpdateManyWithoutPlaylistNestedInput
 }
 
 export type PlaylistCreateWithoutSongsInput = {
@@ -611,9 +750,11 @@ export type PlaylistCreateWithoutSongsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
   shareToken?: string | null
   user: Prisma.UserCreateNestedOneWithoutPlaylistsInput
   collaborators?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutPlaylistInput
+  reports?: Prisma.PlaylistReportCreateNestedManyWithoutPlaylistInput
 }
 
 export type PlaylistUncheckedCreateWithoutSongsInput = {
@@ -624,8 +765,10 @@ export type PlaylistUncheckedCreateWithoutSongsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
   shareToken?: string | null
   collaborators?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutPlaylistInput
+  reports?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutPlaylistInput
 }
 
 export type PlaylistCreateOrConnectWithoutSongsInput = {
@@ -651,9 +794,11 @@ export type PlaylistUpdateWithoutSongsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutPlaylistsNestedInput
   collaborators?: Prisma.PlaylistCollaboratorUpdateManyWithoutPlaylistNestedInput
+  reports?: Prisma.PlaylistReportUpdateManyWithoutPlaylistNestedInput
 }
 
 export type PlaylistUncheckedUpdateWithoutSongsInput = {
@@ -664,8 +809,10 @@ export type PlaylistUncheckedUpdateWithoutSongsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   collaborators?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutPlaylistNestedInput
+  reports?: Prisma.PlaylistReportUncheckedUpdateManyWithoutPlaylistNestedInput
 }
 
 export type PlaylistCreateManyUserInput = {
@@ -675,6 +822,7 @@ export type PlaylistCreateManyUserInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   visibility?: $Enums.PlaylistVisibility
+  moderationStatus?: $Enums.PlaylistModerationStatus
   shareToken?: string | null
 }
 
@@ -685,9 +833,11 @@ export type PlaylistUpdateWithoutUserInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   songs?: Prisma.PlaylistSongUpdateManyWithoutPlaylistNestedInput
   collaborators?: Prisma.PlaylistCollaboratorUpdateManyWithoutPlaylistNestedInput
+  reports?: Prisma.PlaylistReportUpdateManyWithoutPlaylistNestedInput
 }
 
 export type PlaylistUncheckedUpdateWithoutUserInput = {
@@ -697,9 +847,11 @@ export type PlaylistUncheckedUpdateWithoutUserInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   songs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutPlaylistNestedInput
   collaborators?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutPlaylistNestedInput
+  reports?: Prisma.PlaylistReportUncheckedUpdateManyWithoutPlaylistNestedInput
 }
 
 export type PlaylistUncheckedUpdateManyWithoutUserInput = {
@@ -709,6 +861,7 @@ export type PlaylistUncheckedUpdateManyWithoutUserInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   visibility?: Prisma.EnumPlaylistVisibilityFieldUpdateOperationsInput | $Enums.PlaylistVisibility
+  moderationStatus?: Prisma.EnumPlaylistModerationStatusFieldUpdateOperationsInput | $Enums.PlaylistModerationStatus
   shareToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
@@ -720,11 +873,13 @@ export type PlaylistUncheckedUpdateManyWithoutUserInput = {
 export type PlaylistCountOutputType = {
   songs: number
   collaborators: number
+  reports: number
 }
 
 export type PlaylistCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   songs?: boolean | PlaylistCountOutputTypeCountSongsArgs
   collaborators?: boolean | PlaylistCountOutputTypeCountCollaboratorsArgs
+  reports?: boolean | PlaylistCountOutputTypeCountReportsArgs
 }
 
 /**
@@ -751,6 +906,13 @@ export type PlaylistCountOutputTypeCountCollaboratorsArgs<ExtArgs extends runtim
   where?: Prisma.PlaylistCollaboratorWhereInput
 }
 
+/**
+ * PlaylistCountOutputType without action
+ */
+export type PlaylistCountOutputTypeCountReportsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PlaylistReportWhereInput
+}
+
 
 export type PlaylistSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -760,10 +922,12 @@ export type PlaylistSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   createdAt?: boolean
   updatedAt?: boolean
   visibility?: boolean
+  moderationStatus?: boolean
   shareToken?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   songs?: boolean | Prisma.Playlist$songsArgs<ExtArgs>
   collaborators?: boolean | Prisma.Playlist$collaboratorsArgs<ExtArgs>
+  reports?: boolean | Prisma.Playlist$reportsArgs<ExtArgs>
   _count?: boolean | Prisma.PlaylistCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["playlist"]>
 
@@ -775,6 +939,7 @@ export type PlaylistSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   createdAt?: boolean
   updatedAt?: boolean
   visibility?: boolean
+  moderationStatus?: boolean
   shareToken?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["playlist"]>
@@ -787,6 +952,7 @@ export type PlaylistSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   createdAt?: boolean
   updatedAt?: boolean
   visibility?: boolean
+  moderationStatus?: boolean
   shareToken?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["playlist"]>
@@ -799,14 +965,16 @@ export type PlaylistSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   visibility?: boolean
+  moderationStatus?: boolean
   shareToken?: boolean
 }
 
-export type PlaylistOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "name" | "description" | "createdAt" | "updatedAt" | "visibility" | "shareToken", ExtArgs["result"]["playlist"]>
+export type PlaylistOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "name" | "description" | "createdAt" | "updatedAt" | "visibility" | "moderationStatus" | "shareToken", ExtArgs["result"]["playlist"]>
 export type PlaylistInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   songs?: boolean | Prisma.Playlist$songsArgs<ExtArgs>
   collaborators?: boolean | Prisma.Playlist$collaboratorsArgs<ExtArgs>
+  reports?: boolean | Prisma.Playlist$reportsArgs<ExtArgs>
   _count?: boolean | Prisma.PlaylistCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type PlaylistIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -822,6 +990,7 @@ export type $PlaylistPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     user: Prisma.$UserPayload<ExtArgs>
     songs: Prisma.$PlaylistSongPayload<ExtArgs>[]
     collaborators: Prisma.$PlaylistCollaboratorPayload<ExtArgs>[]
+    reports: Prisma.$PlaylistReportPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -831,6 +1000,7 @@ export type $PlaylistPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     createdAt: Date
     updatedAt: Date
     visibility: $Enums.PlaylistVisibility
+    moderationStatus: $Enums.PlaylistModerationStatus
     shareToken: string | null
   }, ExtArgs["result"]["playlist"]>
   composites: {}
@@ -1229,6 +1399,7 @@ export interface Prisma__PlaylistClient<T, Null = never, ExtArgs extends runtime
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   songs<T extends Prisma.Playlist$songsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Playlist$songsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaylistSongPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   collaborators<T extends Prisma.Playlist$collaboratorsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Playlist$collaboratorsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaylistCollaboratorPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  reports<T extends Prisma.Playlist$reportsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Playlist$reportsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaylistReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1265,6 +1436,7 @@ export interface PlaylistFieldRefs {
   readonly createdAt: Prisma.FieldRef<"Playlist", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Playlist", 'DateTime'>
   readonly visibility: Prisma.FieldRef<"Playlist", 'PlaylistVisibility'>
+  readonly moderationStatus: Prisma.FieldRef<"Playlist", 'PlaylistModerationStatus'>
   readonly shareToken: Prisma.FieldRef<"Playlist", 'String'>
 }
     
@@ -1712,6 +1884,30 @@ export type Playlist$collaboratorsArgs<ExtArgs extends runtime.Types.Extensions.
   take?: number
   skip?: number
   distinct?: Prisma.PlaylistCollaboratorScalarFieldEnum | Prisma.PlaylistCollaboratorScalarFieldEnum[]
+}
+
+/**
+ * Playlist.reports
+ */
+export type Playlist$reportsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlaylistReport
+   */
+  select?: Prisma.PlaylistReportSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlaylistReport
+   */
+  omit?: Prisma.PlaylistReportOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlaylistReportInclude<ExtArgs> | null
+  where?: Prisma.PlaylistReportWhereInput
+  orderBy?: Prisma.PlaylistReportOrderByWithRelationInput | Prisma.PlaylistReportOrderByWithRelationInput[]
+  cursor?: Prisma.PlaylistReportWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PlaylistReportScalarFieldEnum | Prisma.PlaylistReportScalarFieldEnum[]
 }
 
 /**
