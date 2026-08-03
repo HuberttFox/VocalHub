@@ -1,0 +1,13 @@
+[Unit]
+Description=VocalHub maintenance job (%i)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/vocalhub/current
+EnvironmentFile=/etc/vocalhub/vocalhub.env
+ExecStart=/usr/bin/docker compose -f /opt/vocalhub/current/compose.production.jobs.yaml --profile maintenance run --rm --no-deps %i
+TimeoutStartSec=30m
+StandardOutput=journal
+StandardError=journal

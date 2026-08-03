@@ -1,0 +1,10 @@
+[Unit]
+Description=Run VocalHub artist refresh
+
+[Timer]
+OnCalendar=*-*-* 04:11:00
+Persistent=true
+Unit=vocalhub-worker-artists-refresh.service
+
+[Install]
+WantedBy=timers.target

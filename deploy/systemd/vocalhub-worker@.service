@@ -1,0 +1,13 @@
+[Unit]
+Description=VocalHub VocaDB worker (%i)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/vocalhub/current
+EnvironmentFile=/etc/vocalhub/vocalhub.env
+ExecStart=/usr/bin/docker compose -f /opt/vocalhub/current/compose.production.jobs.yaml --profile worker run --rm --no-deps worker auto %i
+TimeoutStartSec=2h
+StandardOutput=journal
+StandardError=journal
