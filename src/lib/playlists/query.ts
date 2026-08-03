@@ -4,6 +4,9 @@ import { UUID_PATTERN } from "@/lib/catalog/id";
 export const PLAYLIST_LIMIT = 100;
 export const PLAYLIST_SONG_LIMIT = 500;
 export const PLAYLIST_COLLABORATOR_LIMIT = 20;
+export const REPORT_QUEUE_DEFAULT_LIMIT = 20;
+export const REPORT_QUEUE_MAX_LIMIT = 100;
+export const REPORT_RESOLUTION_CODE_PATTERN = /^[A-Za-z0-9_-]{1,64}$/u;
 export const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 const optionalDescription = z.string().trim().max(500).transform((value) => value || null);
@@ -53,4 +56,10 @@ export const playlistReportSchema = z.object({
   shareToken: z.string().regex(SHARE_TOKEN_PATTERN),
   reason: z.enum(["ILLEGAL", "ABUSIVE", "PERSONAL_DATA", "SPAM", "OTHER"]),
   note: z.string().trim().max(1000).transform((value) => value || null),
+});
+
+export const reportQueueLimitSchema = z.coerce.number().int().min(1).max(REPORT_QUEUE_MAX_LIMIT).default(REPORT_QUEUE_DEFAULT_LIMIT);
+export const reportDispositionSchema = z.object({
+  reportId: z.string().regex(UUID_PATTERN),
+  resolutionCode: z.string().trim().min(1).max(64).regex(REPORT_RESOLUTION_CODE_PATTERN),
 });

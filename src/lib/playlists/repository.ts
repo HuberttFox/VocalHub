@@ -152,6 +152,69 @@ export async function createPlaylistReport(
   throw new Error("PLAYLIST_REPORT_RETRY_EXHAUSTED");
 }
 
+export type PlaylistReportQueueItem = {
+  id: string;
+  targetPlaylistId: string;
+  reason: "ILLEGAL" | "ABUSIVE" | "PERSONAL_DATA" | "SPAM" | "OTHER";
+  status: "OPEN" | "RESOLVED" | "DISMISSED";
+  createdAt: string;
+  resolvedAt: string | null;
+  resolutionCode: string | null;
+};
+
+const playlistReportOperatorSelect = {
+  id: true,
+  targetPlaylistId: true,
+  reason: true,
+  status: true,
+  createdAt: true,
+  resolvedAt: true,
+  resolutionCode: true,
+} satisfies Prisma.PlaylistReportSelect;
+
+type PlaylistReportOperatorRow = Prisma.PlaylistReportGetPayload<{ select: typeof playlistReportOperatorSelect }>;
+
+function mapPlaylistReportOperator(row: PlaylistReportOperatorRow): PlaylistReportQueueItem {
+  return {
+    id: row.id,
+    targetPlaylistId: row.targetPlaylistId,
+    reason: row.reason,
+    status: row.status,
+    createdAt: row.createdAt.toISOString(),
+    resolvedAt: row.resolvedAt?.toISOString() ?? null,
+    resolutionCode: row.resolutionCode,
+  };
+}
+
+export async function listOpenPlaylistReports(limit: number): Promise<PlaylistReportQueueItem[]> {
+  const rows = await getDb().playlistReport.findMany({
+    where: { status: "OPEN" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    take: limit,
+    select: playlistReportOperatorSelect,
+  });
+  return rows.map(mapPlaylistReportOperator);
+}
+
+export async function disposePlaylistReport(
+  reportId: string,
+  status: "RESOLVED" | "DISMISSED",
+  resolutionCode: string,
+): Promise<PlaylistReportQueueItem | "NOT_FOUND" | "ALREADY_DISPOSED"> {
+  return getDb().$transaction(async (tx) => {
+    const report = await tx.playlistReport.findUnique({ where: { id: reportId }, select: playlistReportOperatorSelect });
+    if (!report) return "NOT_FOUND";
+    if (report.status !== "OPEN") return "ALREADY_DISPOSED";
+    const updated = await tx.playlistReport.updateMany({
+      where: { id: reportId, status: "OPEN" },
+      data: { status, resolutionCode, resolvedAt: new Date() },
+    });
+    if (updated.count === 0) return "ALREADY_DISPOSED";
+    const settled = await tx.playlistReport.findUniqueOrThrow({ where: { id: reportId }, select: playlistReportOperatorSelect });
+    return mapPlaylistReportOperator(settled);
+  });
+}
+
 export async function setPlaylistModerationStatus(
   playlistId: string,
   status: "ACTIVE" | "HIDDEN",
