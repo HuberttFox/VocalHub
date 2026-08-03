@@ -399,6 +399,6 @@ compare 精确删除所有 `bench_` index；paired result digest 不一致时立
 
 媒体代理、持久缓存与 CDN 的部署评估已完成：当前保留 direct hotlink；object storage/CDN 基础设施就绪后再按上述 worker-curated 方案实施，不开放任意 URL 代理。Auth.js、账号导出、私有收藏、公开分享与协作歌单 MVP 已实现。
 
-1. 在真实数据和用户行为基础上评估标签页、推荐、Redis、AI 与社区能力。
+1. 在真实数据和用户行为基础上评估标签页、Redis、AI 与社区能力。
 2. 在内容治理和用户行为证据基础上扩展歌单能力。
 3. S3-compatible object storage、CDN 和隔离测试 bucket 可用后，实施 worker-time media hydration 与 additive delivery URL。
