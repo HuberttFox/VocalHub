@@ -15,6 +15,7 @@ export function SiteHeader() {
           <Link className="nav-link" href="/">首页</Link>
           <Link className="nav-link" href="/songs">歌曲目录</Link>
           <Link className="nav-link" href="/search">全站搜索</Link>
+          <Link className="nav-link" href="/discover">发现</Link>
           <Suspense fallback={<span className="nav-link">账号</span>}>
             <AccountNavigation />
           </Suspense>

@@ -17,6 +17,7 @@
 - 作者详情、作者索引与搜索，以及分页公开作品列表；作者 profile 可由独立 VocaDB detail refresh 补充别名、简介、头像和公开外链。
 - 标签索引、搜索与标签详情页；只关联公开歌曲的标签才对外可见，详情页只展示公开歌曲。
 - 全站搜索页面：一次查询本地 PostgreSQL 快照中的歌曲、作者和标签，按组展示预览与准确总数。
+- `/discover` 发现页：匿名展示公开热门歌曲，登录后基于个人收藏与歌单提供本地个性化推荐；不公开关系来源，不新增 migration 或外部服务。
 - GitHub OAuth 登录、PostgreSQL database sessions、用户私有收藏与可公开分享、可协作编辑的有序歌单。
 - 账号设置、全设备 session 撤销、provider disconnect、primary database hard delete、账号 JSON 数据导出与公开隐私/数据保留说明。
 - OAuth token 仅用于 callback，不持久化；每日 one-shot maintenance 清理 expired Session rows。
@@ -116,6 +117,7 @@ npm run dev
 - `http://localhost:3000/`：目录首页
 - `http://localhost:3000/songs`：歌曲浏览与搜索
 - `/search`：跨歌曲、作者和标签的全站搜索
+- `/discover`：公开热门与个性化发现
 - `/songs/{localUuid}`：歌曲详情
 - `/artists`：作者浏览与搜索
 - `/artists/{localUuid}`：作者详情与公开作品
