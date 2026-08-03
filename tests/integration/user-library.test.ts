@@ -8,8 +8,10 @@ import {
   addPlaylistSong,
   createPlaylist,
   createPlaylistReport,
+  disposePlaylistReport,
   getPlaylist,
   getPublicPlaylist,
+  listOpenPlaylistReports,
   leavePlaylist,
   listPlaylists,
   movePlaylistSong,
@@ -27,6 +29,7 @@ const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 beforeAll(async () => db.$connect());
 
 async function cleanDatabase() {
+  await db.playlistReport.deleteMany();
   await db.playlistSong.deleteMany();
   await db.favorite.deleteMany();
   await db.playlist.deleteMany();
@@ -186,6 +189,30 @@ describe("user library persistence", () => {
 
     expect(results.sort()).toEqual(["ALREADY_REPORTED", "CREATED"]);
     expect(await db.playlistReport.count({ where: { reporterId: reporter.id, playlistId: playlist.id, status: "OPEN" } })).toBe(1);
+  });
+  it("lists and disposes reports without exposing private fields", async () => {
+    const owner = await seedUser("triage-owner@example.com");
+    const reporter = await seedUser("triage-reporter@example.com");
+    expect(await createPlaylist(owner.id, { name: "Triage", description: null })).toBe("CREATED");
+    const playlist = await db.playlist.findFirstOrThrow({ where: { userId: owner.id } });
+    expect((await setPlaylistVisibility(owner.id, playlist.id, "PUBLIC")).status).toBe("UPDATED");
+    const published = await db.playlist.findUniqueOrThrow({ where: { id: playlist.id } });
+    expect(await createPlaylistReport(reporter.id, playlist.id, "SPAM", "private note", published.shareToken!)).toBe("CREATED");
+
+    const queue = await listOpenPlaylistReports(10);
+    expect(queue).toHaveLength(1);
+    expect(queue[0]).toMatchObject({ targetPlaylistId: playlist.id, reason: "SPAM", status: "OPEN", resolvedAt: null, resolutionCode: null });
+    expect(queue[0]).not.toHaveProperty("note");
+    expect(queue[0]).not.toHaveProperty("reporterId");
+
+    const reportId = queue[0].id;
+    const [firstDisposition, secondDisposition] = await Promise.all([
+      disposePlaylistReport(reportId, "RESOLVED", "confirmed-spam"),
+      disposePlaylistReport(reportId, "DISMISSED", "duplicate"),
+    ]);
+    expect([firstDisposition, secondDisposition].filter((result) => result !== "ALREADY_DISPOSED")).toHaveLength(1);
+    expect([firstDisposition, secondDisposition]).toContain("ALREADY_DISPOSED");
+    expect(await listOpenPlaylistReports(10)).toHaveLength(0);
   });
   it("keeps playlists private and reorders entries", async () => {
     const owner = await seedUser("owner@example.com");
