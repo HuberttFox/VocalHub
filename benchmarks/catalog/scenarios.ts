@@ -6,6 +6,8 @@ import type { TagListDto } from "@/lib/tags/dto";
 import type { TagSongsDto } from "@/lib/tags/dto";
 import type { ArtistWorksDto } from "@/lib/artists/dto";
 import type { ArtistWorksQuery } from "@/lib/artists/works-query";
+import type { DiscoveryDto } from "@/lib/discover/dto";
+import type { DiscoveryQuery } from "@/lib/discover/query";
 import type { SongListDto } from "@/lib/songs/dto";
 import type { SongListQuery } from "@/lib/songs/list-query";
 import type {
@@ -62,6 +64,12 @@ export type CatalogBenchmarkScenario =
         artists: number;
         tags: number;
       };
+    }
+  | {
+      id: string;
+      kind: "discovery";
+      query: DiscoveryQuery;
+      expectedTotalItems: number;
     };
 
 export type CatalogBenchmarkScenarioResult =
@@ -71,6 +79,7 @@ export type CatalogBenchmarkScenarioResult =
   | TagListDto
   | TagSongsDto
   | SearchResultsDto
+  | DiscoveryDto
   | null;
 
 export type CatalogBenchmarkResultCheck = {
@@ -151,6 +160,8 @@ export function defineCatalogBenchmarkScenarios(
     catalogSearchScenario("search-catalog-no-hit", marker.searchMarkers.noHit),
     catalogSearchScenario("search-catalog-cross-group", marker.searchMarkers.linkedArtistName),
     catalogSearchScenario("search-catalog-tag-alias", marker.searchMarkers.mediumTagAlias),
+    discoveryScenario("discover-popular-first-page", 1, publicSongCount),
+    discoveryScenario("discover-popular-deep-page", deepSongPage, publicSongCount),
     artistScenario("artist-works-high-latest-first-page", marker.artistMarkers.highFanout, 1, "latest"),
     artistScenario(
       "artist-works-high-latest-deep-page",
@@ -192,6 +203,16 @@ export function checkCatalogBenchmarkResult(
       pageSize: 6,
     };
   }
+  if (scenario.kind === "discovery") {
+    const discovery = result as DiscoveryDto;
+    return {
+      checksum: catalogBenchmarkResultChecksum(discovery),
+      itemCount: discovery.items.length,
+      totalItems: discovery.pagination.totalItems,
+      page: discovery.pagination.page,
+      pageSize: discovery.pagination.pageSize,
+    };
+  }
   if (!("pagination" in result) || !("items" in result)) {
     throw new Error(`Scenario ${scenario.id} returned an unexpected result shape`);
   }
@@ -229,9 +250,15 @@ export function catalogBenchmarkResultChecksum(
           artists: { ids: result.artists.items.map(({ id }) => id), totalItems: result.artists.totalItems, hasMore: result.artists.hasMore },
           tags: { ids: result.tags.items.map(({ id }) => id), totalItems: result.tags.totalItems, hasMore: result.tags.hasMore },
         }
-      : {
+      : "mode" in result
+        ? {
+            ids: result.items.map(({ id }) => id),
+            mode: result.mode,
+            algorithmVersion: result.algorithmVersion,
+            pagination: result.pagination,
+          }
+        : {
           ids: result.items.map((item) => item.id),
-          query: result.query,
           pagination: result.pagination,
         }))
     .digest("hex");
@@ -306,6 +333,10 @@ function catalogSearchScenario(
       tags: expectedTags,
     },
   };
+}
+
+function discoveryScenario(id: string, page: number, expectedTotalItems: number): CatalogBenchmarkScenario {
+  return { id, kind: "discovery", query: { page, pageSize: CATALOG_BENCHMARK_PAGE_SIZE }, expectedTotalItems };
 }
 
 function tagScenario(

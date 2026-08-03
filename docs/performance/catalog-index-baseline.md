@@ -144,6 +144,16 @@ Both independent 20k invocations also cleared every gate: 88–91% median paired
 
 Decision: **adopt relation-branch `UNION` for searched repository requests**. Keep unsearched catalog requests on their existing Prisma path. Retain broad search only as a benchmark parity control. This changes query execution, not search semantics or database schema.
 
-## Current decision
+## Discovery baseline
+
+The migration-free `/discover` route now runs through the same isolated benchmark harness for anonymous popular fallback. On the loaded benchmark database, one warmup and three measured calls produced deterministic results:
+
+| Scenario | Median | p95 | Queries | Result |
+| --- | ---: | ---: | ---: | --- |
+| `discover-popular-first-page` | 41.06 ms | 42.04 ms | 8 | deterministic |
+| `discover-popular-deep-page` | 62.90 ms | 70.00 ms | 8 | deterministic |
+
+The paired catalog controls in the same run were 48.36 ms for popular first page and 105.73 ms for popular deep page. The anonymous Discovery fallback does not show a regression and adds no production index or migration. Personalized 50k evidence remains pending because benchmark fixtures do not contain viewer-scoped Favorite/Playlist/PlaylistCollaborator relations; do not infer personalized performance from anonymous fallback.
+
 
 Search query decomposition adds no production index or migration. The bundled trigram and public-ordering candidates remain rejected. At the 50k target, `tag-relation` is promoted independently through migration `20260802090000_add_song_tag_tag_song_index`; reverse artist-credit index remains promoted through migration `20260727120000_add_song_artist_credit_artist_song_partial_index`. No unrelated candidate migration is included.
