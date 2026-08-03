@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   playlistCreateSchema,
   playlistMoveSchema,
+  playlistReportSchema,
   playlistSongSchema,
 } from "@/lib/playlists/query";
 
@@ -21,6 +22,17 @@ describe("playlist validation", () => {
     expect(playlistSongSchema.parse({ playlistId, songId })).toEqual({ playlistId, songId });
   });
 
+  it("validates public playlist reports and trims optional notes", () => {
+    const result = playlistReportSchema.parse({
+      playlistId,
+      shareToken: "A".repeat(43),
+      reason: "SPAM",
+      note: "  unwanted  ",
+    });
+    expect(result.note).toBe("unwanted");
+    expect(() => playlistReportSchema.parse({ playlistId, shareToken: "bad", reason: "SPAM", note: "" })).toThrow();
+    expect(() => playlistReportSchema.parse({ playlistId, shareToken: "A".repeat(43), reason: "SPAM", note: "x".repeat(1001) })).toThrow();
+  });
   it("only accepts adjacent move directions", () => {
     expect(playlistMoveSchema.parse({ playlistId, songId, direction: "up" }).direction).toBe("up");
     expect(() => playlistMoveSchema.parse({ playlistId, songId, direction: "first" })).toThrow();
