@@ -42,6 +42,26 @@ services:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
     restart: "no"
 
+  playlist-report-cleanup:
+    profiles: ["maintenance"]
+    build:
+      context: .
+      target: maintenance
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    command: ["node", "/app/build/maintenance/governance/cleanup-playlist-reports.js"]
+    restart: "no"
+
+  playlist-moderation:
+    profiles: ["maintenance"]
+    build:
+      context: .
+      target: maintenance
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    command: ["node", "/app/build/maintenance/governance/moderate-playlist.js"]
+    restart: "no"
+
   migrate:
     profiles: ["migrate"]
     build:

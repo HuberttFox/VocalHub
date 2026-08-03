@@ -280,6 +280,13 @@ export type EnumPlaylistVisibilityFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel> | $Enums.PlaylistVisibility
 }
 
+export type EnumPlaylistModerationStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistModerationStatus | Prisma.EnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistModerationStatus[] | Prisma.ListEnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistModerationStatus[] | Prisma.ListEnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistModerationStatusFilter<$PrismaModel> | $Enums.PlaylistModerationStatus
+}
+
 export type EnumPlaylistVisibilityWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.PlaylistVisibility | Prisma.EnumPlaylistVisibilityFieldRefInput<$PrismaModel>
   in?: $Enums.PlaylistVisibility[] | Prisma.ListEnumPlaylistVisibilityFieldRefInput<$PrismaModel>
@@ -288,6 +295,50 @@ export type EnumPlaylistVisibilityWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel>
+}
+
+export type EnumPlaylistModerationStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistModerationStatus | Prisma.EnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistModerationStatus[] | Prisma.ListEnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistModerationStatus[] | Prisma.ListEnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistModerationStatusWithAggregatesFilter<$PrismaModel> | $Enums.PlaylistModerationStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaylistModerationStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaylistModerationStatusFilter<$PrismaModel>
+}
+
+export type EnumPlaylistReportReasonFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistReportReason | Prisma.EnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistReportReason[] | Prisma.ListEnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistReportReason[] | Prisma.ListEnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistReportReasonFilter<$PrismaModel> | $Enums.PlaylistReportReason
+}
+
+export type EnumPlaylistReportStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistReportStatus | Prisma.EnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistReportStatus[] | Prisma.ListEnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistReportStatus[] | Prisma.ListEnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistReportStatusFilter<$PrismaModel> | $Enums.PlaylistReportStatus
+}
+
+export type EnumPlaylistReportReasonWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistReportReason | Prisma.EnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistReportReason[] | Prisma.ListEnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistReportReason[] | Prisma.ListEnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistReportReasonWithAggregatesFilter<$PrismaModel> | $Enums.PlaylistReportReason
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaylistReportReasonFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaylistReportReasonFilter<$PrismaModel>
+}
+
+export type EnumPlaylistReportStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistReportStatus | Prisma.EnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistReportStatus[] | Prisma.ListEnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistReportStatus[] | Prisma.ListEnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistReportStatusWithAggregatesFilter<$PrismaModel> | $Enums.PlaylistReportStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaylistReportStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaylistReportStatusFilter<$PrismaModel>
 }
 
 export type EnumPlaylistCollaboratorRoleFilter<$PrismaModel = never> = {
@@ -673,6 +724,13 @@ export type NestedEnumPlaylistVisibilityFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel> | $Enums.PlaylistVisibility
 }
 
+export type NestedEnumPlaylistModerationStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistModerationStatus | Prisma.EnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistModerationStatus[] | Prisma.ListEnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistModerationStatus[] | Prisma.ListEnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistModerationStatusFilter<$PrismaModel> | $Enums.PlaylistModerationStatus
+}
+
 export type NestedEnumPlaylistVisibilityWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.PlaylistVisibility | Prisma.EnumPlaylistVisibilityFieldRefInput<$PrismaModel>
   in?: $Enums.PlaylistVisibility[] | Prisma.ListEnumPlaylistVisibilityFieldRefInput<$PrismaModel>
@@ -681,6 +739,50 @@ export type NestedEnumPlaylistVisibilityWithAggregatesFilter<$PrismaModel = neve
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPlaylistVisibilityFilter<$PrismaModel>
+}
+
+export type NestedEnumPlaylistModerationStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistModerationStatus | Prisma.EnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistModerationStatus[] | Prisma.ListEnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistModerationStatus[] | Prisma.ListEnumPlaylistModerationStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistModerationStatusWithAggregatesFilter<$PrismaModel> | $Enums.PlaylistModerationStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaylistModerationStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaylistModerationStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumPlaylistReportReasonFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistReportReason | Prisma.EnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistReportReason[] | Prisma.ListEnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistReportReason[] | Prisma.ListEnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistReportReasonFilter<$PrismaModel> | $Enums.PlaylistReportReason
+}
+
+export type NestedEnumPlaylistReportStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistReportStatus | Prisma.EnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistReportStatus[] | Prisma.ListEnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistReportStatus[] | Prisma.ListEnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistReportStatusFilter<$PrismaModel> | $Enums.PlaylistReportStatus
+}
+
+export type NestedEnumPlaylistReportReasonWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistReportReason | Prisma.EnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistReportReason[] | Prisma.ListEnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistReportReason[] | Prisma.ListEnumPlaylistReportReasonFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistReportReasonWithAggregatesFilter<$PrismaModel> | $Enums.PlaylistReportReason
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaylistReportReasonFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaylistReportReasonFilter<$PrismaModel>
+}
+
+export type NestedEnumPlaylistReportStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaylistReportStatus | Prisma.EnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaylistReportStatus[] | Prisma.ListEnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaylistReportStatus[] | Prisma.ListEnumPlaylistReportStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaylistReportStatusWithAggregatesFilter<$PrismaModel> | $Enums.PlaylistReportStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaylistReportStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaylistReportStatusFilter<$PrismaModel>
 }
 
 export type NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel = never> = {

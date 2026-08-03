@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run build:web && npm run build:worker && npm run build:maintenance",
+    "build": "npm run build:web && npm run build:worker && npm run build:maintenance && npm run build:maintenance-governance",
     "build:web": "next build",
     "build:worker": "esbuild worker/sync-vocadb.ts --bundle --platform=node --format=esm --target=node20 --packages=external --outfile=build/worker/sync-vocadb.mjs",
     "build:maintenance": "esbuild maintenance/cleanup-auth-sessions.ts --bundle --platform=node --format=esm --target=node20 --packages=external --outfile=build/maintenance/cleanup-auth-sessions.mjs",
+    "build:maintenance-governance": "esbuild maintenance/moderate-playlist.ts maintenance/cleanup-playlist-reports.ts --bundle --platform=node --format=esm --target=node20 --packages=external --outdir=build/maintenance/governance",
     "start": "next start",
     "start:worker": "node build/worker/sync-vocadb.mjs",
     "start:session-cleanup": "node build/maintenance/cleanup-auth-sessions.mjs",
@@ -20,7 +21,9 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "sync:vocadb": "tsx worker/sync-vocadb.ts",
-    "cleanup:auth-sessions": "tsx maintenance/cleanup-auth-sessions.ts"
+    "cleanup:auth-sessions": "tsx maintenance/cleanup-auth-sessions.ts",
+    "moderate:playlist": "tsx maintenance/moderate-playlist.ts",
+    "cleanup:playlist-reports": "tsx maintenance/cleanup-playlist-reports.ts"
   },
   "engines": {
     "node": ">=20.19"

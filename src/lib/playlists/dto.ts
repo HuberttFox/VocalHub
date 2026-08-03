@@ -18,6 +18,7 @@ export type PlaylistSummaryDto = {
   updatedAt: string;
   itemCount: number;
   visibility: "PRIVATE" | "PUBLIC";
+  moderationStatus: "ACTIVE" | "HIDDEN";
   shareToken: string | null;
   role: PlaylistRole;
 };

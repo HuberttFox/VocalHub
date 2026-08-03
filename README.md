@@ -19,6 +19,7 @@
 - 全站搜索页面：一次查询本地 PostgreSQL 快照中的歌曲、作者和标签，按组展示预览与准确总数。
 - `/discover` 发现页：匿名展示公开热门歌曲，登录后基于个人收藏与歌单提供本地个性化推荐；不公开关系来源，不新增 migration 或外部服务。
 - GitHub OAuth 登录、PostgreSQL database sessions、用户私有收藏与可公开分享、可协作编辑的有序歌单。
+- 公开歌单举报与 deployment-only moderation 处置；报告保留 180 天，账号删除解除 reporter 关联但保留运营所需字段。
 - 账号设置、全设备 session 撤销、provider disconnect、primary database hard delete、账号 JSON 数据导出与公开隐私/数据保留说明。
 - OAuth token 仅用于 callback，不持久化；每日 one-shot maintenance 清理 expired Session rows。
 - 媒体交付架构评估：当前继续浏览器 direct hotlink，待对象存储/CDN 就绪后由 worker 执行受控持久缓存；不开放任意 URL 代理。

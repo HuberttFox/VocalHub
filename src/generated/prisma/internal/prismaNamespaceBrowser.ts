@@ -66,6 +66,7 @@ export const ModelName = {
   VerificationToken: 'VerificationToken',
   Favorite: 'Favorite',
   Playlist: 'Playlist',
+  PlaylistReport: 'PlaylistReport',
   PlaylistCollaborator: 'PlaylistCollaborator',
   PlaylistSong: 'PlaylistSong',
   SyncRun: 'SyncRun',
@@ -324,10 +325,27 @@ export const PlaylistScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   visibility: 'visibility',
+  moderationStatus: 'moderationStatus',
   shareToken: 'shareToken'
 } as const
 
 export type PlaylistScalarFieldEnum = (typeof PlaylistScalarFieldEnum)[keyof typeof PlaylistScalarFieldEnum]
+
+
+export const PlaylistReportScalarFieldEnum = {
+  id: 'id',
+  reporterId: 'reporterId',
+  playlistId: 'playlistId',
+  targetPlaylistId: 'targetPlaylistId',
+  reason: 'reason',
+  note: 'note',
+  status: 'status',
+  resolutionCode: 'resolutionCode',
+  createdAt: 'createdAt',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type PlaylistReportScalarFieldEnum = (typeof PlaylistReportScalarFieldEnum)[keyof typeof PlaylistReportScalarFieldEnum]
 
 
 export const PlaylistCollaboratorScalarFieldEnum = {

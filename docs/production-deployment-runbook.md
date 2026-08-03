@@ -71,9 +71,15 @@ docker compose -f compose.production.yaml --profile worker run --rm --no-deps wo
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker auto reconcile
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker artists auto refresh
 docker compose -f compose.production.yaml --profile maintenance run --rm --no-deps session-cleanup
+# After governance migration is deployed:
+docker compose -f compose.production.yaml --profile maintenance run --rm --no-deps playlist-report-cleanup
+# Operator-only, explicit target and action:
+node build/maintenance/governance/moderate-playlist.js hide <playlist-uuid>
 ```
 
 Recommended cadence: incremental every 15 minutes, reconcile daily during low traffic, artist refresh daily at a separate time, and session cleanup daily. Capture exit status and JSON output. Alert on nonzero exit, missing daily success, multiple `RUNNING` runs, or repeated `FAILED` items.
+
+Playlist report cleanup removes only `RESOLVED`/`DISMISSED` reports older than 180 days. It must not remove `OPEN` reports. The moderation command is deployment-only, requires operator shell/database access, accepts one explicit Playlist UUID, and never prints report notes, share tokens, or identity fields.
 
 A worker receiving `SIGTERM` or `SIGINT` stops accepting new work and leaves resumable state. Keep at least 60 seconds termination grace period. `ACTIVITY_INTERVAL_SATURATED` requires a full seed rebuild, not repeated incremental retries.
 

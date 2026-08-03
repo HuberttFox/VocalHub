@@ -8,6 +8,7 @@ import {
   playlistCreateSchema,
   playlistIdSchema,
   playlistTokenSchema,
+  playlistReportSchema,
   playlistVisibilitySchema,
   playlistMoveSchema,
   playlistSongSchema,
@@ -17,6 +18,7 @@ import {
   addPlaylistSong,
   addPlaylistCollaborator,
   createPlaylist,
+  createPlaylistReport,
   deletePlaylist,
   leavePlaylist,
   movePlaylistSong,
@@ -25,6 +27,18 @@ import {
   setPlaylistVisibility,
   updatePlaylist,
 } from "@/lib/playlists/repository";
+
+export async function reportPlaylistAction(formData: FormData): Promise<void> {
+  const viewer = await requireViewerForMutation();
+  const input = playlistReportSchema.parse({
+    playlistId: formData.get("playlistId"),
+    reason: formData.get("reason"),
+    note: formData.get("note") ?? "",
+    shareToken: formData.get("shareToken"),
+  });
+  const result = await createPlaylistReport(viewer.id, input.playlistId, input.reason, input.note, input.shareToken);
+  if (result === "NOT_FOUND") throw new Error("PLAYLIST_NOT_FOUND");
+}
 
 export async function setPlaylistVisibilityAction(formData: FormData): Promise<void> {
   const viewer = await requireViewerForMutation();
