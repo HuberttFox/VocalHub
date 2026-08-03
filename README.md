@@ -28,7 +28,7 @@
 
 - 定时任务和部署级 worker service。
 - 图片对象存储/CDN 持久缓存（需先提供部署级 S3-compatible storage 与稳定 delivery base URL）。
-- 全站搜索所需的 Stage C 候选生产索引；须先通过隔离 benchmark 取得证据。
+- Stage C 未通过证据门的 speculative catalog indexes（trigram/array 等）不进入 production；已推广 relation indexes 见生产部署 runbook。
 - 密码/邮件登录、Redis、推荐、评论、投稿或 AI 功能。
 
 ## 快速开始
