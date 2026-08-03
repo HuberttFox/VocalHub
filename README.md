@@ -147,7 +147,7 @@ docker compose -f compose.production.yaml up -d app
 docker compose -f compose.production.yaml --profile worker run --rm worker seed
 ```
 
-seed 成功后再启用外部 scheduler。单机 cron、systemd timer 或托管 scheduler 都调用同一个一次性 worker：
+seed 成功后再启用外部 scheduler。仓库提供 `deploy/systemd/` systemd timer reference；它只调用一次性 Compose worker/maintenance service，不在 app 或容器内运行 cron。安装前复制 `deploy/systemd/vocalhub.env.example` 到 `/etc/vocalhub/vocalhub.env`，设置 mode `0600`，填入 immutable release 路径与 operator-managed database/VocaDB variables。systemd unit 不接收 `AUTH_*`。
 
 ```bash
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker auto incremental
@@ -155,7 +155,7 @@ docker compose -f compose.production.yaml --profile worker run --rm --no-deps wo
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker artists auto refresh
 ```
 
-建议 incremental 每 15 分钟，reconcile 每日低峰运行，artist refresh 每日错峰调用；seed 只用于首次部署或人工重建 baseline。scheduler 应禁止重叠，但 PostgreSQL advisory lock 仍是所有 VocaDB worker 的最终保护。worker 收到 `SIGTERM`/`SIGINT` 后停止领取新 item、取消 HTTP 等待、等所有 lane 收束再释放 DB 连接；未完成 item 保持 `PENDING`，run 保持 `RUNNING`，下次对应 entity 的 `auto` 恢复。容器至少保留 60 秒 termination grace period。
+systemd timers 使用 `OnCalendar`：incremental 每 15 分钟且不追赶离线期间积压触发，reconcile、artist refresh、session cleanup、playlist-report cleanup 每日错峰且允许一次 catch-up。恢复 timer 时先单独检查并处理 missed jobs，再按上述时间窗分批 enable，避免多个 Persistent timer 同时追赶。unit failure 保留 nonzero 并写入 journald；operator 应监控失败与每日成功缺失。安装与暂停/恢复流程见 production runbook。
 
 Auth.js 已在请求时立即拒绝 expired Session。为了删除长期未再访问的过期数据库 row，外部 scheduler 应每日错峰执行：
 

@@ -1,0 +1,10 @@
+[Unit]
+Description=Clean retained VocalHub playlist reports
+
+[Timer]
+OnCalendar=*-*-* 02:37:00
+Persistent=true
+Unit=vocalhub-maintenance@playlist-report-cleanup.service
+
+[Install]
+WantedBy=timers.target

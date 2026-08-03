@@ -1,0 +1,10 @@
+[Unit]
+Description=Run VocalHub song incremental sync
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=false
+Unit=vocalhub-worker@incremental.service
+
+[Install]
+WantedBy=timers.target

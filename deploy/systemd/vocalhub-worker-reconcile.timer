@@ -1,0 +1,10 @@
+[Unit]
+Description=Run VocalHub song reconciliation
+
+[Timer]
+OnCalendar=*-*-* 03:17:00
+Persistent=true
+Unit=vocalhub-worker@reconcile.service
+
+[Install]
+WantedBy=timers.target

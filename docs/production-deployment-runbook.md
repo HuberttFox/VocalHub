@@ -5,8 +5,8 @@ This runbook covers deployment against an operator-managed PostgreSQL instance. 
 ## Preflight
 
 1. Confirm release commit and build context, database target, maintenance window, and rollback owner. If using a registry, pin the same immutable image digest for `app`, `worker`, and `migrate`; otherwise run all commands from the checked-out release commit and do not rebuild from a dirty tree.
-2. Pause VocaDB incremental, reconcile, artist refresh, and session-cleanup schedulers.
-3. Wait for active worker containers to exit. Check `SyncRun` and `SyncItem` for `RUNNING` ambiguity before proceeding.
+2. Pause VocaDB incremental, reconcile, artist refresh, session-cleanup, and playlist-report-cleanup schedulers. For systemd reference timers, use `systemctl disable --now vocalhub-worker-incremental.timer vocalhub-worker-reconcile.timer vocalhub-worker-artists-refresh.timer vocalhub-session-cleanup.timer vocalhub-playlist-report-cleanup.timer`.
+3. Wait for active worker and maintenance containers to exit. Check `SyncRun` and `SyncItem` for `RUNNING` ambiguity before proceeding.
 4. Verify a current PostgreSQL backup and a tested restore path. Confirm free disk space for additive indexes.
 5. Confirm production secrets are separated by target: app receives `DATABASE_URL` and `AUTH_*`; worker receives `DATABASE_URL`, `VOCADB_*`, and `VOCADB_USER_AGENT`; maintenance receives only `DATABASE_URL`; migrate receives `DATABASE_URL` and optional `DIRECT_URL`.
 6. Run release validation in CI or a staging environment:
@@ -67,8 +67,18 @@ If a build fails, inspect PostgreSQL catalogs and Prisma migration history first
 
 ## Scheduler operations
 
-External scheduler invokes one-shot containers. Prevent overlapping jobs at scheduler level; PostgreSQL advisory lock remains final worker protection:
+External scheduler invokes one-shot containers. Prevent overlapping jobs at scheduler level; PostgreSQL advisory lock remains final worker protection. For the repository systemd reference, copy the units from `deploy/systemd/`, install `/etc/vocalhub/vocalhub.env` with mode `0600`, verify the release path and immutable image/config references, then enable timers only after initial seed and smoke checks:
 
+```bash
+sudo install -d -m 0750 /etc/vocalhub
+sudo install -m 0644 deploy/systemd/*.service deploy/systemd/*.timer /etc/systemd/system/
+sudo install -m 0600 /path/to/edited/vocalhub.env /etc/vocalhub/vocalhub.env
+sudo systemctl daemon-reload
+sudo systemctl enable --now vocalhub-worker-incremental.timer vocalhub-worker-reconcile.timer
+sudo systemctl enable --now vocalhub-worker-artists-refresh.timer vocalhub-session-cleanup.timer vocalhub-playlist-report-cleanup.timer
+```
+
+Use `systemctl status <unit>` and `journalctl -u <unit>` to inspect execution. Nonzero service exits remain visible and alertable. Before any migration or release, pause all five timers with `systemctl disable --now`; re-enable only after migration, app health, and smoke checks pass. Never activate these timers against an unseeded database. Edit the environment file with real values; never install the placeholder example directly. Validate no `db.example`, `user:password`, `replace-with-digest`, or `replace-with-operator-contact` remains. The jobs Compose file excludes app/Auth interpolation and requires pinned worker/maintenance image digests.
 ```bash
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker auto incremental
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker auto reconcile
