@@ -49,7 +49,8 @@ services:
       target: maintenance
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-    command: ["node", "/app/build/maintenance/governance/cleanup-playlist-reports.js"]
+    entrypoint: ["node", "/app/build/maintenance/governance/cleanup-playlist-reports.js"]
+    command: []
     restart: "no"
 
   playlist-moderation:
@@ -59,7 +60,8 @@ services:
       target: maintenance
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-    command: ["node", "/app/build/maintenance/governance/moderate-playlist.js"]
+    entrypoint: ["node", "/app/build/maintenance/governance/moderate-playlist.js"]
+    command: []
     restart: "no"
 
   migrate:
