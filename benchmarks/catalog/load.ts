@@ -11,6 +11,7 @@ import {
   generateCatalogBenchmarkArtists,
   generateCatalogBenchmarkChunk,
   generateCatalogBenchmarkTags,
+  generateCatalogBenchmarkDiscoveryRelations,
   generateArtistNames,
   assertCatalogBenchmarkDatasetOptions,
 } from "./dataset";
@@ -32,6 +33,11 @@ type CatalogTableCounts = {
   artistNameCount: number;
   creditCount: number;
   songTagCount: number;
+  userCount: number;
+  favoriteCount: number;
+  playlistCount: number;
+  playlistSongCount: number;
+  collaboratorCount: number;
 };
 
 export async function assertCatalogBenchmarkServerDatabase(
@@ -104,7 +110,6 @@ export async function loadCatalogBenchmark(
     await ensureMetadataTable(db);
     await resetCatalogTables(db);
 
-    const marker = createCatalogBenchmarkMarker(options);
     const artists = generateCatalogBenchmarkArtists(options);
     const tags = generateCatalogBenchmarkTags(options);
     await createManyInChunks(artists, chunkSize, (data) =>
@@ -114,9 +119,16 @@ export async function loadCatalogBenchmark(
     await createManyInChunks(artistNames, chunkSize, (data: Prisma.ArtistNameCreateManyInput[]) =>
       db.artistName.createMany({ data }),
     );
+    const fullChunk = generateCatalogBenchmarkChunk({ ...options, start: 0, count: options.songCount });
+    const discovery = generateCatalogBenchmarkDiscoveryRelations(options, fullChunk);
+    const marker = createCatalogBenchmarkMarker(options, discovery);
     await createManyInChunks(tags, chunkSize, (data) =>
       db.tag.createMany({ data }),
     );
+
+    await createManyInChunks(discovery.users, chunkSize, (data) => db.user.createMany({ data }));
+    await createManyInChunks(discovery.playlists, chunkSize, (data) => db.playlist.createMany({ data }));
+    await createManyInChunks(discovery.playlistCollaborators, chunkSize, (data) => db.playlistCollaborator.createMany({ data }));
 
     for (let start = 0; start < options.songCount; start += chunkSize) {
       const chunk = generateCatalogBenchmarkChunk({
@@ -132,6 +144,9 @@ export async function loadCatalogBenchmark(
       }, { timeout: 120_000 });
     }
 
+    await createManyInChunks(discovery.favorites, chunkSize, (data) => db.favorite.createMany({ data }));
+    await createManyInChunks(discovery.playlistSongs, chunkSize, (data) => db.playlistSong.createMany({ data }));
+
     const actual = await readCatalogTableCounts(db);
     assertMarkerCounts(marker, actual);
     await writeMarker(db, marker);
@@ -143,8 +158,15 @@ export async function loadCatalogBenchmark(
 export async function resetCatalogTables(db: PrismaClient): Promise<void> {
   await db.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "PlaylistReport",
       "PlaylistSong",
+      "PlaylistCollaborator",
       "Favorite",
+      "Account",
+      "Session",
+      "VerificationToken",
+      "Playlist",
+      "User",
       "SongPV",
       "SongTag",
       "SongArtistCredit",
@@ -204,7 +226,12 @@ async function readCatalogTableCounts(db: PrismaClient): Promise<CatalogTableCou
       (SELECT count(*)::integer FROM "SongName") AS "nameCount",
       (SELECT count(*)::integer FROM "ArtistName") AS "artistNameCount",
       (SELECT count(*)::integer FROM "SongArtistCredit") AS "creditCount",
-      (SELECT count(*)::integer FROM "SongTag") AS "songTagCount"
+      (SELECT count(*)::integer FROM "SongTag") AS "songTagCount",
+      (SELECT count(*)::integer FROM "User") AS "userCount",
+      (SELECT count(*)::integer FROM "Favorite") AS "favoriteCount",
+      (SELECT count(*)::integer FROM "Playlist") AS "playlistCount",
+      (SELECT count(*)::integer FROM "PlaylistSong") AS "playlistSongCount",
+      (SELECT count(*)::integer FROM "PlaylistCollaborator") AS "collaboratorCount"
   `;
   const counts = rows[0];
   if (!counts) throw new Error("PostgreSQL did not report benchmark table counts");
@@ -223,6 +250,11 @@ function assertMarkerCounts(
     artistNameCount: marker.artistNameCount,
     creditCount: marker.creditCount,
     songTagCount: marker.songTagCount,
+    userCount: 2,
+    favoriteCount: marker.discoveryMarkers.favoriteCount,
+    playlistCount: marker.discoveryMarkers.playlistCount,
+    playlistSongCount: marker.discoveryMarkers.playlistSongCount,
+    collaboratorCount: marker.discoveryMarkers.collaboratorCount,
   };
   for (const key of Object.keys(expected) as Array<keyof CatalogTableCounts>) {
     if (actual[key] !== expected[key]) {
@@ -235,7 +267,7 @@ function assertMarkerCounts(
 
 async function analyzeCatalogTables(db: PrismaClient): Promise<void> {
   await db.$executeRawUnsafe(`
-    ANALYZE "Song", "SongName", "Artist", "ArtistName", "SongArtistCredit", "Tag", "SongTag"
+    ANALYZE "Song", "SongName", "Artist", "ArtistName", "SongArtistCredit", "Tag", "SongTag", "User", "Favorite", "Playlist", "PlaylistCollaborator", "PlaylistSong"
   `);
 }
 
@@ -267,6 +299,7 @@ function isMarker(value: unknown): value is CatalogBenchmarkMarker {
     isRecord(marker.searchMarkers) &&
     isRecord(marker.artistMarkers) &&
     isRecord(marker.tagMarkers) &&
+    isRecord(marker.discoveryMarkers) &&
     typeof marker.checksum === "string"
   );
 }

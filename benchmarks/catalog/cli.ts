@@ -612,7 +612,7 @@ async function runScenario(
     case "search-catalog":
       return searchCatalog(scenario.term, db);
     case "discovery":
-      return getDiscovery(null, scenario.query, db);
+      return getDiscovery(scenario.viewerId, scenario.query, db);
     default:
       throw new Error("Unsupported benchmark scenario kind");
   }

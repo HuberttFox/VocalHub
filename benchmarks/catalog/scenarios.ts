@@ -6,7 +6,10 @@ import type { TagListDto } from "@/lib/tags/dto";
 import type { TagSongsDto } from "@/lib/tags/dto";
 import type { ArtistWorksDto } from "@/lib/artists/dto";
 import type { ArtistWorksQuery } from "@/lib/artists/works-query";
-import type { DiscoveryDto } from "@/lib/discover/dto";
+import {
+  DISCOVERY_ALGORITHM_VERSION,
+  type DiscoveryDto,
+} from "@/lib/discover/dto";
 import type { DiscoveryQuery } from "@/lib/discover/query";
 import type { SongListDto } from "@/lib/songs/dto";
 import type { SongListQuery } from "@/lib/songs/list-query";
@@ -68,7 +71,10 @@ export type CatalogBenchmarkScenario =
   | {
       id: string;
       kind: "discovery";
+      viewerId: string | null;
       query: DiscoveryQuery;
+      expectedMode: DiscoveryDto["mode"];
+      expectedAlgorithmVersion: DiscoveryDto["algorithmVersion"];
       expectedTotalItems: number;
     };
 
@@ -91,7 +97,7 @@ export type CatalogBenchmarkResultCheck = {
 };
 
 export type CatalogBenchmarkScenarioContext = {
-  marker: Pick<CatalogBenchmarkMarker, "visibility" | "searchMarkers" | "artistMarkers"> & Partial<Pick<CatalogBenchmarkMarker, "artistSearchMarkers" | "tagMarkers">>;
+  marker: Pick<CatalogBenchmarkMarker, "visibility" | "searchMarkers" | "artistMarkers"> & Partial<Pick<CatalogBenchmarkMarker, "artistSearchMarkers" | "tagMarkers" | "discoveryMarkers">>;
 };
 
 export function defineCatalogBenchmarkScenarios(
@@ -105,6 +111,17 @@ export function defineCatalogBenchmarkScenarios(
     exactAlias: marker.searchMarkers.linkedArtistName,
     aliasSubstringNoHit: marker.searchMarkers.noHit,
     noHit: marker.searchMarkers.noHit,
+  };
+  const discoveryMarkers = marker.discoveryMarkers ?? {
+    viewerId: "",
+    otherViewerId: "",
+    favoriteCount: 0,
+    playlistCount: 0,
+    playlistSongCount: 0,
+    collaboratorCount: 0,
+    rawSeedCount: 0,
+    deduplicatedSeedCount: 0,
+    personalizedTotalItems: 0,
   };
   const publicSongCount = marker.visibility.publicSynced + marker.visibility.publicFailed;
   const deepSongPage = deepPageFor(publicSongCount, CATALOG_BENCHMARK_PAGE_SIZE);
@@ -160,8 +177,22 @@ export function defineCatalogBenchmarkScenarios(
     catalogSearchScenario("search-catalog-no-hit", marker.searchMarkers.noHit),
     catalogSearchScenario("search-catalog-cross-group", marker.searchMarkers.linkedArtistName),
     catalogSearchScenario("search-catalog-tag-alias", marker.searchMarkers.mediumTagAlias),
-    discoveryScenario("discover-popular-first-page", 1, publicSongCount),
-    discoveryScenario("discover-popular-deep-page", deepSongPage, publicSongCount),
+    discoveryScenario("discover-popular-first-page", null, 1, publicSongCount, "POPULAR"),
+    discoveryScenario("discover-popular-deep-page", null, deepSongPage, publicSongCount, "POPULAR"),
+    discoveryScenario(
+      "discover-personalized-first-page",
+      discoveryMarkers.viewerId,
+      1,
+      discoveryMarkers.personalizedTotalItems,
+      discoveryMarkers.personalizedTotalItems > 0 ? "PERSONALIZED" : "POPULAR",
+    ),
+    discoveryScenario(
+      "discover-personalized-deep-page",
+      discoveryMarkers.viewerId,
+      deepPageFor(discoveryMarkers.personalizedTotalItems, CATALOG_BENCHMARK_PAGE_SIZE),
+      discoveryMarkers.personalizedTotalItems,
+      discoveryMarkers.personalizedTotalItems > 0 ? "PERSONALIZED" : "POPULAR",
+    ),
     artistScenario("artist-works-high-latest-first-page", marker.artistMarkers.highFanout, 1, "latest"),
     artistScenario(
       "artist-works-high-latest-deep-page",
@@ -205,6 +236,21 @@ export function checkCatalogBenchmarkResult(
   }
   if (scenario.kind === "discovery") {
     const discovery = result as DiscoveryDto;
+    if (discovery.mode !== scenario.expectedMode || discovery.algorithmVersion !== scenario.expectedAlgorithmVersion) {
+      throw new Error(`Scenario ${scenario.id} returned unexpected discovery mode/version`);
+    }
+    if (discovery.pagination.page !== scenario.query.page || discovery.pagination.pageSize !== scenario.query.pageSize) {
+      throw new Error(`Scenario ${scenario.id} returned unexpected pagination`);
+    }
+    if (discovery.pagination.totalItems !== scenario.expectedTotalItems) {
+      throw new Error(`Scenario ${scenario.id} returned unexpected discovery total`);
+    }
+    if (discovery.items.length > scenario.query.pageSize) {
+      throw new Error(`Scenario ${scenario.id} returned too many items`);
+    }
+    if (discovery.pagination.totalPages !== Math.ceil(discovery.pagination.totalItems / discovery.pagination.pageSize)) {
+      throw new Error(`Scenario ${scenario.id} returned inconsistent totals`);
+    }
     return {
       checksum: catalogBenchmarkResultChecksum(discovery),
       itemCount: discovery.items.length,
@@ -335,8 +381,22 @@ function catalogSearchScenario(
   };
 }
 
-function discoveryScenario(id: string, page: number, expectedTotalItems: number): CatalogBenchmarkScenario {
-  return { id, kind: "discovery", query: { page, pageSize: CATALOG_BENCHMARK_PAGE_SIZE }, expectedTotalItems };
+function discoveryScenario(
+  id: string,
+  viewerId: string | null,
+  page: number,
+  expectedTotalItems: number,
+  expectedMode: DiscoveryDto["mode"],
+): CatalogBenchmarkScenario {
+  return {
+    id,
+    kind: "discovery",
+    viewerId,
+    query: { page, pageSize: CATALOG_BENCHMARK_PAGE_SIZE },
+    expectedMode,
+    expectedAlgorithmVersion: DISCOVERY_ALGORITHM_VERSION,
+    expectedTotalItems,
+  };
 }
 
 function tagScenario(

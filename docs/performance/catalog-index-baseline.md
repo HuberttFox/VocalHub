@@ -146,14 +146,16 @@ Decision: **adopt relation-branch `UNION` for searched repository requests**. Ke
 
 ## Discovery baseline
 
-The migration-free `/discover` route now runs through the same isolated benchmark harness for anonymous popular fallback. On the loaded benchmark database, one warmup and three measured calls produced deterministic results:
+Personalized `/discover` target-scale evidence now uses dataset version 5 with deterministic Favorite, owner-playlist, collaborator-playlist, overlap, and 500-seed-cap fixtures. This benchmark changes no production schema, index, or ranking algorithm. The 50k smoke used one warmup and two measured repetitions; full 3-warmup/15-repeat matrix remains required before production decisions.
 
 | Scenario | Median | p95 | Queries | Result |
 | --- | ---: | ---: | ---: | --- |
-| `discover-popular-first-page` | 41.06 ms | 42.04 ms | 8 | deterministic |
-| `discover-popular-deep-page` | 62.90 ms | 70.00 ms | 8 | deterministic |
+| `discover-popular-first-page` | 41.02 ms | 46.67 ms | 8 | deterministic |
+| `discover-popular-deep-page` | 55.97 ms | 74.17 ms | 8 | deterministic |
+| `discover-personalized-first-page` | 1033.97 ms | 1177.50 ms | 8 | deterministic |
+| `discover-personalized-deep-page` | 1046.36 ms | 1160.71 ms | 8 | deterministic |
 
-The paired catalog controls in the same run were 48.36 ms for popular first page and 105.73 ms for popular deep page. The anonymous Discovery fallback does not show a regression and adds no production index or migration. Personalized 50k evidence remains pending because benchmark fixtures do not contain viewer-scoped Favorite/Playlist/PlaylistCollaborator relations; do not infer personalized performance from anonymous fallback.
+The 50k marker contained 50,000 songs, 2 viewers, 320 favorites, 2 playlists, 700 playlist songs, 1 collaborator, 1,000 raw viewer seeds, 695 valid deduplicated seeds before the repository cap, and 49,495 personalized candidates. The anonymous Discovery fallback remains the control. A full target smoke with 3 warmups and 15 measured repetitions produced the timings above; these are benchmark observations, not production SLO claims. Personalized SQL/EXPLAIN review remains before any production index or algorithm decision.
 
 
 Search query decomposition adds no production index or migration. The bundled trigram and public-ordering candidates remain rejected. At the 50k target, `tag-relation` is promoted independently through migration `20260802090000_add_song_tag_tag_song_index`; reverse artist-credit index remains promoted through migration `20260727120000_add_song_artist_credit_artist_song_partial_index`. No unrelated candidate migration is included.
