@@ -49,6 +49,11 @@ pyproject.toml
 # IDE
 .idea/
 
+# Local agent state
+.agents/
+.claude/
+.codex/
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
