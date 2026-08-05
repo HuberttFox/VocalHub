@@ -83,21 +83,106 @@ export function generateCatalogBenchmarkDataset(
   options: CatalogBenchmarkDatasetOptions,
 ): CatalogBenchmarkDataset {
   assertCatalogBenchmarkDatasetOptions(options);
-  const marker = createCatalogBenchmarkMarker(options);
   const chunk = generateCatalogBenchmarkChunk({
     ...options,
     start: 0,
     count: options.songCount,
   });
+  const discovery = generateCatalogBenchmarkDiscoveryRelations(options, chunk);
+  const marker = createCatalogBenchmarkMarker(options, discovery);
   return {
     artists: generateCatalogBenchmarkArtists(options),
     tags: generateCatalogBenchmarkTags(options),
     ...chunk,
+    ...discovery,
     artistNames: generateArtistNames(options),
     marker,
   };
 }
 
+export function generateCatalogBenchmarkDiscoveryRelations(
+  options: CatalogBenchmarkDatasetOptions,
+  relations: Pick<CatalogBenchmarkRelations, "songs"> & Pick<CatalogBenchmarkRelations, "songTags" | "credits">,
+): Pick<CatalogBenchmarkRelations, "users" | "favorites" | "playlists" | "playlistSongs" | "playlistCollaborators"> & {
+  discovery: CatalogBenchmarkMarker["discoveryMarkers"];
+} {
+  const viewerId = stableUuid("viewer", 1, options.seed);
+  const otherViewerId = stableUuid("viewer", 2, options.seed);
+  const ownerPlaylistId = stableUuid("playlist", 1, options.seed);
+  const collaboratorPlaylistId = stableUuid("playlist", 2, options.seed);
+  const createdAt = dateFor(options.seed, 0, 211);
+  const users: Prisma.UserCreateManyInput[] = [
+    { id: viewerId, email: `benchmark-viewer-${options.seed}@example.invalid`, createdAt, updatedAt: createdAt },
+    { id: otherViewerId, email: `benchmark-other-${options.seed}@example.invalid`, createdAt, updatedAt: createdAt },
+  ];
+  const playlists: Prisma.PlaylistCreateManyInput[] = [
+    { id: ownerPlaylistId, userId: viewerId, name: "Benchmark owner playlist", visibility: "PRIVATE", moderationStatus: "ACTIVE", createdAt, updatedAt: createdAt },
+    { id: collaboratorPlaylistId, userId: otherViewerId, name: "Benchmark collaborator playlist", visibility: "PUBLIC", moderationStatus: "ACTIVE", createdAt, updatedAt: createdAt },
+  ];
+  const favorites: Prisma.FavoriteCreateManyInput[] = [];
+  const playlistSongs: Prisma.PlaylistSongCreateManyInput[] = [];
+  const playlistCollaborators: Prisma.PlaylistCollaboratorCreateManyInput[] = [
+    { playlistId: collaboratorPlaylistId, userId: viewerId, role: "EDITOR", createdAt },
+  ];
+  const addFavorite = (userId: string, index: number) => {
+    const song = relations.songs[index];
+    if (!song || typeof song.id !== "string") throw new Error(`missing benchmark song ${index}`);
+    favorites.push({ userId, songId: song.id, createdAt });
+  };
+  const addPlaylistSong = (playlistId: string, index: number, position: number) => {
+    const song = relations.songs[index];
+    if (!song || typeof song.id !== "string") throw new Error(`missing benchmark song ${index}`);
+    playlistSongs.push({ playlistId, songId: song.id, position, addedAt: createdAt });
+  };
+  for (let index = 0; index < Math.min(300, options.songCount); index += 1) addFavorite(viewerId, index);
+  for (let index = 150; index < Math.min(450, options.songCount); index += 1) addPlaylistSong(ownerPlaylistId, index, index - 150);
+  for (let index = 300; index < Math.min(700, options.songCount); index += 1) addPlaylistSong(collaboratorPlaylistId, index, index - 300);
+  for (let index = 1_000; index < Math.min(1_020, options.songCount); index += 1) addFavorite(otherViewerId, index);
+
+  const rawSeedIds = [...favorites.filter((row) => row.userId === viewerId).map((row) => row.songId), ...playlistSongs.map((row) => row.songId)];
+  const deduplicatedSeedIds = new Set(rawSeedIds.filter((id) => {
+    const song = relations.songs.find((row) => row.id === id);
+    return song?.sourceDeleted === false && song.lastSyncedAt !== null && (song.syncStatus === "SYNCED" || song.syncStatus === "FAILED");
+  }));
+  const cappedSeedIds = new Set([...deduplicatedSeedIds].sort().slice(0, 500));
+  const seedTags = new Set(relations.songTags.filter((row) => cappedSeedIds.has(row.songId)).map((row) => row.tagId));
+  const seedArtists = new Set(relations.credits
+    .filter((row) => cappedSeedIds.has(row.songId) && row.artistId !== null)
+    .map((row) => row.artistId)
+    .filter((artistId): artistId is string => typeof artistId === "string"));
+  const candidateIds = new Set(relations.songTags.filter((row) => seedTags.has(row.tagId)).map((row) => row.songId));
+  relations.credits
+    .filter((row) => typeof row.songId === "string" && typeof row.artistId === "string" && seedArtists.has(row.artistId))
+    .forEach((row) => {
+      if (typeof row.songId === "string") candidateIds.add(row.songId);
+    });
+  const personalizedTotalItems = relations.songs.filter((song) => {
+    if (typeof song.id !== "string") return false;
+    return candidateIds.has(song.id)
+      && !cappedSeedIds.has(song.id)
+      && song.sourceDeleted === false
+      && song.lastSyncedAt !== null
+      && (song.syncStatus === "SYNCED" || song.syncStatus === "FAILED");
+  }).length;
+  return {
+    users,
+    favorites,
+    playlists,
+    playlistSongs,
+    playlistCollaborators,
+    discovery: {
+      viewerId,
+      otherViewerId,
+      favoriteCount: favorites.length,
+      playlistCount: playlists.length,
+      playlistSongCount: playlistSongs.length,
+      collaboratorCount: playlistCollaborators.length,
+      rawSeedCount: rawSeedIds.length,
+      deduplicatedSeedCount: deduplicatedSeedIds.size,
+      personalizedTotalItems,
+    },
+  };
+}
 export function generateCatalogBenchmarkArtists(
   options: CatalogBenchmarkDatasetOptions,
 ): CatalogBenchmarkDataset["artists"] {
@@ -176,6 +261,11 @@ export function generateCatalogBenchmarkChunk(
   }
 
   const result: CatalogBenchmarkRelations = {
+    users: [],
+    favorites: [],
+    playlists: [],
+    playlistSongs: [],
+    playlistCollaborators: [],
     songs: [],
     names: [],
     credits: [],
@@ -298,6 +388,7 @@ export function generateArtistNames(
 
 export function createCatalogBenchmarkMarker(
   options: CatalogBenchmarkDatasetOptions,
+  discovery?: { discovery: CatalogBenchmarkMarker["discoveryMarkers"] },
 ): CatalogBenchmarkMarker {
   assertCatalogBenchmarkDatasetOptions(options);
   const highFanout = artistMarker(options, HIGH_FANOUT_INDEX);
@@ -342,10 +433,26 @@ export function createCatalogBenchmarkMarker(
       mediumFanout: tagMarker(options, MEDIUM_WORK_TAG_INDEX),
       sparseFanout: tagMarker(options, SPARSE_TAG_INDEX),
     },
+    discoveryMarkers: discovery?.discovery ?? defaultDiscoveryMarkers(options),
   };
   return {
     ...markerWithoutChecksum,
     checksum: createHash("sha256").update(JSON.stringify(markerWithoutChecksum)).digest("hex"),
+  };
+}
+
+function defaultDiscoveryMarkers(options: CatalogBenchmarkDatasetOptions): CatalogBenchmarkMarker["discoveryMarkers"] {
+  const viewerId = stableUuid("viewer", 1, options.seed);
+  return {
+    viewerId,
+    otherViewerId: stableUuid("viewer", 2, options.seed),
+    favoriteCount: Math.min(320, options.songCount + 20),
+    playlistCount: 2,
+    playlistSongCount: Math.max(0, Math.min(450, options.songCount) - 150) + Math.max(0, Math.min(700, options.songCount) - 300),
+    collaboratorCount: 1,
+    rawSeedCount: Math.min(300, options.songCount) + Math.max(0, Math.min(450, options.songCount) - 150) + Math.max(0, Math.min(700, options.songCount) - 300),
+    deduplicatedSeedCount: Math.max(0, Math.min(695, options.songCount - 5)),
+    personalizedTotalItems: 0,
   };
 }
 

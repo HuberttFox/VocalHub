@@ -1,6 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 
-export const CATALOG_BENCHMARK_DATASET_VERSION = 4;
+export const CATALOG_BENCHMARK_DATASET_VERSION = 5;
 export const CATALOG_BENCHMARK_MIN_SONGS = 5_000;
 export const CATALOG_BENCHMARK_MAX_SONGS = 50_000;
 export const CATALOG_BENCHMARK_TARGET_SONGS = 50_000;
@@ -97,10 +97,26 @@ export type CatalogBenchmarkMarker = {
     mediumFanout: CatalogBenchmarkTagMarker;
     sparseFanout: CatalogBenchmarkTagMarker;
   };
+  discoveryMarkers: {
+    viewerId: string;
+    otherViewerId: string;
+    favoriteCount: number;
+    playlistCount: number;
+    playlistSongCount: number;
+    collaboratorCount: number;
+    rawSeedCount: number;
+    deduplicatedSeedCount: number;
+    personalizedTotalItems: number;
+  };
   checksum: string;
 };
 
 export type CatalogBenchmarkRelations = {
+  users: Prisma.UserCreateManyInput[];
+  favorites: Prisma.FavoriteCreateManyInput[];
+  playlists: Prisma.PlaylistCreateManyInput[];
+  playlistSongs: Prisma.PlaylistSongCreateManyInput[];
+  playlistCollaborators: Prisma.PlaylistCollaboratorCreateManyInput[];
   songs: Prisma.SongCreateManyInput[];
   names: Prisma.SongNameCreateManyInput[];
   credits: Prisma.SongArtistCreditCreateManyInput[];

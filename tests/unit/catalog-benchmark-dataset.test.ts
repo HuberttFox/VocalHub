@@ -19,6 +19,13 @@ describe("catalog benchmark dataset", () => {
     expect(first.names).toHaveLength(first.marker.nameCount);
     expect(first.credits).toHaveLength(first.marker.creditCount);
     expect(first.songTags).toHaveLength(first.marker.songTagCount);
+    expect(first.users).toHaveLength(2);
+    expect(first.favorites).toHaveLength(first.marker.discoveryMarkers.favoriteCount);
+    expect(first.playlists).toHaveLength(first.marker.discoveryMarkers.playlistCount);
+    expect(first.playlistSongs).toHaveLength(first.marker.discoveryMarkers.playlistSongCount);
+    expect(first.playlistCollaborators).toHaveLength(first.marker.discoveryMarkers.collaboratorCount);
+    expect(first.marker.discoveryMarkers.rawSeedCount).toBeGreaterThan(500);
+    expect(first.marker.discoveryMarkers.deduplicatedSeedCount).toBeLessThan(first.marker.discoveryMarkers.rawSeedCount);
     expect(first.artistNames).toHaveLength(first.marker.artistNameCount);
     expect(first.marker.tagMarkers.highFanout.expectedPublicSongCount)
       .toBeGreaterThan(first.marker.tagMarkers.mediumFanout.expectedPublicSongCount);
@@ -67,7 +74,12 @@ describe("catalog benchmark dataset", () => {
       .not.toBe(base.marker.checksum);
     expect(base.marker).toMatchObject({
       kind: "vocalhub-catalog-benchmark",
-      version: 4,
+      version: 5,
+      discoveryMarkers: expect.objectContaining({
+        favoriteCount: 320,
+        playlistCount: 2,
+        collaboratorCount: 1,
+      }),
       seed: options.seed,
       songCount: 5_000,
       artistCount: 625,

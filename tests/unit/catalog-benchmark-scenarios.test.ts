@@ -111,6 +111,7 @@ describe("catalog benchmark scenarios", () => {
       "tags-search-rare-name", "tags-search-exact-alias",
       "search-catalog-no-hit", "search-catalog-cross-group", "search-catalog-tag-alias",
       "discover-popular-first-page", "discover-popular-deep-page",
+      "discover-personalized-first-page", "discover-personalized-deep-page",
       "artist-works-high-latest-first-page", "artist-works-high-latest-deep-page",
       "artist-works-high-popular-first-page", "artist-works-medium-latest-first-page",
       "artist-works-sparse-latest-first-page", "artist-works-duplicate-latest-first-page",
