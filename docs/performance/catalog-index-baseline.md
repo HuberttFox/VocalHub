@@ -159,3 +159,86 @@ The 50k marker contained 50,000 songs, 2 viewers, 320 favorites, 2 playlists, 70
 
 
 Search query decomposition adds no production index or migration. The bundled trigram and public-ordering candidates remain rejected. At the 50k target, `tag-relation` is promoted independently through migration `20260802090000_add_song_tag_tag_song_index`; reverse artist-credit index remains promoted through migration `20260727120000_add_song_artist_credit_artist_song_partial_index`. No unrelated candidate migration is included.
+
+## Discovery SQL/EXPLAIN review
+
+Target-scale SQL review for personalized `/discover` completed at the 50k dataset version 5 marker. It changes no production schema, index, repository SQL, or ranking algorithm. Raw reports remain local under ignored `.benchmark-results/`.
+
+Commands (isolated `vocalhub_benchmark`, port 5434):
+
+```bash
+npm run benchmark:catalog -- run --warmups=3 --repeats=15 \
+  --scenarios=discover-personalized-first-page,discover-personalized-deep-page,discover-popular-first-page,discover-popular-deep-page \
+  --output=.benchmark-results/catalog-50000-discovery-baseline.json
+npm run benchmark:catalog -- compare-discovery-shape --candidate=combined-cte \
+  --warmups=3 --repeats=15 \
+  --scenarios=discover-personalized-first-page,discover-personalized-deep-page \
+  --output=.benchmark-results/catalog-50000-discovery-shape-combined-cte.json
+npm run benchmark:catalog -- compare-discovery-shape --candidate=split-count \
+  --warmups=3 --repeats=15 \
+  --scenarios=discover-personalized-first-page,discover-personalized-deep-page \
+  --output=.benchmark-results/catalog-50000-discovery-shape-split-count.json
+```
+
+### EXPLAIN baseline
+
+Replayed personalized ranked statement (`EXPLAIN (ANALYZE, BUFFERS, SETTINGS, FORMAT JSON, TIMING FALSE)`), root execution 1543 ms, planning 1.2 ms:
+
+```
+Limit | rows=24
+  Function Scan | rows=500                      (CTE seeds)
+  Sort | rows=24 | sort=top-N heapsort          (final page sort is bounded)
+    WindowAgg | rows=49495                      (COUNT(*) OVER())
+      Hash Join | rows=49495
+        Hash Join | rows=49495
+          Hash Join | rows=49495
+            Seq Scan | rows=49995 | rel=Song
+            Hash | rows=500                     (seeds)
+          Hash | rows=50000
+            Subquery Scan | rows=50000
+              Aggregate | rows=50000 | group=["candidate.songId"]
+                Sort | rows=1220766 | sort=external merge | space=50264KB
+                  Nested Loop | rows=1220766
+                    Nested Loop | rows=2232     (seeds x per-seed tags)
+                    Index Only Scan | rows=547  | idx=SongTag_tagId_songId_idx
+        Hash | rows=16805
+          Subquery Scan | rows=16805
+            Aggregate | rows=16805 | group=["candidate_1.songId"]
+              Sort | rows=277662 | sort=external merge | space=11440KB
+                Nested Loop | rows=277662       (artist self-join)
+                  Index Scan  | idx=SongArtistCredit_songId_vocadbId_key
+                  Index Only Scan | rows=292 | idx=SongArtistCredit_artistId_songId_idx
+```
+
+Findings:
+
+- **Dominant cost is the `tag_scores` self-join fanout**: 500 seeds x ~4.5 tags x ~547 candidate songs per tag produce **1,220,766 intermediate rows**, grouped by `songId` via an `external merge` sort that spills to disk (`space=50264KB`). The `artist_scores` fanout (277,662 rows, 11 MB spill) is smaller. Together they dominate the 1.0–1.5 s runtime.
+- **The window function is NOT the bottleneck.** The final `ORDER BY score DESC, id ASC LIMIT 24` already uses `top-N heapsort` (bounded); `WindowAgg` adds one pass over the 49,495 ranked rows.
+- **All relevant production indexes are already selected** (`SongTag` PK, `SongTag_tagId_songId_idx`, `SongArtistCredit_songId_vocadbId_key`, partial `SongArtistCredit_artistId_songId_idx`). The seed query uses `Favorite`/`PlaylistSong`/`PlaylistCollaborator` keys. No missing index explains the cost.
+
+### Candidate index
+
+`I1 song-public-discovery` (partial `Song("id") WHERE NOT sourceDeleted AND lastSyncedAt IS NOT NULL AND syncStatus IN ('SYNCED','FAILED')`) was evaluated on the EXPLAIN baseline: the ranked query's `Song` access is join-driven (49,995 rows matching the visibility predicate, ~99.99% of the table), and the dominant node is the already-indexed `SongTag` self-join aggregation. A visibility partial index cannot remove the fanout cost, so the candidate matrix was not run. Decision: **reject**; document the EXPLAIN reasoning as the evidence.
+
+### Candidate query shapes
+
+Both candidates preserve byte-identical `DiscoveryDto` (mode, `DISCOVERY_ALGORITHM_VERSION`, pagination, ordered ids) — the harness enforces per-pair digest equality. Both were measured with 3 warmups and 15 measured AB/BA pairs at 50k.
+
+| Shape | Scenario | A median | B median | Paired change | B win rate | Decision |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `combined-cte` (C2) | personalized-first-page | 1189.36 ms | 1249.92 ms | +7.30% | 0.27 | Reject |
+| `combined-cte` (C2) | personalized-deep-page | 1162.32 ms | 1216.39 ms | +4.60% | 0.27 | Reject |
+| `split-count` (C1) | personalized-first-page | 1259.88 ms | 2928.90 ms | +137.18% | 0.00 | Reject |
+| `split-count` (C1) | personalized-deep-page | 1367.38 ms | 3094.37 ms | +120.66% | 0.00 | Reject |
+
+- **`combined-cte`**: removing the window and computing the total via a scalar `COUNT(*)` over a `MATERIALIZED ranked` forces a materialized tuplestore pass plus a second sort for the page `ARRAY(...)` subquery — three passes over ranked instead of the single sorted pass, so it is ~5–7% slower at the target. (A 2-warmup/5-repeat smoke showed a spurious −5.87% B win; the full 15-repeat run reversed it — small samples are noise at this variance.)
+- **`split-count`**: the always-run count recomputes the candidate join tree a second time, doubling the dominant `tag_scores` fanout — +120–137% slower. The existing deep-page fallback remains cheaper than an always-run count.
+
+Neither shape passes the evidence gates (B win rate ≥ 75%, both order strata improving, no WindowAgg/temp regression), and neither addresses the real bottleneck.
+
+### Decision
+
+- **No query-shape change adopted.** Production `getDiscovery` keeps the window-count ranked query and its conditional deep-page fallback.
+- **No index promoted.** All relation lookups are already indexed; the bottleneck is the algorithm-inherent tag-fanout aggregation (`tag_scores`/`artist_scores` self-joins), which materializes 1.22M intermediate rows with disk spill at 50k under the documented 4 MB `work_mem`.
+- The benchmark harness (`compare-discovery-shape` command, `src/lib/discover/shape-query.ts` candidate shapes, digest-parity paired comparison) is retained for future evidence; the candidate shapes are marked rejected.
+- Reducing the personalized runtime further requires an algorithm or data-model change (for example, precomputed tag/artist affinity or a bounded candidate set), which is out of scope and deferred. Current personalized medians at 50k remain in the ~1.16–1.32 s range (this session's runs; the M1 record of ~1.03 s reflects host variance).

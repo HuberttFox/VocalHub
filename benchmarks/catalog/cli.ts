@@ -11,6 +11,10 @@ import { listSongs, listSongsWithBroadSearch } from "@/lib/songs/repository";
 import { listSongsWithDecomposedSearch } from "@/lib/songs/search-query";
 import { getDiscovery } from "@/lib/discover/repository";
 import {
+  getDiscoveryWithCombinedCte,
+  getDiscoveryWithSplitCount,
+} from "@/lib/discover/shape-query";
+import {
   measureAlternatingStateSuite,
   measurePairedAlternating,
   type PairedComparison,
@@ -64,6 +68,12 @@ const DEFAULT_BLOCK_REPEATS = 3;
 const REQUIRED_MATRIX_SIZES = [5_000, 10_000, 20_000, 50_000] as const;
 const DEFAULT_SIZES = REQUIRED_MATRIX_SIZES;
 const CLI_LOCK_KEYS = [0x564f4341, 0x54434c49];
+
+const DISCOVERY_SHAPES = {
+  "combined-cte": getDiscoveryWithCombinedCte,
+  "split-count": getDiscoveryWithSplitCount,
+} as const;
+type DiscoveryShapeName = keyof typeof DISCOVERY_SHAPES;
 
 interface Arguments {
   _: string[];
@@ -126,6 +136,24 @@ async function main(): Promise<void> {
         config.connectionString,
         config.databaseName,
         config.databaseIdentity,
+        integerOption(args, "warmups", DEFAULT_WARMUPS),
+        integerOption(args, "repeats", DEFAULT_REPEATS),
+        scenarioIdsOption(args),
+      );
+      await emitReport(report, optionalStringOption(args, "output"));
+      return;
+    }
+
+    case "compare-discovery-shape": {
+      const shape = stringOption(args, "candidate");
+      if (!(shape in DISCOVERY_SHAPES)) {
+        throw new Error(`Unknown discovery shape ${shape}; expected ${Object.keys(DISCOVERY_SHAPES).join(", ")}`);
+      }
+      const report = await runLockedDiscoveryShapeComparison(
+        config.connectionString,
+        config.databaseName,
+        config.databaseIdentity,
+        shape as DiscoveryShapeName,
         integerOption(args, "warmups", DEFAULT_WARMUPS),
         integerOption(args, "repeats", DEFAULT_REPEATS),
         scenarioIdsOption(args),
@@ -371,6 +399,136 @@ function reportQueries(
     fingerprint,
     durationMs,
   }));
+}
+
+async function runLockedDiscoveryShapeComparison(
+  connectionString: string,
+  databaseName: string,
+  databaseIdentity: string,
+  shape: DiscoveryShapeName,
+  warmups: number,
+  repeats: number,
+  scenarioIds?: ReadonlySet<string>,
+): Promise<BenchmarkReport> {
+  return withPgClient(connectionString, (pg) =>
+    withAdvisoryLock(pg, async () => {
+      await assertConnectedDatabase(pg, databaseName);
+      await assertNoBenchmarkIndexes(pg);
+      const db = createCatalogBenchmarkClient(connectionString);
+      try {
+        const marker = await requireMarker(db);
+        const scenarios = defineCatalogBenchmarkScenarios({ marker }, scenarioIds)
+          .filter((scenario): scenario is Extract<CatalogBenchmarkScenario, { kind: "discovery" }> =>
+            scenario.kind === "discovery");
+        if (scenarios.length === 0) throw new Error("No discovery benchmark scenarios selected");
+
+        const reports: PairedComparisonReport["scenarios"] = [];
+        for (const scenario of scenarios) {
+          reports.push(await compareDiscoveryScenario(
+            connectionString,
+            pg,
+            scenario,
+            shape,
+            warmups,
+            repeats,
+          ));
+        }
+
+        return {
+          schemaVersion: 2,
+          generatedAt: new Date().toISOString(),
+          command: "compare-discovery-shape",
+          dataset: marker,
+          environment: {
+            database: databaseIdentity,
+            node: process.version,
+            platform: process.platform,
+          },
+          runs: [],
+          pairedComparison: {
+            kind: "discovery-shape",
+            candidate: shape,
+            scenarios: reports,
+          },
+        };
+      } finally {
+        await db.$disconnect();
+      }
+    }),
+  );
+}
+
+async function compareDiscoveryScenario(
+  connectionString: string,
+  pg: PoolClient,
+  scenario: Extract<CatalogBenchmarkScenario, { kind: "discovery" }>,
+  shape: DiscoveryShapeName,
+  warmups: number,
+  repeats: number,
+): Promise<PairedComparisonReport["scenarios"][number]> {
+  const aDb = createCatalogBenchmarkClient(connectionString);
+  const bDb = createCatalogBenchmarkClient(connectionString);
+  let resultDigest = "";
+
+  try {
+    const comparison: PairedComparison = await measurePairedAlternating({
+      a: {
+        warmups,
+        run: () => getDiscovery(scenario.viewerId, scenario.query, aDb),
+      },
+      b: {
+        warmups,
+        run: () => DISCOVERY_SHAPES[shape](scenario.viewerId, scenario.query, bDb),
+      },
+      repeats,
+      digest: (result) => checkCatalogBenchmarkResult(scenario, result).checksum,
+      observePair: ({ aValue }) => {
+        resultDigest = checkCatalogBenchmarkResult(scenario, aValue).checksum;
+      },
+    });
+
+    const aEvidence = await captureDiscoveryEvidence(connectionString, pg, scenario, "window");
+    const bEvidence = await captureDiscoveryEvidence(connectionString, pg, scenario, shape);
+
+    return {
+      name: scenario.id,
+      warmups,
+      repeats,
+      pairs: comparison.pairs,
+      summary: comparison.summary,
+      resultDigest,
+      aQueries: reportQueries(aEvidence.queries),
+      bQueries: reportQueries(bEvidence.queries),
+      aExplains: aEvidence.explains,
+      bExplains: bEvidence.explains,
+    };
+  } finally {
+    await Promise.all([aDb.$disconnect(), bDb.$disconnect()]);
+  }
+}
+
+async function captureDiscoveryEvidence(
+  connectionString: string,
+  pg: PoolClient,
+  scenario: Extract<CatalogBenchmarkScenario, { kind: "discovery" }>,
+  shape: DiscoveryShapeName | "window",
+): Promise<{ queries: Map<string, CapturedQuery>; explains: Awaited<ReturnType<typeof explainCapturedQueries>> }> {
+  const collector = createCatalogQueryEventCollector();
+  const db = createCatalogBenchmarkClient(connectionString, collector.onQuery);
+  const capture = collectorCapture(collector);
+  try {
+    capture.start();
+    if (shape === "window") await getDiscovery(scenario.viewerId, scenario.query, db);
+    else await DISCOVERY_SHAPES[shape](scenario.viewerId, scenario.query, db);
+    const queries = new Map<string, CapturedQuery>();
+    collectQueries(capture.stop(), queries);
+    return {
+      queries,
+      explains: await explainCapturedQueries(pg, [...queries.values()]),
+    };
+  } finally {
+    await db.$disconnect();
+  }
 }
 
 async function runLockedBenchmark(
@@ -790,6 +948,7 @@ Commands:
   load --songs=5000 --seed=${DEFAULT_SEED} --confirm-reset=NAME
   run [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
   compare-search-shape [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
+  compare-discovery-shape --candidate=combined-cte|split-count [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
   compare --candidate=NAME --confirm-reset=NAME [--cycles=${DEFAULT_CYCLES}] [--block-repeats=${DEFAULT_BLOCK_REPEATS}] [--scenarios=ID,...] [--output=FILE]
   matrix --confirm-reset=NAME [--sizes=5000,10000,20000,50000] [--candidate=NAME] [--scenarios=ID,...]\n
 Candidates: ${Object.keys(INDEX_CANDIDATES).join(", ")}`);

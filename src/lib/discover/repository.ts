@@ -20,17 +20,30 @@ export type DiscoveryDb = Pick<ReturnType<typeof getDb>, "$transaction">;
 
 type RankedSong = { id: string };
 type RankedQueryRow = RankedSong & { totalCount: number };
-type RankedResult = { rows: RankedSong[]; totalCount: number };
+export type RankedResult = { rows: RankedSong[]; totalCount: number };
 
-export async function getDiscovery(
+export type DiscoveryPersonalizedQuery = (
+  tx: Prisma.TransactionClient,
+  seedIds: string[],
+  query: DiscoveryQuery,
+) => Promise<RankedResult>;
+
+/**
+ * Runs the discovery transaction with an injectable personalized-query
+ * strategy. Only the personalized ranking SQL differs between the current
+ * window-count implementation and benchmark candidate query shapes; seed
+ * collection, mode selection, and DTO assembly stay identical.
+ */
+export async function runDiscoveryTransaction(
+  database: DiscoveryDb,
   viewerId: string | null,
   query: DiscoveryQuery,
-  database: DiscoveryDb = getDb(),
+  personalizedQuery: DiscoveryPersonalizedQuery,
 ): Promise<DiscoveryDto> {
   return database.$transaction(async (tx) => {
     const seedIds = viewerId ? await getSeedIds(tx, viewerId) : [];
     const personalizedResult = seedIds.length > 0
-      ? await getPersonalizedIds(tx, seedIds, query)
+      ? await personalizedQuery(tx, seedIds, query)
       : null;
     const personalized = personalizedResult !== null && personalizedResult.totalCount > 0;
     const mode: DiscoveryMode = personalized ? "PERSONALIZED" : "POPULAR";
@@ -57,6 +70,14 @@ export async function getDiscovery(
       },
     };
   }, DISCOVERY_TRANSACTION_OPTIONS);
+}
+
+export async function getDiscovery(
+  viewerId: string | null,
+  query: DiscoveryQuery,
+  database: DiscoveryDb = getDb(),
+): Promise<DiscoveryDto> {
+  return runDiscoveryTransaction(database, viewerId, query, getPersonalizedIds);
 }
 
 async function getSeedIds(tx: Prisma.TransactionClient, viewerId: string): Promise<string[]> {
