@@ -20,7 +20,7 @@ export interface BenchmarkReport {
 }
 
 export interface PairedComparisonReport {
-  kind: "search-shape" | "index";
+  kind: "search-shape" | "index" | "discovery-shape";
   candidate: string;
   scenarios: Array<{
     name: string;

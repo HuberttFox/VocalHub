@@ -73,4 +73,32 @@ describe("catalog benchmark paired report", () => {
       }),
     ]);
   });
+
+  it("handles the discovery-shape paired kind", () => {
+    const discoveryReport: BenchmarkReport = {
+      ...report(),
+      command: "compare-discovery-shape",
+      pairedComparison: {
+        kind: "discovery-shape",
+        candidate: "combined-cte",
+        scenarios: [{
+          ...report().pairedComparison!.scenarios[0],
+          name: "discover-personalized-first-page",
+        }],
+      },
+    };
+    const original = console.table;
+    const tables: unknown[] = [];
+    console.table = (value?: unknown) => { tables.push(value); };
+    try {
+      printReport(discoveryReport);
+    } finally {
+      console.table = original;
+    }
+    expect(redactReport(discoveryReport).pairedComparison?.kind).toBe("discovery-shape");
+    expect(tables).toHaveLength(1);
+    expect(tables[0]).toEqual([
+      expect.objectContaining({ scenario: "discover-personalized-first-page" }),
+    ]);
+  });
 });
