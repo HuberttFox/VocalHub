@@ -42,6 +42,7 @@ export type ArtistSyncRunnerOptions = {
   logger?: Logger;
   concurrency?: number;
   refreshIntervalMs?: number;
+  heartbeatIntervalMs?: number;
   signal?: AbortSignal;
 };
 
@@ -65,6 +66,7 @@ export async function runVocaDbArtistSync(
     concurrency,
     now,
     logger,
+    heartbeatIntervalMs: options.heartbeatIntervalMs,
     signal: options.signal,
     createRun: (mode) => createArtistRun(mode, request, options.db, now, refreshIntervalMs),
     discover: (run) => discoverArtistRun(run, options.db),

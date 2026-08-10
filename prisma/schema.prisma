@@ -395,6 +395,7 @@ model SyncRun {
   requestedCount       Int           @default(0)
   successCount         Int           @default(0)
   failureCount         Int           @default(0)
+  lastHeartbeatAt      DateTime?
   errorCode            String?
   errorMessage         String?
   items                SyncItem[]

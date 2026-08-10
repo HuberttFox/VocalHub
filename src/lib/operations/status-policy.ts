@@ -2,6 +2,7 @@ import { SyncRunStatus } from "@/generated/prisma/enums";
 import type { OperationsStatusClassification } from "@/lib/operations/status-dto";
 
 export const DEFAULT_OPERATIONS_STATUS_STALE_AFTER_MS = 24 * 60 * 60 * 1_000;
+export const DEFAULT_HEARTBEAT_STALE_AFTER_MS = 5 * 60 * 1_000;
 
 type StatusEvidence = {
   lastSeedCompletedAt: Date | null;
@@ -11,6 +12,7 @@ type StatusEvidence = {
     (typeof SyncRunStatus)[keyof typeof SyncRunStatus] | null
   >;
   hasMultipleRunningManifests: boolean;
+  resumableHeartbeats: Array<Date | null>;
 };
 
 export function validateOperationsStatusStaleAfterMs(value: number): number {
@@ -22,12 +24,33 @@ export function validateOperationsStatusStaleAfterMs(value: number): number {
   return value;
 }
 
+export function validateHeartbeatStaleAfterMs(value: number): number {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new RangeError(
+      "Operations status heartbeatStaleAfterMs must be a positive safe integer",
+    );
+  }
+  return value;
+}
+
+export function isHeartbeatStale(
+  now: Date,
+  lastHeartbeatAt: Date | null,
+  heartbeatStaleAfterMs: number,
+): boolean {
+  validateHeartbeatStaleAfterMs(heartbeatStaleAfterMs);
+  if (!lastHeartbeatAt) return true;
+  return now.getTime() - lastHeartbeatAt.getTime() >= heartbeatStaleAfterMs;
+}
+
 export function classifyOperationsStatus(
   evidence: StatusEvidence,
   now: Date,
   staleAfterMs: number,
+  heartbeatStaleAfterMs: number = DEFAULT_HEARTBEAT_STALE_AFTER_MS,
 ): OperationsStatusClassification {
   validateOperationsStatusStaleAfterMs(staleAfterMs);
+  validateHeartbeatStaleAfterMs(heartbeatStaleAfterMs);
 
   if (!evidence.lastSeedCompletedAt) return "UNSEEDED";
 
@@ -36,6 +59,9 @@ export function classifyOperationsStatus(
     evidence.latestTerminalRunStatuses.some(
       (status) =>
         status === SyncRunStatus.FAILED || status === SyncRunStatus.PARTIAL,
+    ) ||
+    evidence.resumableHeartbeats.some((heartbeat) =>
+      isHeartbeatStale(now, heartbeat, heartbeatStaleAfterMs),
     )
   ) {
     return "DEGRADED";

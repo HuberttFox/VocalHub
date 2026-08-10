@@ -110,7 +110,7 @@ A worker receiving `SIGTERM` or `SIGINT` stops accepting new work and leaves res
 
 - Requires `Authorization: Bearer $OPERATIONAL_STATUS_TOKEN`. The token must be a fresh random value of at least 16 characters; the example placeholder from `.env.example` is rejected and the endpoint fails closed rather than serve status. Never store the token in the jobs-only systemd environment or in Git.
 - Returns `200` with the full snapshot when classification is `READY`, and `503` for every other classification (`UNSEEDED`, `DEGRADED`, `STALE`) or on database failure.
-- Classification order: `UNSEEDED` (no completed song seed) → `DEGRADED` (multiple running manifests for one entity, or latest terminal run `FAILED`/`PARTIAL`) → `STALE` (activity checkpoint and reconcile both older than the stale window, default 24h) → `READY`. A recent reconcile counts as activity, so reconcile-only operation with the incremental timer paused does not go stale.
+- Classification order: `UNSEEDED` (no completed song seed) → `DEGRADED` (multiple running manifests for one entity, latest terminal run `FAILED`/`PARTIAL`, or a resumable manifest with a stale or null worker heartbeat) → `STALE` (activity checkpoint and reconcile both older than the stale window, default 24h) → `READY`. A recent reconcile counts as activity, so reconcile-only operation with the incremental timer paused does not go stale.
 
 Smoke checks after deploy:
 
@@ -120,7 +120,7 @@ curl -s -H "Authorization: Bearer $OPERATIONAL_STATUS_TOKEN" http://127.0.0.1:30
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/api/ops/status  # expect 401
 ```
 
-The snapshot does not prove worker liveness. A single `RUNNING` resumable manifest with pending items appears in `resumableManifests` but is indistinguishable from a healthy in-progress run without a heartbeat; treat a long-lived manifest as a prompt to inspect scheduler and worker logs, not as a health verdict. Ingress/TLS exposure of `/api/ops/status`, catalog seed, and scheduler enablement remain operator-controlled follow-up actions outside this repository.
+The durable sync worker writes `lastHeartbeatAt` on the active `SyncRun` every 30 seconds during discovery and item processing. `/api/ops/status` exposes `lastHeartbeatAt` and `heartbeatStale` per resumable manifest; a `RUNNING` manifest whose heartbeat is older than the 5-minute stale window (or that has no heartbeat) is reported `heartbeatStale: true` and classifies the endpoint `DEGRADED` before the 24-hour catalog-stale window fires. A fresh heartbeat is evidence the worker is alive; a stale or null heartbeat means the worker is likely dead or crashed — inspect scheduler and worker logs, then resume the manifest (`auto`/`resume` clears the stale heartbeat). A fresh heartbeat is evidence, not proof, of healthy progress. Ingress/TLS exposure of `/api/ops/status`, catalog seed, and scheduler enablement remain operator-controlled follow-up actions outside this repository.
 
 ## Rollback boundary
 
