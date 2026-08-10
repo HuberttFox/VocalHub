@@ -2,6 +2,7 @@
 import "dotenv/config";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 import { Pool, type PoolClient } from "pg";
 import { listArtistWorks } from "@/lib/artists/repository";
 import { listArtists } from "@/lib/artists/list-repository";
@@ -10,6 +11,8 @@ import { searchCatalog } from "@/lib/search/repository";
 import { listSongs, listSongsWithBroadSearch } from "@/lib/songs/repository";
 import { listSongsWithDecomposedSearch } from "@/lib/songs/search-query";
 import { getDiscovery } from "@/lib/discover/repository";
+import { getDiscoveryV2 } from "@/lib/discover/discovery-v2";
+import type { DiscoveryDto } from "@/lib/discover/dto";
 import {
   getDiscoveryWithCombinedCte,
   getDiscoveryWithSplitCount,
@@ -17,6 +20,8 @@ import {
 import {
   measureAlternatingStateSuite,
   measurePairedAlternating,
+  pairOrder,
+  summarizePairedMeasurements,
   type PairedComparison,
 } from "./compare";
 import { parseCatalogBenchmarkConfig } from "./config";
@@ -154,6 +159,19 @@ async function main(): Promise<void> {
         config.databaseName,
         config.databaseIdentity,
         shape as DiscoveryShapeName,
+        integerOption(args, "warmups", DEFAULT_WARMUPS),
+        integerOption(args, "repeats", DEFAULT_REPEATS),
+        scenarioIdsOption(args),
+      );
+      await emitReport(report, optionalStringOption(args, "output"));
+      return;
+    }
+
+    case "compare-discovery-algorithm": {
+      const report = await runLockedDiscoveryAlgorithmComparison(
+        config.connectionString,
+        config.databaseName,
+        config.databaseIdentity,
         integerOption(args, "warmups", DEFAULT_WARMUPS),
         integerOption(args, "repeats", DEFAULT_REPEATS),
         scenarioIdsOption(args),
@@ -504,6 +522,194 @@ async function compareDiscoveryScenario(
     };
   } finally {
     await Promise.all([aDb.$disconnect(), bDb.$disconnect()]);
+  }
+}
+
+async function runLockedDiscoveryAlgorithmComparison(
+  connectionString: string,
+  databaseName: string,
+  databaseIdentity: string,
+  warmups: number,
+  repeats: number,
+  scenarioIds?: ReadonlySet<string>,
+): Promise<BenchmarkReport> {
+  return withPgClient(connectionString, (pg) =>
+    withAdvisoryLock(pg, async () => {
+      await assertConnectedDatabase(pg, databaseName);
+      await assertNoBenchmarkIndexes(pg);
+      const db = createCatalogBenchmarkClient(connectionString);
+      try {
+        const marker = await requireMarker(db);
+        const scenarios = defineCatalogBenchmarkScenarios({ marker }, scenarioIds)
+          .filter((scenario): scenario is Extract<CatalogBenchmarkScenario, { kind: "discovery" }> =>
+            scenario.kind === "discovery" && scenario.query.page === 1);
+        if (scenarios.length === 0) throw new Error("No first-page discovery benchmark scenarios selected");
+
+        const reports: PairedComparisonReport["scenarios"] = [];
+        for (const scenario of scenarios) {
+          reports.push(await compareDiscoveryAlgorithmScenario(
+            connectionString,
+            pg,
+            scenario,
+            warmups,
+            repeats,
+          ));
+        }
+
+        return {
+          schemaVersion: 2,
+          generatedAt: new Date().toISOString(),
+          command: "compare-discovery-algorithm",
+          dataset: marker,
+          environment: {
+            database: databaseIdentity,
+            node: process.version,
+            platform: process.platform,
+          },
+          runs: [],
+          pairedComparison: {
+            kind: "discovery-algorithm",
+            candidate: "bounded-candidate-v2",
+            scenarios: reports,
+          },
+        };
+      } finally {
+        await db.$disconnect();
+      }
+    }),
+  );
+}
+
+async function compareDiscoveryAlgorithmScenario(
+  connectionString: string,
+  pg: PoolClient,
+  scenario: Extract<CatalogBenchmarkScenario, { kind: "discovery" }>,
+  warmups: number,
+  repeats: number,
+): Promise<PairedComparisonReport["scenarios"][number]> {
+  if (!Number.isInteger(repeats) || repeats < 1) {
+    throw new Error("repeats must be a positive integer");
+  }
+
+  const aDb = createCatalogBenchmarkClient(connectionString);
+  const bDb = createCatalogBenchmarkClient(connectionString);
+  const aDigests = new Set<string>();
+  const bDigests = new Set<string>();
+
+  const runA = async (): Promise<number> => {
+    const startedAt = performance.now();
+    const result = await getDiscovery(scenario.viewerId, scenario.query, aDb);
+    aDigests.add(checkCatalogBenchmarkResult(scenario, result).checksum);
+    return performance.now() - startedAt;
+  };
+  const runB = async (): Promise<number> => {
+    const startedAt = performance.now();
+    const result = await getDiscoveryV2(scenario.viewerId, scenario.query, bDb);
+    assertV2DiscoveryContract(scenario, result);
+    bDigests.add(catalogBenchmarkResultChecksum(result));
+    return performance.now() - startedAt;
+  };
+
+  try {
+    for (let pairIndex = 0; pairIndex < warmups; pairIndex += 1) {
+      if (pairOrder(pairIndex) === "AB") {
+        await runA();
+        await runB();
+      } else {
+        await runB();
+        await runA();
+      }
+    }
+
+    const pairs = [];
+    for (let pairIndex = 0; pairIndex < repeats; pairIndex += 1) {
+      const order = pairOrder(pairIndex);
+      const [aDurationMs, bDurationMs] = order === "AB"
+        ? [await runA(), await runB()]
+        : [await runB(), await runA()];
+      pairs.push({
+        pairIndex,
+        order,
+        aDurationMs,
+        bDurationMs,
+        bChangePercent: aDurationMs === 0 ? 0 : ((bDurationMs - aDurationMs) / aDurationMs) * 100,
+      });
+    }
+
+    assertSingleDiscoveryDigest("V1", scenario.id, aDigests);
+    assertSingleDiscoveryDigest("V2", scenario.id, bDigests);
+    const aEvidence = await captureDiscoveryAlgorithmEvidence(connectionString, pg, scenario, "v1");
+    const bEvidence = await captureDiscoveryAlgorithmEvidence(connectionString, pg, scenario, "v2");
+
+    return {
+      name: scenario.id,
+      warmups,
+      repeats,
+      pairs,
+      summary: summarizePairedMeasurements(pairs),
+      resultDigest: [...aDigests][0]!,
+      aResultDigest: [...aDigests][0]!,
+      bResultDigest: [...bDigests][0]!,
+      aDeterministic: true,
+      bDeterministic: true,
+      aQueries: reportQueries(aEvidence.queries),
+      bQueries: reportQueries(bEvidence.queries),
+      aExplains: aEvidence.explains,
+      bExplains: bEvidence.explains,
+    };
+  } finally {
+    await Promise.all([aDb.$disconnect(), bDb.$disconnect()]);
+  }
+}
+
+function assertSingleDiscoveryDigest(algorithm: string, scenario: string, digests: ReadonlySet<string>): void {
+  if (digests.size !== 1) {
+    throw new Error(`${algorithm} discovery result was not deterministic for ${scenario}`);
+  }
+}
+
+function assertV2DiscoveryContract(
+  scenario: Extract<CatalogBenchmarkScenario, { kind: "discovery" }>,
+  result: DiscoveryDto,
+): void {
+  if (result.algorithmVersion !== scenario.expectedAlgorithmVersion) {
+    throw new Error(`Scenario ${scenario.id} returned unexpected V2 discovery version`);
+  }
+  const expectedItemCount = Math.max(
+    0,
+    Math.min(
+      result.pagination.pageSize,
+      result.pagination.totalItems - (result.pagination.page - 1) * result.pagination.pageSize,
+    ),
+  );
+  if (
+    result.pagination.page !== scenario.query.page
+    || result.pagination.pageSize !== scenario.query.pageSize
+    || result.items.length !== expectedItemCount
+    || result.pagination.totalPages !== Math.ceil(result.pagination.totalItems / result.pagination.pageSize)
+  ) {
+    throw new Error(`Scenario ${scenario.id} returned inconsistent V2 discovery pagination`);
+  }
+}
+
+async function captureDiscoveryAlgorithmEvidence(
+  connectionString: string,
+  pg: PoolClient,
+  scenario: Extract<CatalogBenchmarkScenario, { kind: "discovery" }>,
+  algorithm: "v1" | "v2",
+): Promise<{ queries: Map<string, CapturedQuery>; explains: Awaited<ReturnType<typeof explainCapturedQueries>> }> {
+  const collector = createCatalogQueryEventCollector();
+  const db = createCatalogBenchmarkClient(connectionString, collector.onQuery);
+  const capture = collectorCapture(collector);
+  try {
+    capture.start();
+    if (algorithm === "v1") await getDiscovery(scenario.viewerId, scenario.query, db);
+    else await getDiscoveryV2(scenario.viewerId, scenario.query, db);
+    const queries = new Map<string, CapturedQuery>();
+    collectQueries(capture.stop(), queries);
+    return { queries, explains: await explainCapturedQueries(pg, [...queries.values()]) };
+  } finally {
+    await db.$disconnect();
   }
 }
 
@@ -949,6 +1155,7 @@ Commands:
   run [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
   compare-search-shape [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
   compare-discovery-shape --candidate=combined-cte|split-count [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
+  compare-discovery-algorithm [--warmups=${DEFAULT_WARMUPS}] [--repeats=${DEFAULT_REPEATS}] [--scenarios=ID,...] [--output=FILE]
   compare --candidate=NAME --confirm-reset=NAME [--cycles=${DEFAULT_CYCLES}] [--block-repeats=${DEFAULT_BLOCK_REPEATS}] [--scenarios=ID,...] [--output=FILE]
   matrix --confirm-reset=NAME [--sizes=5000,10000,20000,50000] [--candidate=NAME] [--scenarios=ID,...]\n
 Candidates: ${Object.keys(INDEX_CANDIDATES).join(", ")}`);

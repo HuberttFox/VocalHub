@@ -20,7 +20,7 @@ export interface BenchmarkReport {
 }
 
 export interface PairedComparisonReport {
-  kind: "search-shape" | "index" | "discovery-shape";
+  kind: "search-shape" | "index" | "discovery-shape" | "discovery-algorithm";
   candidate: string;
   scenarios: Array<{
     name: string;
@@ -29,6 +29,10 @@ export interface PairedComparisonReport {
     pairs: PairedMeasurement[];
     summary: PairedMeasurementSummary;
     resultDigest: string;
+    aResultDigest?: string;
+    bResultDigest?: string;
+    aDeterministic?: boolean;
+    bDeterministic?: boolean;
     aQueries: ReportScenario["queries"];
     bQueries: ReportScenario["queries"];
     aExplains: ExplainPlan[];
