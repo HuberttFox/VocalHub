@@ -242,3 +242,16 @@ Neither shape passes the evidence gates (B win rate ≥ 75%, both order strata i
 - **No index promoted.** All relation lookups are already indexed; the bottleneck is the algorithm-inherent tag-fanout aggregation (`tag_scores`/`artist_scores` self-joins), which materializes 1.22M intermediate rows with disk spill at 50k under the documented 4 MB `work_mem`.
 - The benchmark harness (`compare-discovery-shape` command, `src/lib/discover/shape-query.ts` candidate shapes, digest-parity paired comparison) is retained for future evidence; the candidate shapes are marked rejected.
 - Reducing the personalized runtime further requires an algorithm or data-model change (for example, precomputed tag/artist affinity or a bounded candidate set), which is out of scope and deferred. Current personalized medians at 50k remain in the ~1.16–1.32 s range (this session's runs; the M1 record of ~1.03 s reflects host variance).
+
+## Bounded Candidate Discovery V2 evaluation
+
+At 50k, 3 warmups and 15 adjacent AB/BA pairs compared V1 with V2. V2 passed deterministic shared-contract checks for the first page and reduced `candidate_ids` from 49,495 to 4,027, but deliberately changed candidate/ranking results and did not meet adoption gates. The initial deep-page measurement is invalid for comparison: V1's requested deep page lies beyond V2's bounded 168-page pool, so V2 returned an empty page; the comparator now rejects unequal page cardinality.
+
+| Scenario | V1 median | V2 median | Paired change | V2 win rate | BA/AB strata |
+| --- | ---: | ---: | ---: | ---: | --- |
+| First page | 1485.59 ms | 593.93 ms | -63.90% | 0.53 | +333.99% / -76.04% |
+| Deep page (invalid: V2 empty) | 1415.09 ms | 492.69 ms | -71.95% | 0.53 | +346.33% / -76.36% |
+
+V2 still spills in the `tag_scores` external merge: 118,052 rows, 4,872 KB, with temp read/write blocks.
+
+Decision: **reject production adoption**. V2 fails the no-spill gate and the both-strata and win-rate >=75% gates. Retain V1; keep V2 benchmark-only.

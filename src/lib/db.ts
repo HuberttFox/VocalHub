@@ -16,13 +16,9 @@ export function getDb(): PrismaClient {
     throw new Error("DATABASE_URL is not configured");
   }
 
-  const client = new PrismaClient({
+  globalForPrisma.prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString }),
   });
 
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
-  }
-
-  return client;
+  return globalForPrisma.prisma;
 }

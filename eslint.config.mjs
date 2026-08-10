@@ -8,7 +8,7 @@ const eslintConfig = defineConfig([
   {
     files: [
       "src/app/**/*.{ts,tsx}",
-      "src/lib/{songs,artists,catalog}/**/*.{ts,tsx}",
+      "src/lib/{songs,artists,catalog,operations}/**/*.{ts,tsx}",
       "benchmarks/**/*.{ts,tsx}",
     ],
     rules: {

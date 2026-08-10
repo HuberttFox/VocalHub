@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { VOCADB_SONG_SYNC_STATE_ID } from "@/lib/catalog/sync-state";
 import {
   SyncEntity,
   SyncRunMode,
@@ -32,7 +33,7 @@ import {
   syncVocaDbSong,
 } from "@/lib/vocadb/sync-song";
 
-export const VOCADB_SONG_SYNC_STATE_ID = "vocadb:songs";
+export { VOCADB_SONG_SYNC_STATE_ID } from "@/lib/catalog/sync-state";
 export const DEFAULT_SYNC_CONCURRENCY = 2;
 export const DEFAULT_ACTIVITY_OVERLAP_MS = 15 * 60 * 1_000;
 export const DEFAULT_SETTLEMENT_LAG_MS = 2 * 60 * 1_000;

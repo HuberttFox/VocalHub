@@ -101,4 +101,43 @@ describe("catalog benchmark paired report", () => {
       expect.objectContaining({ scenario: "discover-personalized-first-page" }),
     ]);
   });
+
+  it("handles the discovery-algorithm paired kind", () => {
+    const discoveryReport: BenchmarkReport = {
+      ...report(),
+      command: "compare-discovery-algorithm",
+      pairedComparison: {
+        kind: "discovery-algorithm",
+        candidate: "ranked-candidates",
+        scenarios: [{
+          ...report().pairedComparison!.scenarios[0],
+          name: "discover-personalized-first-page",
+          aResultDigest: "baseline-digest",
+          bResultDigest: "candidate-digest",
+          aDeterministic: true,
+          bDeterministic: true,
+        }],
+      },
+    };
+    const original = console.table;
+    const tables: unknown[] = [];
+    console.table = (value?: unknown) => { tables.push(value); };
+    try {
+      printReport(discoveryReport);
+    } finally {
+      console.table = original;
+    }
+    const safe = redactReport(discoveryReport);
+    expect(safe.pairedComparison?.kind).toBe("discovery-algorithm");
+    expect(safe.pairedComparison?.scenarios[0]).toMatchObject({
+      aResultDigest: "baseline-digest",
+      bResultDigest: "candidate-digest",
+      aDeterministic: true,
+      bDeterministic: true,
+    });
+    expect(tables).toHaveLength(1);
+    expect(tables[0]).toEqual([
+      expect.objectContaining({ scenario: "discover-personalized-first-page" }),
+    ]);
+  });
 });
