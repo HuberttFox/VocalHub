@@ -15,6 +15,8 @@ import {
 export type Logger = Pick<Console, "log" | "error">;
 export type Entity = (typeof SyncEntity)[keyof typeof SyncEntity];
 
+export const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
+
 export type DurableRunRecord = {
   id: string;
   entity: Entity;
@@ -54,6 +56,7 @@ export type DurableRunnerOptions = {
   concurrency: number;
   now: () => Date;
   logger: Logger;
+  heartbeatIntervalMs?: number;
   signal?: AbortSignal;
   createRun: (mode: string) => Promise<DurableRunRecord>;
   discover: (run: DurableRunRecord) => Promise<DurableDiscovery>;
@@ -80,9 +83,53 @@ const runSelect = {
   expectedStateVersion: true,
 } as const;
 
+export function validateHeartbeatIntervalMs(value: number): number {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new RangeError("Heartbeat interval must be a positive safe integer");
+  }
+  return value;
+}
+
+async function updateRunHeartbeat(
+  db: PrismaClient,
+  runId: string,
+  now: () => Date,
+  logger: Logger,
+): Promise<void> {
+  try {
+    await db.syncRun.update({
+      where: { id: runId },
+      data: { lastHeartbeatAt: now() },
+    });
+  } catch (error) {
+    // A failed heartbeat is itself the liveness signal; do not abort the run.
+    logger.error(
+      `Heartbeat update failed for sync run ${runId}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+}
+
+export function startRunHeartbeat(
+  options: Pick<DurableRunnerOptions, "db" | "now" | "logger">,
+  runId: string,
+  heartbeatIntervalMs: number,
+): { stop(): void } {
+  validateHeartbeatIntervalMs(heartbeatIntervalMs);
+  const timer = setInterval(() => {
+    void updateRunHeartbeat(options.db, runId, options.now, options.logger);
+  }, heartbeatIntervalMs);
+  timer.unref?.();
+  return { stop: () => clearInterval(timer) };
+}
+
 export async function runDurableSync(
   options: DurableRunnerOptions,
 ): Promise<DurableRunResult> {
+  const heartbeatIntervalMs = validateHeartbeatIntervalMs(
+    options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS,
+  );
   throwIfVocaDbCancelled(options.signal);
   let run: DurableRunRecord;
   if (options.requestMode === "RESUME") {
@@ -109,6 +156,11 @@ export async function runDurableSync(
     run = await options.createRun(options.requestMode);
   }
 
+  // Establish an initial heartbeat before discovery, which may run long and
+  // would otherwise appear unresponsive; resume clears the prior stale beat.
+  await updateRunHeartbeat(options.db, run.id, options.now, options.logger);
+  const heartbeat = startRunHeartbeat(options, run.id, heartbeatIntervalMs);
+
   try {
     throwIfVocaDbCancelled(options.signal);
     if (!run.discoveryCompletedAt) {
@@ -121,6 +173,7 @@ export async function runDurableSync(
 
     await processPendingItems(run, options);
     throwIfVocaDbCancelled(options.signal);
+    heartbeat.stop();
     return await finalizeRun(
       options.db,
       run,
@@ -131,6 +184,8 @@ export async function runDurableSync(
   } catch (error) {
     await recordRunInterruption(options.db, run.id, error);
     throw error;
+  } finally {
+    heartbeat.stop();
   }
 }
 

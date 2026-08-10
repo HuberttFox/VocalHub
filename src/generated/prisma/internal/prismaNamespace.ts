@@ -2327,6 +2327,7 @@ export const SyncRunScalarFieldEnum = {
   requestedCount: 'requestedCount',
   successCount: 'successCount',
   failureCount: 'failureCount',
+  lastHeartbeatAt: 'lastHeartbeatAt',
   errorCode: 'errorCode',
   errorMessage: 'errorMessage'
 } as const

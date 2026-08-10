@@ -2,7 +2,7 @@ import "dotenv/config";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import { SyncRunMode, SyncStatus } from "@/generated/prisma/enums";
+import { SyncRunMode, SyncRunStatus, SyncStatus } from "@/generated/prisma/enums";
 import { VocaDbCancellationError, VocaDbNotFoundError } from "@/lib/vocadb/errors";
 import { vocaDbSongSchema } from "@/lib/vocadb/contract";
 import {
@@ -428,6 +428,41 @@ describe("durable VocaDB sync runner", () => {
     });
     expect(currentState.lastReconciledAt).toEqual(
       previousState.lastReconciledAt,
+    );
+  });
+
+  it("writes heartbeats during processing and finalizes succeeded", async () => {
+    const client = {
+      getSongIds: async () => [1, 2, 3],
+      getSongActivityEntries: async () => [],
+      getSong: async (id: number) => {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        return source(id);
+      },
+    };
+
+    const result = await runVocaDbSongSync(
+      { mode: SyncRunMode.SEED },
+      {
+        db,
+        client,
+        now: () => new Date(),
+        logger: quietLogger,
+        heartbeatIntervalMs: 30,
+      },
+    );
+
+    expect(result).toMatchObject({
+      status: SyncRunStatus.SUCCEEDED,
+      successCount: 3,
+      failureCount: 0,
+    });
+    const run = await db.syncRun.findUniqueOrThrow({
+      where: { id: result.runId },
+    });
+    expect(run.lastHeartbeatAt).not.toBeNull();
+    expect(run.lastHeartbeatAt!.getTime()).toBeGreaterThan(
+      run.startedAt.getTime(),
     );
   });
 });

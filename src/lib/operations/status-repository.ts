@@ -13,7 +13,10 @@ import type {
 } from "@/lib/operations/status-dto";
 import {
   classifyOperationsStatus,
+  DEFAULT_HEARTBEAT_STALE_AFTER_MS,
   DEFAULT_OPERATIONS_STATUS_STALE_AFTER_MS,
+  isHeartbeatStale,
+  validateHeartbeatStaleAfterMs,
   validateOperationsStatusStaleAfterMs,
 } from "@/lib/operations/status-policy";
 import { VOCADB_SONG_SYNC_STATE_ID } from "@/lib/catalog/sync-state";
@@ -49,6 +52,7 @@ const RESUMABLE_MANIFEST_SELECT = {
   status: true,
   startedAt: true,
   discoveryCompletedAt: true,
+  lastHeartbeatAt: true,
 } satisfies Prisma.SyncRunSelect;
 
 type StatusTransaction = Pick<
@@ -75,6 +79,7 @@ export type OperationsStatusDb = {
 export type OperationsStatusOptions = {
   now?: () => Date;
   staleAfterMs?: number;
+  heartbeatStaleAfterMs?: number;
 };
 
 export async function getOperationsStatus(
@@ -84,6 +89,9 @@ export async function getOperationsStatus(
   const now = options.now?.() ?? new Date();
   const staleAfterMs = validateOperationsStatusStaleAfterMs(
     options.staleAfterMs ?? DEFAULT_OPERATIONS_STATUS_STALE_AFTER_MS,
+  );
+  const heartbeatStaleAfterMs = validateHeartbeatStaleAfterMs(
+    options.heartbeatStaleAfterMs ?? DEFAULT_HEARTBEAT_STALE_AFTER_MS,
   );
 
   return database.$transaction(async (tx) => {
@@ -135,9 +143,13 @@ export async function getOperationsStatus(
           ],
           hasMultipleRunningManifests:
             songRunningManifestCount > 1 || artistRunningManifestCount > 1,
+          resumableHeartbeats: resumableRuns.map(
+            (run) => run.lastHeartbeatAt,
+          ),
         },
         now,
         staleAfterMs,
+        heartbeatStaleAfterMs,
       ),
       observedAt: now.toISOString(),
       staleAfterMs,
@@ -153,7 +165,7 @@ export async function getOperationsStatus(
         itemCountsByRun,
       ),
       resumableManifests: resumableRuns.map((run) =>
-        resumableManifestDto(run, pendingItemCounts),
+        resumableManifestDto(run, pendingItemCounts, now, heartbeatStaleAfterMs),
       ),
     };
   }, STATUS_TRANSACTION_OPTIONS);
@@ -207,6 +219,8 @@ function entityStatus(
 function resumableManifestDto(
   run: ResumableManifest,
   pendingItemCounts: Map<string, number>,
+  now: Date,
+  heartbeatStaleAfterMs: number,
 ): OperationsResumableManifestDto {
   return {
     entity: run.entity,
@@ -216,6 +230,12 @@ function resumableManifestDto(
     startedAt: run.startedAt.toISOString(),
     discoveryCompletedAt: run.discoveryCompletedAt?.toISOString() ?? null,
     pendingItemCount: pendingItemCounts.get(run.id) ?? 0,
+    lastHeartbeatAt: run.lastHeartbeatAt?.toISOString() ?? null,
+    heartbeatStale: isHeartbeatStale(
+      now,
+      run.lastHeartbeatAt,
+      heartbeatStaleAfterMs,
+    ),
   };
 }
 

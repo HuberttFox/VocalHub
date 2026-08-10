@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { SyncRunStatus } from "@/generated/prisma/enums";
-import { classifyOperationsStatus } from "@/lib/operations/status-policy";
+import {
+  classifyOperationsStatus,
+  validateHeartbeatStaleAfterMs,
+} from "@/lib/operations/status-policy";
 
 const NOW = new Date("2026-08-10T12:00:00Z");
 const STALE_AFTER_MS = 24 * 60 * 60 * 1_000;
+const HEARTBEAT_STALE_AFTER_MS = 5 * 60 * 1_000;
 
 type Evidence = Parameters<typeof classifyOperationsStatus>[0];
 
@@ -14,6 +18,7 @@ function evidence(overrides: Partial<Evidence> = {}): Evidence {
     lastReconciledAt: null,
     latestTerminalRunStatuses: [SyncRunStatus.SUCCEEDED, SyncRunStatus.SUCCEEDED],
     hasMultipleRunningManifests: false,
+    resumableHeartbeats: [],
     ...overrides,
   };
 }
@@ -91,5 +96,45 @@ describe("classifyOperationsStatus", () => {
         STALE_AFTER_MS,
       ),
     ).toBe("STALE");
+  });
+
+  it("reports READY when a single RUNNING manifest has a fresh heartbeat", () => {
+    expect(
+      classifyOperationsStatus(
+        evidence({ resumableHeartbeats: [new Date("2026-08-10T11:59:00Z")] }),
+        NOW,
+        STALE_AFTER_MS,
+        HEARTBEAT_STALE_AFTER_MS,
+      ),
+    ).toBe("READY");
+  });
+
+  it("reports DEGRADED when a RUNNING manifest heartbeat is stale", () => {
+    expect(
+      classifyOperationsStatus(
+        evidence({ resumableHeartbeats: [new Date("2026-08-10T11:50:00Z")] }),
+        NOW,
+        STALE_AFTER_MS,
+        HEARTBEAT_STALE_AFTER_MS,
+      ),
+    ).toBe("DEGRADED");
+  });
+
+  it("reports DEGRADED when a RUNNING manifest has no heartbeat evidence", () => {
+    expect(
+      classifyOperationsStatus(
+        evidence({ resumableHeartbeats: [null] }),
+        NOW,
+        STALE_AFTER_MS,
+        HEARTBEAT_STALE_AFTER_MS,
+      ),
+    ).toBe("DEGRADED");
+  });
+
+  it("rejects a non-positive heartbeat staleness window", () => {
+    expect(() => validateHeartbeatStaleAfterMs(0)).toThrow(RangeError);
+    expect(() => validateHeartbeatStaleAfterMs(-1)).toThrow(RangeError);
+    expect(() => validateHeartbeatStaleAfterMs(1.5)).toThrow(RangeError);
+    expect(validateHeartbeatStaleAfterMs(300_000)).toBe(300_000);
   });
 });

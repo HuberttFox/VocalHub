@@ -66,6 +66,7 @@ export type SyncRunnerOptions = {
   concurrency?: number;
   activityOverlapMs?: number;
   settlementLagMs?: number;
+  heartbeatIntervalMs?: number;
   signal?: AbortSignal;
 };
 
@@ -104,6 +105,7 @@ export async function runVocaDbSongSync(
     concurrency,
     now,
     logger,
+    heartbeatIntervalMs: options.heartbeatIntervalMs,
     signal: options.signal,
     createRun: (mode) => createSongRun(mode, request, options.db, now, overlapMs, settlementLagMs),
     discover: (run) => discoverSongRun(run, options.db, options.client, options.signal),

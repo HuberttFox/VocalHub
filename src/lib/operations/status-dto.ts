@@ -51,4 +51,6 @@ export type OperationsResumableManifestDto = {
   startedAt: string;
   discoveryCompletedAt: string | null;
   pendingItemCount: number;
+  lastHeartbeatAt: string | null;
+  heartbeatStale: boolean;
 };

@@ -227,4 +227,78 @@ describe("operations status repository", () => {
     expect(serialized).not.toContain("PRIVATE_ITEM_CODE");
     expect(serialized).not.toContain("private item error message");
   });
+
+  it("reports a RUNNING manifest with a fresh heartbeat as ready", async () => {
+    await seedFreshSongState();
+    const freshHeartbeat = new Date(now.getTime() - 60_000);
+    await db.syncRun.create({
+      data: {
+        entity: SyncEntity.SONG,
+        mode: SyncRunMode.INCREMENTAL,
+        lastHeartbeatAt: freshHeartbeat,
+      },
+    });
+
+    const status = await getOperationsStatus(db, { now: () => now, staleAfterMs });
+
+    expect(status.classification).toBe("READY");
+    expect(status.resumableManifests).toHaveLength(1);
+    expect(status.resumableManifests[0]).toMatchObject({
+      entity: "SONG",
+      status: "RUNNING",
+      lastHeartbeatAt: freshHeartbeat.toISOString(),
+      heartbeatStale: false,
+    });
+  });
+
+  it("reports a RUNNING manifest with a stale heartbeat as degraded", async () => {
+    await seedFreshSongState();
+    await db.syncRun.create({
+      data: {
+        entity: SyncEntity.SONG,
+        mode: SyncRunMode.INCREMENTAL,
+        lastHeartbeatAt: new Date(now.getTime() - 10 * 60 * 1_000),
+      },
+    });
+
+    const status = await getOperationsStatus(db, { now: () => now, staleAfterMs });
+
+    expect(status.classification).toBe("DEGRADED");
+    expect(status.resumableManifests[0].heartbeatStale).toBe(true);
+  });
+
+  it("reports a RUNNING manifest without a heartbeat as degraded", async () => {
+    await seedFreshSongState();
+    await db.syncRun.create({
+      data: { entity: SyncEntity.SONG, mode: SyncRunMode.INCREMENTAL },
+    });
+
+    const status = await getOperationsStatus(db, { now: () => now, staleAfterMs });
+
+    expect(status.classification).toBe("DEGRADED");
+    expect(status.resumableManifests[0]).toMatchObject({
+      lastHeartbeatAt: null,
+      heartbeatStale: true,
+    });
+  });
+
+  it("honors a custom heartbeat staleness window", async () => {
+    await seedFreshSongState();
+    await db.syncRun.create({
+      data: {
+        entity: SyncEntity.SONG,
+        mode: SyncRunMode.INCREMENTAL,
+        lastHeartbeatAt: new Date(now.getTime() - 10 * 60 * 1_000),
+      },
+    });
+
+    const status = await getOperationsStatus(db, {
+      now: () => now,
+      staleAfterMs,
+      heartbeatStaleAfterMs: 20 * 60 * 1_000,
+    });
+
+    expect(status.classification).toBe("READY");
+    expect(status.resumableManifests[0].heartbeatStale).toBe(false);
+  });
 });
