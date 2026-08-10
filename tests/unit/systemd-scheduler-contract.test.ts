@@ -28,10 +28,12 @@ describe("systemd scheduler contract", () => {
     expect(unit("vocalhub-maintenance@.service")).toContain("--profile maintenance");
     expect(unit("vocalhub-worker@.service")).not.toMatch(/AUTH_/);
     expect(unit("vocalhub-maintenance@.service")).not.toMatch(/AUTH_/);
-    expect(unit("vocalhub.env.example")).not.toMatch(/^AUTH_/m);
     expect(jobsCompose()).not.toMatch(/AUTH_/);
     expect(jobsCompose()).toContain("VOCALHUB_WORKER_IMAGE");
     expect(jobsCompose()).toContain("VOCALHUB_MAINTENANCE_IMAGE");
+    expect(unit("vocalhub.env.example")).not.toMatch(/^AUTH_/m);
+    expect(unit("vocalhub.env.example")).not.toMatch(/^OPERATIONAL_STATUS_TOKEN=/m);
+    expect(unit("vocalhub.env.example")).not.toMatch(/^VOCALHUB_(APP|MIGRATE)_IMAGE=/m);
   });
 
   it("makes failures observable and documents release paths", () => {

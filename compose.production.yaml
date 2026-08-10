@@ -1,8 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      target: app
+    image: ${VOCALHUB_APP_IMAGE:?VOCALHUB_APP_IMAGE is required}
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
@@ -10,65 +8,22 @@ services:
       AUTH_GITHUB_ID: ${AUTH_GITHUB_ID:?AUTH_GITHUB_ID is required}
       AUTH_GITHUB_SECRET: ${AUTH_GITHUB_SECRET:?AUTH_GITHUB_SECRET is required}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-false}
+      OPERATIONAL_STATUS_TOKEN: ${OPERATIONAL_STATUS_TOKEN:?OPERATIONAL_STATUS_TOKEN is required}
       HOSTNAME: 0.0.0.0
       PORT: 3000
     ports:
-      - "${VOCALHUB_PORT:-3000}:3000"
+      - "127.0.0.1:${VOCALHUB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
-
-  worker:
-    profiles: ["worker"]
-    build:
-      context: .
-      target: worker
-    environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      VOCADB_BASE_URL: ${VOCADB_BASE_URL:-https://vocadb.net/api/}
-      VOCADB_USER_AGENT: ${VOCADB_USER_AGENT:?VOCADB_USER_AGENT is required}
-      VOCADB_TIMEOUT_MS: ${VOCADB_TIMEOUT_MS:-10000}
-      VOCADB_ACTIVITY_OVERLAP_MS: ${VOCADB_ACTIVITY_OVERLAP_MS:-900000}
-      VOCADB_SETTLEMENT_LAG_MS: ${VOCADB_SETTLEMENT_LAG_MS:-120000}
-      VOCADB_ARTIST_REFRESH_INTERVAL_MS: ${VOCADB_ARTIST_REFRESH_INTERVAL_MS:-604800000}
-      VOCADB_SYNC_CONCURRENCY: ${VOCADB_SYNC_CONCURRENCY:-2}
-    restart: "no"
-    stop_grace_period: 60s
-
-  session-cleanup:
-    profiles: ["maintenance"]
-    build:
-      context: .
-      target: maintenance
-    environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-    restart: "no"
-
-  playlist-report-cleanup:
-    profiles: ["maintenance"]
-    build:
-      context: .
-      target: maintenance
-    environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-    entrypoint: ["node", "/app/build/maintenance/governance/cleanup-playlist-reports.js"]
-    command: []
-    restart: "no"
-
-  playlist-moderation:
-    profiles: ["maintenance"]
-    build:
-      context: .
-      target: maintenance
-    environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-    entrypoint: ["node", "/app/build/maintenance/governance/moderate-playlist.js"]
-    command: []
-    restart: "no"
 
   migrate:
     profiles: ["migrate"]
-    build:
-      context: .
-      target: migrate
+    image: ${VOCALHUB_MIGRATE_IMAGE:?VOCALHUB_MIGRATE_IMAGE is required}
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       DIRECT_URL: ${DIRECT_URL:-}

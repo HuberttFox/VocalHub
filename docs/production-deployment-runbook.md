@@ -4,11 +4,11 @@ This runbook covers deployment against an operator-managed PostgreSQL instance. 
 
 ## Preflight
 
-1. Confirm release commit and build context, database target, maintenance window, and rollback owner. If using a registry, pin the same immutable image digest for `app`, `worker`, and `migrate`; otherwise run all commands from the checked-out release commit and do not rebuild from a dirty tree.
+1. Confirm release commit, image digests, database target, maintenance window, and rollback owner. Pin immutable image digests for `app`, `migrate`, `worker`, and `maintenance`; do not rebuild from a dirty tree.
 2. Pause VocaDB incremental, reconcile, artist refresh, session-cleanup, and playlist-report-cleanup schedulers. For systemd reference timers, use `systemctl disable --now vocalhub-worker-incremental.timer vocalhub-worker-reconcile.timer vocalhub-worker-artists-refresh.timer vocalhub-session-cleanup.timer vocalhub-playlist-report-cleanup.timer`.
 3. Wait for active worker and maintenance containers to exit. Check `SyncRun` and `SyncItem` for `RUNNING` ambiguity before proceeding.
 4. Verify a current PostgreSQL backup and a tested restore path. Confirm free disk space for additive indexes.
-5. Confirm production secrets are separated by target: app receives `DATABASE_URL` and `AUTH_*`; worker receives `DATABASE_URL`, `VOCADB_*`, and `VOCADB_USER_AGENT`; maintenance receives only `DATABASE_URL`; migrate receives `DATABASE_URL` and optional `DIRECT_URL`.
+5. Confirm production secrets are separated by target: app Compose receives `DATABASE_URL`, `AUTH_*`, `OPERATIONAL_STATUS_TOKEN`, `VOCALHUB_APP_IMAGE`, and `VOCALHUB_MIGRATE_IMAGE` from its dedicated deployment environment; the jobs-only systemd environment receives `DATABASE_URL`, `VOCADB_*`, `VOCALHUB_WORKER_IMAGE`, and `VOCALHUB_MAINTENANCE_IMAGE`. `DIRECT_URL` is optional for `migrate`.
 6. Run release validation in CI or a staging environment:
 
 ```bash
@@ -25,12 +25,12 @@ Do not point destructive or migration commands at development, test, or benchmar
 
 ## First deployment
 
-Run migrations before starting app traffic, then seed catalog baseline. Seed is only for initial deployment or an operator-approved rebuild:
+Run migrations before starting app traffic, then seed catalog baseline from the separate jobs Compose file. The normal Compose file exposes the app only on `127.0.0.1`; configure ingress/TLS outside this repository. Seed is only for initial deployment or an operator-approved rebuild:
 
 ```bash
 docker compose -f compose.production.yaml --profile migrate run --rm migrate
 docker compose -f compose.production.yaml up -d app
-docker compose -f compose.production.yaml --profile worker run --rm worker seed
+docker compose -f compose.production.jobs.yaml --profile worker run --rm --no-deps worker seed
 ```
 
 For governance releases, the two migrations `20260803100000_add_playlist_governance` and `20260803110000_retain_playlist_report_targets` are one indivisible deployment unit. Before starting migration 1, disable Playlist/User deletion writes and keep that gate until both migrations and post-migration catalog checks pass. Do not start the new app image, route traffic, or resume schedulers during the intermediate state. Verify `PlaylistReport.targetPlaylistId` is populated and `NOT NULL`, `PlaylistReport.playlistId` is nullable, both `playlistId` and `reporterId` foreign keys use `ON DELETE SET NULL`, and the corresponding columns accept NULL.
@@ -46,8 +46,8 @@ Verify app health, login callback, public catalog reads, and seed summary before
 docker compose -f compose.production.yaml --profile migrate run --rm migrate
 ```
 
-4. Check migration output and application startup logs. Keep scheduler paused until app health checks pass.
-5. Deploy the new app image or container definition without changing database target.
+4. Check migration output and application startup logs. Wait for the Compose app health check to report `healthy`; it probes `http://127.0.0.1:3000/api/health` with Node `fetch`. Keep scheduler paused until health checks pass.
+5. Deploy the new immutable app image without changing database target. Ingress/TLS configuration remains external to this Compose artifact.
 6. Run a read-only smoke check against `/`, `/songs`, `/search`, `/api/songs`, and `/privacy`.
 7. Resume schedulers only after migration and smoke checks pass.
 
@@ -78,14 +78,14 @@ sudo systemctl enable --now vocalhub-worker-incremental.timer vocalhub-worker-re
 sudo systemctl enable --now vocalhub-worker-artists-refresh.timer vocalhub-session-cleanup.timer vocalhub-playlist-report-cleanup.timer
 ```
 
-Use `systemctl status <unit>` and `journalctl -u <unit>` to inspect execution. Nonzero service exits remain visible and alertable. Before any migration or release, pause all five timers with `systemctl disable --now`; re-enable only after migration, app health, and smoke checks pass. Never activate these timers against an unseeded database. Edit the environment file with real values; never install the placeholder example directly. Validate no `db.example`, `user:password`, `replace-with-digest`, or `replace-with-operator-contact` remains. The jobs Compose file excludes app/Auth interpolation and requires pinned worker/maintenance image digests.
+Use `systemctl status <unit>` and `journalctl -u <unit>` to inspect execution. Nonzero service exits remain visible and alertable. Before any migration or release, pause all five timers with `systemctl disable --now`; re-enable only after migration, app health, and smoke checks pass. Never activate these timers against an unseeded database. Edit the jobs-only environment file with real values; never install the placeholder example directly. Validate no `db.example`, `user:password`, `replace-with-digest`, or `replace-with-operator-contact` remains. `compose.production.yaml` requires pinned app/migrate image digests and app secrets from a separate deployment environment; `compose.production.jobs.yaml` and its systemd template exclude app, migration, and Auth interpolation and require pinned worker/maintenance image digests.
 ```bash
-docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker auto incremental
-docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker auto reconcile
-docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker artists auto refresh
-docker compose -f compose.production.yaml --profile maintenance run --rm --no-deps session-cleanup
+docker compose -f compose.production.jobs.yaml --profile worker run --rm --no-deps worker auto incremental
+docker compose -f compose.production.jobs.yaml --profile worker run --rm --no-deps worker auto reconcile
+docker compose -f compose.production.jobs.yaml --profile worker run --rm --no-deps worker artists auto refresh
+docker compose -f compose.production.jobs.yaml --profile maintenance run --rm --no-deps session-cleanup
 # After governance migration is deployed:
-docker compose -f compose.production.yaml --profile maintenance run --rm --no-deps playlist-report-cleanup
+docker compose -f compose.production.jobs.yaml --profile maintenance run --rm --no-deps playlist-report-cleanup
 # Operator-only, explicit report queue/disposition:
 node build/maintenance/governance/moderate-playlist.js list-reports --limit=50
 node build/maintenance/governance/moderate-playlist.js resolve-report <report-uuid> <resolution-code>
@@ -101,6 +101,26 @@ Playlist report cleanup removes only `RESOLVED`/`DISMISSED` reports older than 1
 
 
 A worker receiving `SIGTERM` or `SIGINT` stops accepting new work and leaves resumable state. Keep at least 60 seconds termination grace period. `ACTIVITY_INTERVAL_SATURATED` requires a full seed rebuild, not repeated incremental retries.
+
+## Operations status endpoint
+
+`/api/health` is a minimal PostgreSQL readiness probe used by the Compose container healthcheck; it returns `200 {status:"ok"}` once `SELECT 1` succeeds and `503` otherwise. It never loads VocaDB, Auth, or sync state.
+
+`/api/ops/status` is an operator-only, read-only snapshot of sync state:
+
+- Requires `Authorization: Bearer $OPERATIONAL_STATUS_TOKEN`. The token must be a fresh random value of at least 16 characters; the example placeholder from `.env.example` is rejected and the endpoint fails closed rather than serve status. Never store the token in the jobs-only systemd environment or in Git.
+- Returns `200` with the full snapshot when classification is `READY`, and `503` for every other classification (`UNSEEDED`, `DEGRADED`, `STALE`) or on database failure.
+- Classification order: `UNSEEDED` (no completed song seed) → `DEGRADED` (multiple running manifests for one entity, or latest terminal run `FAILED`/`PARTIAL`) → `STALE` (activity checkpoint and reconcile both older than the stale window, default 24h) → `READY`. A recent reconcile counts as activity, so reconcile-only operation with the incremental timer paused does not go stale.
+
+Smoke checks after deploy:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/api/health
+curl -s -H "Authorization: Bearer $OPERATIONAL_STATUS_TOKEN" http://127.0.0.1:3000/api/ops/status
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/api/ops/status  # expect 401
+```
+
+The snapshot does not prove worker liveness. A single `RUNNING` resumable manifest with pending items appears in `resumableManifests` but is indistinguishable from a healthy in-progress run without a heartbeat; treat a long-lived manifest as a prompt to inspect scheduler and worker logs, not as a health verdict. Ingress/TLS exposure of `/api/ops/status`, catalog seed, and scheduler enablement remain operator-controlled follow-up actions outside this repository.
 
 ## Rollback boundary
 
