@@ -46,6 +46,16 @@ describe("classifyOperationsStatus", () => {
     ).toBe("DEGRADED");
   });
 
+  it("reports DEGRADED when discovery refresh has failed", () => {
+    expect(
+      classifyOperationsStatus(
+        evidence({ hasDiscoveryRefreshFailure: true }),
+        NOW,
+        STALE_AFTER_MS,
+      ),
+    ).toBe("DEGRADED");
+  });
+
   it("reports READY when the activity checkpoint is fresh", () => {
     expect(
       classifyOperationsStatus(evidence(), NOW, STALE_AFTER_MS),

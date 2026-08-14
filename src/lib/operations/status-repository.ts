@@ -1,10 +1,12 @@
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import {
   SyncEntity,
   SyncRunStatus,
   SyncStatus,
 } from "@/generated/prisma/enums";
 import { getDb } from "@/lib/db";
+import { getDiscoveryMaterializerTiming } from "@/lib/discover/materializer-timing";
+import { staleDiscoveryCandidatesQuery } from "@/lib/discover/stale-candidates";
 import type {
   OperationsEntityStatusDto,
   OperationsResumableManifestDto,
@@ -57,7 +59,7 @@ const RESUMABLE_MANIFEST_SELECT = {
 
 type StatusTransaction = Pick<
   ReturnType<typeof getDb>,
-  "vocaDbSongSyncState" | "syncRun" | "syncItem"
+  "$queryRaw" | "vocaDbSongSyncState" | "syncRun" | "syncItem"
 >;
 
 type LatestRun = Prisma.SyncRunGetPayload<{ select: typeof LATEST_RUN_SELECT }>;
@@ -95,7 +97,7 @@ export async function getOperationsStatus(
   );
 
   return database.$transaction(async (tx) => {
-    const [state, latestSongRun, latestArtistRun, latestSongTerminalRun, latestArtistTerminalRun, resumableRuns] =
+    const [state, latestSongRun, latestArtistRun, latestSongTerminalRun, latestArtistTerminalRun, resumableRuns, discovery] =
       await Promise.all([
         tx.vocaDbSongSyncState.findUnique({
           where: { id: VOCADB_SONG_SYNC_STATE_ID },
@@ -110,6 +112,7 @@ export async function getOperationsStatus(
           orderBy: [{ entity: "asc" }, { sequence: "asc" }],
           select: RESUMABLE_MANIFEST_SELECT,
         }),
+        discoveryStatus(tx, new Date(now.getTime() - getDiscoveryMaterializerTiming().buildLeaseMs)),
       ]);
 
     const allRuns = [latestSongRun, latestArtistRun, ...resumableRuns];
@@ -146,6 +149,7 @@ export async function getOperationsStatus(
           resumableHeartbeats: resumableRuns.map(
             (run) => run.lastHeartbeatAt,
           ),
+          hasDiscoveryRefreshFailure: discovery.failedProfileCount > 0,
         },
         now,
         staleAfterMs,
@@ -164,6 +168,7 @@ export async function getOperationsStatus(
         artistRunningManifestCount,
         itemCountsByRun,
       ),
+      discovery,
       resumableManifests: resumableRuns.map((run) =>
         resumableManifestDto(run, pendingItemCounts, now, heartbeatStaleAfterMs),
       ),
@@ -191,6 +196,29 @@ async function findLatestTerminalRun(
     orderBy: { sequence: "desc" },
     select: { status: true },
   });
+}
+
+async function discoveryStatus(
+  tx: StatusTransaction,
+  expiredLeaseAt: Date,
+): Promise<OperationsStatusDto["discovery"]> {
+  const rows = await tx.$queryRaw<Array<{
+    staleProfileCount: number;
+    failedProfileCount: number;
+    oldestPendingAt: Date | null;
+  }>>(Prisma.sql`
+    ${staleDiscoveryCandidatesQuery(expiredLeaseAt)}
+    SELECT
+      (SELECT COUNT(*)::int FROM stale_candidates) AS "staleProfileCount",
+      (SELECT COUNT(*)::int FROM "DiscoveryProfile" WHERE "lastRefreshError" IS NOT NULL) AS "failedProfileCount",
+      (SELECT MIN("profileUpdatedAt") FROM stale_candidates) AS "oldestPendingAt"
+  `);
+  const status = rows[0];
+  return {
+    staleProfileCount: status?.staleProfileCount ?? 0,
+    failedProfileCount: status?.failedProfileCount ?? 0,
+    oldestPendingAt: status?.oldestPendingAt?.toISOString() ?? null,
+  };
 }
 
 function entityStatus(

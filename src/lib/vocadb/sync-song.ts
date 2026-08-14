@@ -1,5 +1,7 @@
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 import { SyncStatus } from "@/generated/prisma/enums";
+import { invalidateDiscoveryCatalog } from "@/lib/discover/materializer";
 import type { NormalizedVocaDbSong } from "@/lib/vocadb/normalize";
 
 type DbClient = PrismaClient;
@@ -11,12 +13,30 @@ export type SyncSongResult = {
   lastSyncedAt: Date;
 };
 
+type SongSyncOptions = {
+  invalidateDiscoveryCatalog?: boolean;
+  syncRunId?: string;
+};
+
+const DISCOVERY_FAVORITED_TIMES_CAP = 1_000;
+const DISCOVERY_RATING_SCORE_CAP = 100;
+
+type SongDiscoveryProjection = {
+  publicVisible: boolean;
+  favoritedTimes: number;
+  ratingScore: number;
+  tagIds: string[];
+  artistIds: string[];
+};
+
 export async function syncVocaDbSong(
   db: DbClient,
   input: NormalizedVocaDbSong,
   now = new Date(),
+  options: SongSyncOptions = {},
 ): Promise<SyncSongResult> {
   return db.$transaction(async (tx) => {
+    const before = await readDiscoveryProjection(tx, input.vocadbId);
     const song = await tx.song.upsert({
       where: { vocadbId: input.vocadbId },
       create: {
@@ -38,6 +58,10 @@ export async function syncVocaDbSong(
     await syncCredits(tx, song.id, input, now);
     await syncTags(tx, song.id, input, now);
     await syncPvs(tx, song.id, input, now);
+    const after = await readDiscoveryProjection(tx, input.vocadbId);
+    if (discoveryProjectionChanged(before, after)) {
+      await recordCatalogChange(tx, options);
+    }
 
     return {
       id: song.id,
@@ -55,13 +79,24 @@ export async function markSongSyncFailure(
   vocadbId: number,
   status: typeof SyncStatus.FAILED | typeof SyncStatus.SOURCE_MISSING,
   message: string,
-): Promise<void> {
-  await db.song.updateMany({
-    where: { vocadbId },
-    data: {
-      syncStatus: status,
-      lastSyncError: message.slice(0, 500),
-    },
+  options: SongSyncOptions = {},
+): Promise<boolean> {
+  return db.$transaction(async (tx) => {
+    const before = await readDiscoveryProjection(tx, vocadbId);
+    const updated = await tx.song.updateMany({
+      where: { vocadbId },
+      data: {
+        syncStatus: status,
+        lastSyncError: message.slice(0, 500),
+      },
+    });
+    if (updated.count > 0) {
+      const after = await readDiscoveryProjection(tx, vocadbId);
+      if (discoveryProjectionChanged(before, after)) {
+        await recordCatalogChange(tx, options);
+      }
+    }
+    return updated.count > 0;
   });
 }
 
@@ -69,15 +104,92 @@ export async function markSongSourceDeleted(
   db: DbClient,
   vocadbId: number,
   message: string,
-): Promise<void> {
-  await db.song.updateMany({
+  options: SongSyncOptions = {},
+): Promise<boolean> {
+  return db.$transaction(async (tx) => {
+    const before = await readDiscoveryProjection(tx, vocadbId);
+    const updated = await tx.song.updateMany({
+      where: { vocadbId },
+      data: {
+        sourceDeleted: true,
+        syncStatus: SyncStatus.SOURCE_DELETED,
+        lastSyncError: message.slice(0, 500),
+      },
+    });
+    if (updated.count > 0) {
+      const after = await readDiscoveryProjection(tx, vocadbId);
+      if (discoveryProjectionChanged(before, after)) {
+        await recordCatalogChange(tx, options);
+      }
+    }
+    return updated.count > 0;
+  });
+}
+
+async function readDiscoveryProjection(
+  tx: Prisma.TransactionClient,
+  vocadbId: number,
+): Promise<SongDiscoveryProjection | null> {
+  const song = await tx.song.findUnique({
     where: { vocadbId },
-    data: {
+    select: {
       sourceDeleted: true,
-      syncStatus: SyncStatus.SOURCE_DELETED,
-      lastSyncError: message.slice(0, 500),
+      lastSyncedAt: true,
+      syncStatus: true,
+      favoritedTimes: true,
+      ratingScore: true,
+      tags: { select: { tagId: true } },
+      artistCredits: { select: { artistId: true } },
     },
   });
+  if (!song) return null;
+
+  return {
+    publicVisible:
+      !song.sourceDeleted &&
+      song.lastSyncedAt !== null &&
+      (song.syncStatus === SyncStatus.SYNCED || song.syncStatus === SyncStatus.FAILED),
+    favoritedTimes: Math.min(song.favoritedTimes, DISCOVERY_FAVORITED_TIMES_CAP),
+    ratingScore: Math.min(song.ratingScore, DISCOVERY_RATING_SCORE_CAP),
+    tagIds: [...new Set(song.tags.map((tag) => tag.tagId))].sort(),
+    artistIds: [...new Set(
+      song.artistCredits
+        .map((credit) => credit.artistId)
+        .filter((artistId): artistId is string => artistId !== null),
+    )].sort(),
+  };
+}
+
+function discoveryProjectionChanged(
+  before: SongDiscoveryProjection | null,
+  after: SongDiscoveryProjection | null,
+): boolean {
+  if (before === null || after === null) return before !== after;
+  return (
+    before.publicVisible !== after.publicVisible ||
+    before.favoritedTimes !== after.favoritedTimes ||
+    before.ratingScore !== after.ratingScore ||
+    !sameIds(before.tagIds, after.tagIds) ||
+    !sameIds(before.artistIds, after.artistIds)
+  );
+}
+
+function sameIds(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
+async function recordCatalogChange(
+  tx: Prisma.TransactionClient,
+  options: SongSyncOptions,
+): Promise<void> {
+  if (options.syncRunId) {
+    await tx.syncRun.update({
+      where: { id: options.syncRunId },
+      data: { catalogChanged: true },
+    });
+  } else if (options.invalidateDiscoveryCatalog !== false) {
+    await invalidateDiscoveryCatalog(tx);
+  }
 }
 
 function songScalars(input: NormalizedVocaDbSong, now: Date) {

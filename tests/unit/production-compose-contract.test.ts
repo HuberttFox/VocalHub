@@ -16,6 +16,7 @@ describe("production Compose contract", () => {
     expect(compose).toContain("VOCALHUB_APP_IMAGE:?VOCALHUB_APP_IMAGE is required");
     expect(compose).toContain("VOCALHUB_MIGRATE_IMAGE:?VOCALHUB_MIGRATE_IMAGE is required");
     expect(compose).toContain("OPERATIONAL_STATUS_TOKEN:?OPERATIONAL_STATUS_TOKEN is required");
+    expect(compose).toContain("DISCOVERY_SNAPSHOT_READS_ENABLED:-false");
     expect(compose).not.toContain("build:");
     expect(compose).not.toMatch(/^  (worker|session-cleanup|playlist-report-cleanup|playlist-moderation):/m);
   });

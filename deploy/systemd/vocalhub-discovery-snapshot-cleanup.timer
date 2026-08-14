@@ -1,0 +1,10 @@
+[Unit]
+Description=Prune expired VocalHub discovery snapshots
+
+[Timer]
+OnCalendar=*:11/15
+Persistent=false
+Unit=vocalhub-maintenance@discovery-snapshot-cleanup.service
+
+[Install]
+WantedBy=timers.target

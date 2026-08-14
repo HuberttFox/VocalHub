@@ -3,6 +3,7 @@ import { VOCADB_SONG_SYNC_STATE_ID } from "@/lib/catalog/sync-state";
 import {
   SyncEntity,
   SyncRunMode,
+  SyncRunStatus,
   SyncStatus,
 } from "@/generated/prisma/enums";
 import {
@@ -14,6 +15,7 @@ import {
   createIdsRun,
   type DurableDiscovery,
   type DurableItem,
+  type DurableRunResult,
   type DurableRunRecord,
   failItem,
   finishItem,
@@ -26,6 +28,11 @@ import {
   throwIfVocaDbCancelled,
   VocaDbCancellationError,
 } from "@/lib/vocadb/errors";
+import {
+  invalidateDiscoveryCatalog,
+  materializeDiscoverySnapshots,
+} from "@/lib/discover/materializer";
+import { getDiscoveryMaterializerBatchTiming } from "@/lib/discover/materializer-timing";
 import { normalizeVocaDbSong } from "@/lib/vocadb/normalize";
 import {
   markSongSourceDeleted,
@@ -38,6 +45,7 @@ export const DEFAULT_SYNC_CONCURRENCY = 2;
 export const DEFAULT_ACTIVITY_OVERLAP_MS = 15 * 60 * 1_000;
 export const DEFAULT_SETTLEMENT_LAG_MS = 2 * 60 * 1_000;
 const MIN_ACTIVITY_SLICE_MS = 1;
+const DISCOVERY_MATERIALIZER_LIMIT = 100;
 
 type Logger = Pick<Console, "log" | "error">;
 
@@ -68,9 +76,10 @@ export type SyncRunnerOptions = {
   settlementLagMs?: number;
   heartbeatIntervalMs?: number;
   signal?: AbortSignal;
+  materializeDiscovery?: boolean;
 };
 
-export type SyncRunResult = Awaited<ReturnType<typeof runVocaDbSongSync>>;
+export type SyncRunResult = DurableRunResult;
 
 export class ActivityIntervalSaturatedError extends Error {
   readonly code = "ACTIVITY_INTERVAL_SATURATED";
@@ -84,7 +93,7 @@ export class ActivityIntervalSaturatedError extends Error {
 export async function runVocaDbSongSync(
   request: SyncRunRequest,
   options: SyncRunnerOptions,
-) {
+): Promise<SyncRunResult> {
   const now = options.now ?? (() => new Date());
   const logger = options.logger ?? console;
   const concurrency = Math.max(1, options.concurrency ?? DEFAULT_SYNC_CONCURRENCY);
@@ -97,21 +106,40 @@ export async function runVocaDbSongSync(
     options.settlementLagMs ?? DEFAULT_SETTLEMENT_LAG_MS,
   );
 
-  return runDurableSync({
-    db: options.db,
-    entity: SyncEntity.SONG,
-    requestMode: request.mode,
-    autoTarget: request.mode === "AUTO" ? request.target : undefined,
-    concurrency,
-    now,
-    logger,
-    heartbeatIntervalMs: options.heartbeatIntervalMs,
-    signal: options.signal,
-    createRun: (mode) => createSongRun(mode, request, options.db, now, overlapMs, settlementLagMs),
-    discover: (run) => discoverSongRun(run, options.db, options.client, options.signal),
-    processItem: (run, item) => processSongItem(run, item, options, now, logger),
-    advanceState: advanceSongState,
-  });
+  const result = await runDurableSync({
+      db: options.db,
+      entity: SyncEntity.SONG,
+      requestMode: request.mode,
+      autoTarget: request.mode === "AUTO" ? request.target : undefined,
+      concurrency,
+      now,
+      logger,
+      heartbeatIntervalMs: options.heartbeatIntervalMs,
+      signal: options.signal,
+      createRun: (mode) => createSongRun(mode, request, options.db, now, overlapMs, settlementLagMs),
+      discover: (run) => discoverSongRun(run, options.db, options.client, options.signal),
+      processItem: (run, item) =>
+        processSongItem(run, item, options, now, logger),
+      advanceState: advanceSongState,
+      finalizeRun: finalizeSongRun,
+      interruptRun: interruptSongRun,
+    });
+  if (options.materializeDiscovery === false || !result.catalogChanged || result.status === SyncRunStatus.FAILED) {
+    return result;
+  }
+
+  try {
+    await materializeDiscoverySnapshots(DISCOVERY_MATERIALIZER_LIMIT, options.db, {
+      batchTiming: getDiscoveryMaterializerBatchTiming(),
+    });
+  } catch (error) {
+    logger.error(
+      `Discovery materialization failed after song sync: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  return result;
 }
 
 async function createSongRun(
@@ -255,6 +283,7 @@ async function processSongItem(
       options.db,
       normalizeVocaDbSong(source),
       now(),
+      { syncRunId: run.id },
     );
     await finishItem(
       options.db,
@@ -279,6 +308,7 @@ async function processSongItem(
         options.db,
         item.vocadbId,
         "Absent from complete VocaDB inventory and detail returned 404",
+        { syncRunId: run.id },
       );
       await finishItem(options.db, item.id, SyncStatus.SOURCE_DELETED, now());
       logger.log(`VocaDB ${item.vocadbId}: SOURCE_DELETED`);
@@ -296,6 +326,7 @@ async function processSongItem(
         item.vocadbId,
         SyncStatus.SOURCE_MISSING,
         message,
+        { syncRunId: run.id },
       );
       await options.db.syncItem.update({
         where: { id: item.id },
@@ -315,6 +346,7 @@ async function processSongItem(
       item.vocadbId,
       details.sourceMissing ? SyncStatus.SOURCE_MISSING : SyncStatus.FAILED,
       details.message,
+      { syncRunId: run.id },
     );
     await failItem(options.db, item.id, error, now());
     logger.error(`VocaDB ${item.vocadbId}: ${details.code} ${details.message}`);
@@ -322,6 +354,33 @@ async function processSongItem(
 }
 
 type TransactionDb = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
+
+async function consumeSongRunCatalogChange(
+  tx: TransactionDb,
+  run: DurableRunRecord,
+): Promise<boolean> {
+  const consumed = await tx.syncRun.updateMany({
+    where: { id: run.id, catalogChanged: true },
+    data: { catalogChanged: false },
+  });
+  if (consumed.count === 0) return false;
+  await invalidateDiscoveryCatalog(tx);
+  return true;
+}
+
+async function finalizeSongRun(
+  tx: TransactionDb,
+  run: DurableRunRecord,
+): Promise<boolean> {
+  return consumeSongRunCatalogChange(tx, run);
+}
+
+async function interruptSongRun(
+  tx: TransactionDb,
+  run: DurableRunRecord,
+): Promise<void> {
+  await consumeSongRunCatalogChange(tx, run);
+}
 
 async function advanceSongState(
   tx: TransactionDb,

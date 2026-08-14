@@ -90,3 +90,12 @@ export const PlaylistCollaboratorRole = {
 } as const
 
 export type PlaylistCollaboratorRole = (typeof PlaylistCollaboratorRole)[keyof typeof PlaylistCollaboratorRole]
+
+
+export const DiscoverySnapshotStatus = {
+  BUILDING: 'BUILDING',
+  READY: 'READY',
+  FAILED: 'FAILED'
+} as const
+
+export type DiscoverySnapshotStatus = (typeof DiscoverySnapshotStatus)[keyof typeof DiscoverySnapshotStatus]

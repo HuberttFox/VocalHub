@@ -398,6 +398,7 @@ export type SongWhereInput = {
   pvs?: Prisma.SongPVListRelationFilter
   favorites?: Prisma.FavoriteListRelationFilter
   playlistSongs?: Prisma.PlaylistSongListRelationFilter
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemListRelationFilter
 }
 
 export type SongOrderByWithRelationInput = {
@@ -432,6 +433,7 @@ export type SongOrderByWithRelationInput = {
   pvs?: Prisma.SongPVOrderByRelationAggregateInput
   favorites?: Prisma.FavoriteOrderByRelationAggregateInput
   playlistSongs?: Prisma.PlaylistSongOrderByRelationAggregateInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemOrderByRelationAggregateInput
 }
 
 export type SongWhereUniqueInput = Prisma.AtLeast<{
@@ -469,6 +471,7 @@ export type SongWhereUniqueInput = Prisma.AtLeast<{
   pvs?: Prisma.SongPVListRelationFilter
   favorites?: Prisma.FavoriteListRelationFilter
   playlistSongs?: Prisma.PlaylistSongListRelationFilter
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemListRelationFilter
 }, "id" | "vocadbId">
 
 export type SongOrderByWithAggregationInput = {
@@ -567,6 +570,7 @@ export type SongCreateInput = {
   pvs?: Prisma.SongPVCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemCreateNestedManyWithoutSongInput
 }
 
 export type SongUncheckedCreateInput = {
@@ -601,6 +605,7 @@ export type SongUncheckedCreateInput = {
   pvs?: Prisma.SongPVUncheckedCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedCreateNestedManyWithoutSongInput
 }
 
 export type SongUpdateInput = {
@@ -635,6 +640,7 @@ export type SongUpdateInput = {
   pvs?: Prisma.SongPVUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUpdateManyWithoutSongNestedInput
 }
 
 export type SongUncheckedUpdateInput = {
@@ -669,6 +675,7 @@ export type SongUncheckedUpdateInput = {
   pvs?: Prisma.SongPVUncheckedUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedUpdateManyWithoutSongNestedInput
 }
 
 export type SongCreateManyInput = {
@@ -1001,6 +1008,20 @@ export type SongUpdateOneRequiredWithoutPlaylistSongsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SongUpdateToOneWithWhereWithoutPlaylistSongsInput, Prisma.SongUpdateWithoutPlaylistSongsInput>, Prisma.SongUncheckedUpdateWithoutPlaylistSongsInput>
 }
 
+export type SongCreateNestedOneWithoutDiscoverySnapshotItemsInput = {
+  create?: Prisma.XOR<Prisma.SongCreateWithoutDiscoverySnapshotItemsInput, Prisma.SongUncheckedCreateWithoutDiscoverySnapshotItemsInput>
+  connectOrCreate?: Prisma.SongCreateOrConnectWithoutDiscoverySnapshotItemsInput
+  connect?: Prisma.SongWhereUniqueInput
+}
+
+export type SongUpdateOneRequiredWithoutDiscoverySnapshotItemsNestedInput = {
+  create?: Prisma.XOR<Prisma.SongCreateWithoutDiscoverySnapshotItemsInput, Prisma.SongUncheckedCreateWithoutDiscoverySnapshotItemsInput>
+  connectOrCreate?: Prisma.SongCreateOrConnectWithoutDiscoverySnapshotItemsInput
+  upsert?: Prisma.SongUpsertWithoutDiscoverySnapshotItemsInput
+  connect?: Prisma.SongWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SongUpdateToOneWithWhereWithoutDiscoverySnapshotItemsInput, Prisma.SongUpdateWithoutDiscoverySnapshotItemsInput>, Prisma.SongUncheckedUpdateWithoutDiscoverySnapshotItemsInput>
+}
+
 export type SongCreateWithoutNamesInput = {
   id?: string
   vocadbId: number
@@ -1032,6 +1053,7 @@ export type SongCreateWithoutNamesInput = {
   pvs?: Prisma.SongPVCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemCreateNestedManyWithoutSongInput
 }
 
 export type SongUncheckedCreateWithoutNamesInput = {
@@ -1065,6 +1087,7 @@ export type SongUncheckedCreateWithoutNamesInput = {
   pvs?: Prisma.SongPVUncheckedCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedCreateNestedManyWithoutSongInput
 }
 
 export type SongCreateOrConnectWithoutNamesInput = {
@@ -1114,6 +1137,7 @@ export type SongUpdateWithoutNamesInput = {
   pvs?: Prisma.SongPVUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUpdateManyWithoutSongNestedInput
 }
 
 export type SongUncheckedUpdateWithoutNamesInput = {
@@ -1147,6 +1171,7 @@ export type SongUncheckedUpdateWithoutNamesInput = {
   pvs?: Prisma.SongPVUncheckedUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedUpdateManyWithoutSongNestedInput
 }
 
 export type SongCreateWithoutArtistCreditsInput = {
@@ -1180,6 +1205,7 @@ export type SongCreateWithoutArtistCreditsInput = {
   pvs?: Prisma.SongPVCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemCreateNestedManyWithoutSongInput
 }
 
 export type SongUncheckedCreateWithoutArtistCreditsInput = {
@@ -1213,6 +1239,7 @@ export type SongUncheckedCreateWithoutArtistCreditsInput = {
   pvs?: Prisma.SongPVUncheckedCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedCreateNestedManyWithoutSongInput
 }
 
 export type SongCreateOrConnectWithoutArtistCreditsInput = {
@@ -1262,6 +1289,7 @@ export type SongUpdateWithoutArtistCreditsInput = {
   pvs?: Prisma.SongPVUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUpdateManyWithoutSongNestedInput
 }
 
 export type SongUncheckedUpdateWithoutArtistCreditsInput = {
@@ -1295,6 +1323,7 @@ export type SongUncheckedUpdateWithoutArtistCreditsInput = {
   pvs?: Prisma.SongPVUncheckedUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedUpdateManyWithoutSongNestedInput
 }
 
 export type SongCreateWithoutTagsInput = {
@@ -1328,6 +1357,7 @@ export type SongCreateWithoutTagsInput = {
   pvs?: Prisma.SongPVCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemCreateNestedManyWithoutSongInput
 }
 
 export type SongUncheckedCreateWithoutTagsInput = {
@@ -1361,6 +1391,7 @@ export type SongUncheckedCreateWithoutTagsInput = {
   pvs?: Prisma.SongPVUncheckedCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedCreateNestedManyWithoutSongInput
 }
 
 export type SongCreateOrConnectWithoutTagsInput = {
@@ -1410,6 +1441,7 @@ export type SongUpdateWithoutTagsInput = {
   pvs?: Prisma.SongPVUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUpdateManyWithoutSongNestedInput
 }
 
 export type SongUncheckedUpdateWithoutTagsInput = {
@@ -1443,6 +1475,7 @@ export type SongUncheckedUpdateWithoutTagsInput = {
   pvs?: Prisma.SongPVUncheckedUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedUpdateManyWithoutSongNestedInput
 }
 
 export type SongCreateWithoutPvsInput = {
@@ -1476,6 +1509,7 @@ export type SongCreateWithoutPvsInput = {
   tags?: Prisma.SongTagCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemCreateNestedManyWithoutSongInput
 }
 
 export type SongUncheckedCreateWithoutPvsInput = {
@@ -1509,6 +1543,7 @@ export type SongUncheckedCreateWithoutPvsInput = {
   tags?: Prisma.SongTagUncheckedCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedCreateNestedManyWithoutSongInput
 }
 
 export type SongCreateOrConnectWithoutPvsInput = {
@@ -1558,6 +1593,7 @@ export type SongUpdateWithoutPvsInput = {
   tags?: Prisma.SongTagUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUpdateManyWithoutSongNestedInput
 }
 
 export type SongUncheckedUpdateWithoutPvsInput = {
@@ -1591,6 +1627,7 @@ export type SongUncheckedUpdateWithoutPvsInput = {
   tags?: Prisma.SongTagUncheckedUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedUpdateManyWithoutSongNestedInput
 }
 
 export type SongCreateWithoutFavoritesInput = {
@@ -1624,6 +1661,7 @@ export type SongCreateWithoutFavoritesInput = {
   tags?: Prisma.SongTagCreateNestedManyWithoutSongInput
   pvs?: Prisma.SongPVCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemCreateNestedManyWithoutSongInput
 }
 
 export type SongUncheckedCreateWithoutFavoritesInput = {
@@ -1657,6 +1695,7 @@ export type SongUncheckedCreateWithoutFavoritesInput = {
   tags?: Prisma.SongTagUncheckedCreateNestedManyWithoutSongInput
   pvs?: Prisma.SongPVUncheckedCreateNestedManyWithoutSongInput
   playlistSongs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedCreateNestedManyWithoutSongInput
 }
 
 export type SongCreateOrConnectWithoutFavoritesInput = {
@@ -1706,6 +1745,7 @@ export type SongUpdateWithoutFavoritesInput = {
   tags?: Prisma.SongTagUpdateManyWithoutSongNestedInput
   pvs?: Prisma.SongPVUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUpdateManyWithoutSongNestedInput
 }
 
 export type SongUncheckedUpdateWithoutFavoritesInput = {
@@ -1739,6 +1779,7 @@ export type SongUncheckedUpdateWithoutFavoritesInput = {
   tags?: Prisma.SongTagUncheckedUpdateManyWithoutSongNestedInput
   pvs?: Prisma.SongPVUncheckedUpdateManyWithoutSongNestedInput
   playlistSongs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedUpdateManyWithoutSongNestedInput
 }
 
 export type SongCreateWithoutPlaylistSongsInput = {
@@ -1772,6 +1813,7 @@ export type SongCreateWithoutPlaylistSongsInput = {
   tags?: Prisma.SongTagCreateNestedManyWithoutSongInput
   pvs?: Prisma.SongPVCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemCreateNestedManyWithoutSongInput
 }
 
 export type SongUncheckedCreateWithoutPlaylistSongsInput = {
@@ -1805,6 +1847,7 @@ export type SongUncheckedCreateWithoutPlaylistSongsInput = {
   tags?: Prisma.SongTagUncheckedCreateNestedManyWithoutSongInput
   pvs?: Prisma.SongPVUncheckedCreateNestedManyWithoutSongInput
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutSongInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedCreateNestedManyWithoutSongInput
 }
 
 export type SongCreateOrConnectWithoutPlaylistSongsInput = {
@@ -1854,6 +1897,7 @@ export type SongUpdateWithoutPlaylistSongsInput = {
   tags?: Prisma.SongTagUpdateManyWithoutSongNestedInput
   pvs?: Prisma.SongPVUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUpdateManyWithoutSongNestedInput
 }
 
 export type SongUncheckedUpdateWithoutPlaylistSongsInput = {
@@ -1887,6 +1931,159 @@ export type SongUncheckedUpdateWithoutPlaylistSongsInput = {
   tags?: Prisma.SongTagUncheckedUpdateManyWithoutSongNestedInput
   pvs?: Prisma.SongPVUncheckedUpdateManyWithoutSongNestedInput
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutSongNestedInput
+  discoverySnapshotItems?: Prisma.DiscoverySnapshotItemUncheckedUpdateManyWithoutSongNestedInput
+}
+
+export type SongCreateWithoutDiscoverySnapshotItemsInput = {
+  id?: string
+  vocadbId: number
+  name: string
+  defaultName: string
+  defaultNameLanguage: string
+  artistString: string
+  songType: string
+  sourceStatus: string
+  sourceDeleted?: boolean
+  sourceCreatedAt: Date | string
+  publishDate?: Date | string | null
+  durationSeconds: number
+  favoritedTimes: number
+  ratingScore: number
+  originalVersionId?: number | null
+  cultureCodes?: Prisma.SongCreatecultureCodesInput | string[]
+  coverUrlOriginal?: string | null
+  coverUrlThumb?: string | null
+  sourceVersion: number
+  sourceUpdatedAt?: Date | string | null
+  lastSyncedAt?: Date | string | null
+  syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  names?: Prisma.SongNameCreateNestedManyWithoutSongInput
+  artistCredits?: Prisma.SongArtistCreditCreateNestedManyWithoutSongInput
+  tags?: Prisma.SongTagCreateNestedManyWithoutSongInput
+  pvs?: Prisma.SongPVCreateNestedManyWithoutSongInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutSongInput
+  playlistSongs?: Prisma.PlaylistSongCreateNestedManyWithoutSongInput
+}
+
+export type SongUncheckedCreateWithoutDiscoverySnapshotItemsInput = {
+  id?: string
+  vocadbId: number
+  name: string
+  defaultName: string
+  defaultNameLanguage: string
+  artistString: string
+  songType: string
+  sourceStatus: string
+  sourceDeleted?: boolean
+  sourceCreatedAt: Date | string
+  publishDate?: Date | string | null
+  durationSeconds: number
+  favoritedTimes: number
+  ratingScore: number
+  originalVersionId?: number | null
+  cultureCodes?: Prisma.SongCreatecultureCodesInput | string[]
+  coverUrlOriginal?: string | null
+  coverUrlThumb?: string | null
+  sourceVersion: number
+  sourceUpdatedAt?: Date | string | null
+  lastSyncedAt?: Date | string | null
+  syncStatus?: $Enums.SyncStatus
+  lastSyncError?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  names?: Prisma.SongNameUncheckedCreateNestedManyWithoutSongInput
+  artistCredits?: Prisma.SongArtistCreditUncheckedCreateNestedManyWithoutSongInput
+  tags?: Prisma.SongTagUncheckedCreateNestedManyWithoutSongInput
+  pvs?: Prisma.SongPVUncheckedCreateNestedManyWithoutSongInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutSongInput
+  playlistSongs?: Prisma.PlaylistSongUncheckedCreateNestedManyWithoutSongInput
+}
+
+export type SongCreateOrConnectWithoutDiscoverySnapshotItemsInput = {
+  where: Prisma.SongWhereUniqueInput
+  create: Prisma.XOR<Prisma.SongCreateWithoutDiscoverySnapshotItemsInput, Prisma.SongUncheckedCreateWithoutDiscoverySnapshotItemsInput>
+}
+
+export type SongUpsertWithoutDiscoverySnapshotItemsInput = {
+  update: Prisma.XOR<Prisma.SongUpdateWithoutDiscoverySnapshotItemsInput, Prisma.SongUncheckedUpdateWithoutDiscoverySnapshotItemsInput>
+  create: Prisma.XOR<Prisma.SongCreateWithoutDiscoverySnapshotItemsInput, Prisma.SongUncheckedCreateWithoutDiscoverySnapshotItemsInput>
+  where?: Prisma.SongWhereInput
+}
+
+export type SongUpdateToOneWithWhereWithoutDiscoverySnapshotItemsInput = {
+  where?: Prisma.SongWhereInput
+  data: Prisma.XOR<Prisma.SongUpdateWithoutDiscoverySnapshotItemsInput, Prisma.SongUncheckedUpdateWithoutDiscoverySnapshotItemsInput>
+}
+
+export type SongUpdateWithoutDiscoverySnapshotItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  artistString?: Prisma.StringFieldUpdateOperationsInput | string
+  songType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  publishDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSeconds?: Prisma.IntFieldUpdateOperationsInput | number
+  favoritedTimes?: Prisma.IntFieldUpdateOperationsInput | number
+  ratingScore?: Prisma.IntFieldUpdateOperationsInput | number
+  originalVersionId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  cultureCodes?: Prisma.SongUpdatecultureCodesInput | string[]
+  coverUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  names?: Prisma.SongNameUpdateManyWithoutSongNestedInput
+  artistCredits?: Prisma.SongArtistCreditUpdateManyWithoutSongNestedInput
+  tags?: Prisma.SongTagUpdateManyWithoutSongNestedInput
+  pvs?: Prisma.SongPVUpdateManyWithoutSongNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutSongNestedInput
+  playlistSongs?: Prisma.PlaylistSongUpdateManyWithoutSongNestedInput
+}
+
+export type SongUncheckedUpdateWithoutDiscoverySnapshotItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  vocadbId?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultName?: Prisma.StringFieldUpdateOperationsInput | string
+  defaultNameLanguage?: Prisma.StringFieldUpdateOperationsInput | string
+  artistString?: Prisma.StringFieldUpdateOperationsInput | string
+  songType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceDeleted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceCreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  publishDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSeconds?: Prisma.IntFieldUpdateOperationsInput | number
+  favoritedTimes?: Prisma.IntFieldUpdateOperationsInput | number
+  ratingScore?: Prisma.IntFieldUpdateOperationsInput | number
+  originalVersionId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  cultureCodes?: Prisma.SongUpdatecultureCodesInput | string[]
+  coverUrlOriginal?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverUrlThumb?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  sourceUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncStatus?: Prisma.EnumSyncStatusFieldUpdateOperationsInput | $Enums.SyncStatus
+  lastSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  names?: Prisma.SongNameUncheckedUpdateManyWithoutSongNestedInput
+  artistCredits?: Prisma.SongArtistCreditUncheckedUpdateManyWithoutSongNestedInput
+  tags?: Prisma.SongTagUncheckedUpdateManyWithoutSongNestedInput
+  pvs?: Prisma.SongPVUncheckedUpdateManyWithoutSongNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutSongNestedInput
+  playlistSongs?: Prisma.PlaylistSongUncheckedUpdateManyWithoutSongNestedInput
 }
 
 
@@ -1901,6 +2098,7 @@ export type SongCountOutputType = {
   pvs: number
   favorites: number
   playlistSongs: number
+  discoverySnapshotItems: number
 }
 
 export type SongCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1910,6 +2108,7 @@ export type SongCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   pvs?: boolean | SongCountOutputTypeCountPvsArgs
   favorites?: boolean | SongCountOutputTypeCountFavoritesArgs
   playlistSongs?: boolean | SongCountOutputTypeCountPlaylistSongsArgs
+  discoverySnapshotItems?: boolean | SongCountOutputTypeCountDiscoverySnapshotItemsArgs
 }
 
 /**
@@ -1964,6 +2163,13 @@ export type SongCountOutputTypeCountPlaylistSongsArgs<ExtArgs extends runtime.Ty
   where?: Prisma.PlaylistSongWhereInput
 }
 
+/**
+ * SongCountOutputType without action
+ */
+export type SongCountOutputTypeCountDiscoverySnapshotItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DiscoverySnapshotItemWhereInput
+}
+
 
 export type SongSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1997,6 +2203,7 @@ export type SongSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   pvs?: boolean | Prisma.Song$pvsArgs<ExtArgs>
   favorites?: boolean | Prisma.Song$favoritesArgs<ExtArgs>
   playlistSongs?: boolean | Prisma.Song$playlistSongsArgs<ExtArgs>
+  discoverySnapshotItems?: boolean | Prisma.Song$discoverySnapshotItemsArgs<ExtArgs>
   _count?: boolean | Prisma.SongCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["song"]>
 
@@ -2092,6 +2299,7 @@ export type SongInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   pvs?: boolean | Prisma.Song$pvsArgs<ExtArgs>
   favorites?: boolean | Prisma.Song$favoritesArgs<ExtArgs>
   playlistSongs?: boolean | Prisma.Song$playlistSongsArgs<ExtArgs>
+  discoverySnapshotItems?: boolean | Prisma.Song$discoverySnapshotItemsArgs<ExtArgs>
   _count?: boolean | Prisma.SongCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type SongIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -2106,6 +2314,7 @@ export type $SongPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     pvs: Prisma.$SongPVPayload<ExtArgs>[]
     favorites: Prisma.$FavoritePayload<ExtArgs>[]
     playlistSongs: Prisma.$PlaylistSongPayload<ExtArgs>[]
+    discoverySnapshotItems: Prisma.$DiscoverySnapshotItemPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2533,6 +2742,7 @@ export interface Prisma__SongClient<T, Null = never, ExtArgs extends runtime.Typ
   pvs<T extends Prisma.Song$pvsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Song$pvsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SongPVPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   favorites<T extends Prisma.Song$favoritesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Song$favoritesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FavoritePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   playlistSongs<T extends Prisma.Song$playlistSongsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Song$playlistSongsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaylistSongPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  discoverySnapshotItems<T extends Prisma.Song$discoverySnapshotItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Song$discoverySnapshotItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DiscoverySnapshotItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3121,6 +3331,30 @@ export type Song$playlistSongsArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.PlaylistSongScalarFieldEnum | Prisma.PlaylistSongScalarFieldEnum[]
+}
+
+/**
+ * Song.discoverySnapshotItems
+ */
+export type Song$discoverySnapshotItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DiscoverySnapshotItem
+   */
+  select?: Prisma.DiscoverySnapshotItemSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DiscoverySnapshotItem
+   */
+  omit?: Prisma.DiscoverySnapshotItemOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DiscoverySnapshotItemInclude<ExtArgs> | null
+  where?: Prisma.DiscoverySnapshotItemWhereInput
+  orderBy?: Prisma.DiscoverySnapshotItemOrderByWithRelationInput | Prisma.DiscoverySnapshotItemOrderByWithRelationInput[]
+  cursor?: Prisma.DiscoverySnapshotItemWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DiscoverySnapshotItemScalarFieldEnum | Prisma.DiscoverySnapshotItemScalarFieldEnum[]
 }
 
 /**

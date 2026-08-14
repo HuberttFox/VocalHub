@@ -2,6 +2,8 @@ import "dotenv/config";
 import pg from "pg";
 import { SyncRunMode } from "../src/generated/prisma/enums";
 import { getDb } from "../src/lib/db";
+import { materializeDiscoverySnapshots } from "../src/lib/discover/materializer";
+import { getDiscoveryMaterializerBatchTiming } from "../src/lib/discover/materializer-timing";
 import { VocaDbClient } from "../src/lib/vocadb/client";
 import { runVocaDbArtistSync } from "../src/lib/vocadb/artist-sync-runner";
 import {
@@ -33,6 +35,9 @@ async function main() {
   process.once("SIGINT", onSignal);
 
   const lockClient = new pg.Client({ connectionString: config.connectionString });
+  const db = getDb();
+  let lockHeld = false;
+  let materializeDiscovery = false;
   try {
     await lockClient.connect();
     const lock = await lockClient.query<{ locked: boolean }>(
@@ -42,38 +47,54 @@ async function main() {
     if (!lock.rows[0]?.locked) {
       throw new Error("Another VocaDB sync worker holds the advisory lock");
     }
+    lockHeld = true;
     if (shutdown.signal.aborted) throw new VocaDbCancellationError();
 
-    const db = getDb();
-    try {
-      const client = new VocaDbClient({
-        baseUrl: config.baseUrl,
-        userAgent: config.userAgent,
-        timeoutMs: config.timeoutMs,
-      });
-      const common = {
-        db,
-        client,
-        concurrency: config.concurrency,
-        signal: shutdown.signal,
-      };
-      const result = "entity" in parsedRequest
-        ? await runVocaDbArtistSync(toArtistRunnerRequest(parsedRequest), {
-            ...common,
-            refreshIntervalMs: config.artistRefreshIntervalMs,
-          })
-        : await runVocaDbSongSync(toRunnerRequest(parsedRequest), {
-            ...common,
-            activityOverlapMs: config.activityOverlapMs,
-            settlementLagMs: config.settlementLagMs,
-          });
+    const client = new VocaDbClient({
+      baseUrl: config.baseUrl,
+      userAgent: config.userAgent,
+      timeoutMs: config.timeoutMs,
+    });
+    const common = {
+      db,
+      client,
+      concurrency: config.concurrency,
+      signal: shutdown.signal,
+    };
+    const result = "entity" in parsedRequest
+      ? await runVocaDbArtistSync(toArtistRunnerRequest(parsedRequest), {
+          ...common,
+          refreshIntervalMs: config.artistRefreshIntervalMs,
+        })
+      : await runVocaDbSongSync(toRunnerRequest(parsedRequest), {
+          ...common,
+          activityOverlapMs: config.activityOverlapMs,
+          settlementLagMs: config.settlementLagMs,
+          materializeDiscovery: false,
+        });
 
-      console.log(
-        `Sync run ${result.runId}: ${result.status} (${result.successCount} succeeded, ${result.failureCount} failed)`,
-      );
-      if (result.failureCount > 0) process.exitCode = 1;
-    } finally {
-      await db.$disconnect();
+    console.log(
+      `Sync run ${result.runId}: ${result.status} (${result.successCount} succeeded, ${result.failureCount} failed)`,
+    );
+    if (result.failureCount > 0) process.exitCode = 1;
+    materializeDiscovery = !('entity' in parsedRequest)
+      && result.catalogChanged === true
+      && result.status !== "FAILED";
+
+    await lockClient.query("SELECT pg_advisory_unlock($1)", [ADVISORY_LOCK_KEY]);
+    lockHeld = false;
+    if (materializeDiscovery) {
+      try {
+        await materializeDiscoverySnapshots(100, db, {
+          batchTiming: getDiscoveryMaterializerBatchTiming(),
+        });
+      } catch (error) {
+        console.error(
+          `Discovery materialization failed after song sync: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
     }
   } catch (error) {
     if (isVocaDbCancellation(error, shutdown.signal)) {
@@ -82,6 +103,10 @@ async function main() {
     }
     throw error;
   } finally {
+    await db.$disconnect();
+    if (lockHeld) {
+      await lockClient.query("SELECT pg_advisory_unlock($1)", [ADVISORY_LOCK_KEY]).catch(() => undefined);
+    }
     await lockClient.end().catch(() => undefined);
     process.removeListener("SIGTERM", onSignal);
     process.removeListener("SIGINT", onSignal);

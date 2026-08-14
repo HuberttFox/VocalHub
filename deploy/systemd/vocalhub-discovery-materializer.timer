@@ -1,0 +1,10 @@
+[Unit]
+Description=Materialize stale VocalHub discovery snapshots
+
+[Timer]
+OnCalendar=*:7/30
+Persistent=false
+Unit=vocalhub-maintenance@discovery-materializer.service
+
+[Install]
+WantedBy=timers.target

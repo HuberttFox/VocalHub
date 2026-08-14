@@ -13,6 +13,7 @@ type StatusEvidence = {
   >;
   hasMultipleRunningManifests: boolean;
   resumableHeartbeats: Array<Date | null>;
+  hasDiscoveryRefreshFailure?: boolean;
 };
 
 export function validateOperationsStatusStaleAfterMs(value: number): number {
@@ -56,6 +57,7 @@ export function classifyOperationsStatus(
 
   if (
     evidence.hasMultipleRunningManifests ||
+    evidence.hasDiscoveryRefreshFailure ||
     evidence.latestTerminalRunStatuses.some(
       (status) =>
         status === SyncRunStatus.FAILED || status === SyncRunStatus.PARTIAL,

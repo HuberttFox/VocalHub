@@ -8,8 +8,8 @@ import {
   type DiscoveryMode,
 } from "@/lib/discover/dto";
 import type { DiscoveryQuery } from "@/lib/discover/query";
-
-const DISCOVERY_SEED_LIMIT = 500;
+import { getSnapshotDiscovery } from "@/lib/discover/materializer";
+import { getDiscoverySeedIds } from "@/lib/discover/seeds";
 
 const DISCOVERY_TRANSACTION_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
@@ -41,7 +41,7 @@ export async function runDiscoveryTransaction(
   personalizedQuery: DiscoveryPersonalizedQuery,
 ): Promise<DiscoveryDto> {
   return database.$transaction(async (tx) => {
-    const seedIds = viewerId ? await getSeedIds(tx, viewerId) : [];
+    const seedIds = viewerId ? await getDiscoverySeedIds(tx, viewerId) : [];
     const personalizedResult = seedIds.length > 0
       ? await personalizedQuery(tx, seedIds, query)
       : null;
@@ -62,6 +62,7 @@ export async function runDiscoveryTransaction(
       }),
       mode,
       algorithmVersion: DISCOVERY_ALGORITHM_VERSION,
+      freshness: "FRESH",
       pagination: {
         page: query.page,
         pageSize: query.pageSize,
@@ -77,35 +78,48 @@ export async function getDiscovery(
   query: DiscoveryQuery,
   database: DiscoveryDb = getDb(),
 ): Promise<DiscoveryDto> {
-  return runDiscoveryTransaction(database, viewerId, query, getPersonalizedIds);
+  return database.$transaction(async (tx) => {
+    const snapshotReadsEnabled = process.env.DISCOVERY_SNAPSHOT_READS_ENABLED === "true";
+    const snapshot = snapshotReadsEnabled && viewerId
+      ? await getSnapshotDiscovery(tx, viewerId, query)
+      : null;
+    const seedIds = viewerId && (!snapshotReadsEnabled || !snapshot)
+      ? await getDiscoverySeedIds(tx, viewerId)
+      : [];
+    const personalizedResult = snapshotReadsEnabled
+      ? snapshot
+      : seedIds.length > 0
+        ? await getPersonalizedIds(tx, seedIds, query)
+        : null;
+    const personalized = personalizedResult !== null && personalizedResult.totalCount > 0;
+    const ranked = personalized && personalizedResult
+      ? personalizedResult
+      : await getPopularIds(tx, query);
+    const songs = await tx.song.findMany({
+      where: { id: { in: ranked.rows.map((row) => row.id) }, ...PUBLIC_SONG_WHERE },
+      select: SONG_LIST_SELECT,
+    });
+    const byId = new Map(songs.map((song) => [song.id, mapSongListItem(song)]));
+    return {
+      items: ranked.rows.flatMap((row) => {
+        const song = byId.get(row.id);
+        return song ? [song] : [];
+      }),
+      mode: personalized ? "PERSONALIZED" : "POPULAR",
+      algorithmVersion: DISCOVERY_ALGORITHM_VERSION,
+      freshness: snapshotReadsEnabled
+        ? snapshot?.freshness ?? (seedIds.length > 0 ? "PENDING" : "FRESH")
+        : "FRESH",
+      pagination: {
+        page: query.page,
+        pageSize: query.pageSize,
+        totalItems: ranked.totalCount,
+        totalPages: Math.ceil(ranked.totalCount / query.pageSize),
+      },
+    };
+  }, DISCOVERY_TRANSACTION_OPTIONS);
 }
 
-async function getSeedIds(tx: Prisma.TransactionClient, viewerId: string): Promise<string[]> {
-  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-    SELECT "songId" AS id FROM "Favorite" f
-    JOIN "Song" s ON s.id = f."songId"
-    WHERE f."userId" = ${viewerId}::uuid
-      AND s."sourceDeleted" = false
-      AND s."lastSyncedAt" IS NOT NULL
-      AND s."syncStatus" IN ('SYNCED', 'FAILED')
-    UNION
-    SELECT ps."songId" AS id
-    FROM "PlaylistSong" ps
-    JOIN "Playlist" p ON p.id = ps."playlistId"
-    JOIN "Song" s ON s.id = ps."songId"
-    WHERE (p."userId" = ${viewerId}::uuid
-       OR EXISTS (
-         SELECT 1 FROM "PlaylistCollaborator" pc
-         WHERE pc."playlistId" = p.id AND pc."userId" = ${viewerId}::uuid
-       ))
-      AND s."sourceDeleted" = false
-      AND s."lastSyncedAt" IS NOT NULL
-      AND s."syncStatus" IN ('SYNCED', 'FAILED')
-    ORDER BY id ASC
-    LIMIT ${DISCOVERY_SEED_LIMIT}
-  `);
-  return rows.map((row) => row.id);
-}
 
 async function getPersonalizedIds(
   tx: Prisma.TransactionClient,

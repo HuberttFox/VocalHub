@@ -155,7 +155,7 @@ docker compose -f compose.production.yaml --profile worker run --rm --no-deps wo
 docker compose -f compose.production.yaml --profile worker run --rm --no-deps worker artists auto refresh
 ```
 
-systemd timers 使用 `OnCalendar`：incremental 每 15 分钟且不追赶离线期间积压触发，reconcile、artist refresh、session cleanup、playlist-report cleanup 每日错峰且允许一次 catch-up。恢复 timer 时先单独检查并处理 missed jobs，再按上述时间窗分批 enable，避免多个 Persistent timer 同时追赶。unit failure 保留 nonzero 并写入 journald；operator 应监控失败与每日成功缺失。安装与暂停/恢复流程见 production runbook。
+systemd timers 使用 `OnCalendar`：incremental、discovery snapshot cleanup 每 15 分钟且不追赶离线期间积压触发，discovery materializer 每 30 分钟 offset 7 且不追赶离线期间积压触发，reconcile、artist refresh、session cleanup、playlist-report cleanup 每日错峰且允许一次 catch-up。恢复 timer 时先单独检查并处理 missed jobs，再按上述时间窗分批 enable，避免多个 Persistent timer 同时追赶。unit failure 保留 nonzero 并写入 journald；operator 应监控失败与每日成功缺失。安装与暂停/恢复流程见 production runbook。
 
 Auth.js 已在请求时立即拒绝 expired Session。为了删除长期未再访问的过期数据库 row，外部 scheduler 应每日错峰执行：
 
@@ -165,6 +165,10 @@ docker compose -f compose.production.yaml \
 ```
 
 maintenance 只接收 `DATABASE_URL`，不接收 OAuth/VocaDB secrets，也不占用 VocaDB advisory lock。它以 PostgreSQL `CURRENT_TIMESTAMP` 计算 cutoff，删除严格早于 database time `- 5 minutes` 的 Session；5 分钟仅是物理 cleanup race grace，不延长认证有效期。重复执行 idempotent，operator 应捕获 JSON summary 和 exit status，并对 nonzero 或每日成功缺失告警。
+
+Discovery snapshot cleanup 独立于 materializer，每 15 分钟错峰执行；它最多删除 100 个已完成七天以上的非 active `READY`/`FAILED` snapshot，并依赖数据库 cascade 删除其 items。它永不删除 `BUILDING`、`finishedAt` 为 null 或 `DiscoveryProfile.currentSnapshotId` 指向的 snapshot。若 JSON `deletedCount` 连续等于 limit，说明 backlog 未排空，应先检查 cascade 时间和磁盘/锁等待，再由 operator 调整容量。
+
+Discovery materializer 保持完整 V1 ranking semantics；每个 profile build 默认最多运行 300000ms，DB statement timeout 提前 10000ms，lease 留出 publication buffer。通过 jobs-only `DISCOVERY_MATERIALIZER_BUILD_TIMEOUT_MS` 调整时，必须依据 staging p95 并保持低于 30 分钟 maintenance service deadline。反复出现 JSON `failedCount > 0` 或 `attemptedCount == limit` 需告警。
 
 发布新版本时先暂停 scheduler 并等待 active worker 退出，再运行 `migrate`、部署 `app`，最后恢复 scheduler；advisory lock 不负责协调 migration。同一 entity 出现多个 `RUNNING` run 表示状态歧义，对应 worker 会拒绝自动恢复；应先检查 `SyncRun`/`SyncItem`。`PARTIAL`/`FAILED` run 已终结，需根据 item error 修复后发起新 run。`ACTIVITY_INTERVAL_SATURATED` 需重新执行完整 song seed。production app 不接收 `VOCADB_*`，且 lint 禁止请求路径导入 VocaDB 模块。
 

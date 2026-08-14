@@ -203,6 +203,8 @@ export type UserWhereInput = {
   favorites?: Prisma.FavoriteListRelationFilter
   playlists?: Prisma.PlaylistListRelationFilter
   collaborations?: Prisma.PlaylistCollaboratorListRelationFilter
+  discoveryProfile?: Prisma.XOR<Prisma.DiscoveryProfileNullableScalarRelationFilter, Prisma.DiscoveryProfileWhereInput> | null
+  discoverySnapshots?: Prisma.DiscoverySnapshotListRelationFilter
   reportsSubmitted?: Prisma.PlaylistReportListRelationFilter
 }
 
@@ -219,6 +221,8 @@ export type UserOrderByWithRelationInput = {
   favorites?: Prisma.FavoriteOrderByRelationAggregateInput
   playlists?: Prisma.PlaylistOrderByRelationAggregateInput
   collaborations?: Prisma.PlaylistCollaboratorOrderByRelationAggregateInput
+  discoveryProfile?: Prisma.DiscoveryProfileOrderByWithRelationInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotOrderByRelationAggregateInput
   reportsSubmitted?: Prisma.PlaylistReportOrderByRelationAggregateInput
 }
 
@@ -238,6 +242,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   favorites?: Prisma.FavoriteListRelationFilter
   playlists?: Prisma.PlaylistListRelationFilter
   collaborations?: Prisma.PlaylistCollaboratorListRelationFilter
+  discoveryProfile?: Prisma.XOR<Prisma.DiscoveryProfileNullableScalarRelationFilter, Prisma.DiscoveryProfileWhereInput> | null
+  discoverySnapshots?: Prisma.DiscoverySnapshotListRelationFilter
   reportsSubmitted?: Prisma.PlaylistReportListRelationFilter
 }, "id" | "email">
 
@@ -280,6 +286,8 @@ export type UserCreateInput = {
   favorites?: Prisma.FavoriteCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportCreateNestedManyWithoutReporterInput
 }
 
@@ -296,6 +304,8 @@ export type UserUncheckedCreateInput = {
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistUncheckedCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutReporterInput
 }
 
@@ -312,6 +322,8 @@ export type UserUpdateInput = {
   favorites?: Prisma.FavoriteUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUpdateManyWithoutReporterNestedInput
 }
 
@@ -328,6 +340,8 @@ export type UserUncheckedUpdateInput = {
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUncheckedUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedUpdateManyWithoutReporterNestedInput
 }
 
@@ -487,6 +501,34 @@ export type UserUpdateOneRequiredWithoutCollaborationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCollaborationsInput, Prisma.UserUpdateWithoutCollaborationsInput>, Prisma.UserUncheckedUpdateWithoutCollaborationsInput>
 }
 
+export type UserCreateNestedOneWithoutDiscoveryProfileInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutDiscoveryProfileInput, Prisma.UserUncheckedCreateWithoutDiscoveryProfileInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutDiscoveryProfileInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutDiscoveryProfileNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutDiscoveryProfileInput, Prisma.UserUncheckedCreateWithoutDiscoveryProfileInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutDiscoveryProfileInput
+  upsert?: Prisma.UserUpsertWithoutDiscoveryProfileInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutDiscoveryProfileInput, Prisma.UserUpdateWithoutDiscoveryProfileInput>, Prisma.UserUncheckedUpdateWithoutDiscoveryProfileInput>
+}
+
+export type UserCreateNestedOneWithoutDiscoverySnapshotsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutDiscoverySnapshotsInput, Prisma.UserUncheckedCreateWithoutDiscoverySnapshotsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutDiscoverySnapshotsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutDiscoverySnapshotsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutDiscoverySnapshotsInput, Prisma.UserUncheckedCreateWithoutDiscoverySnapshotsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutDiscoverySnapshotsInput
+  upsert?: Prisma.UserUpsertWithoutDiscoverySnapshotsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutDiscoverySnapshotsInput, Prisma.UserUpdateWithoutDiscoverySnapshotsInput>, Prisma.UserUncheckedUpdateWithoutDiscoverySnapshotsInput>
+}
+
 export type UserCreateWithoutAccountsInput = {
   id?: string
   name?: string | null
@@ -499,6 +541,8 @@ export type UserCreateWithoutAccountsInput = {
   favorites?: Prisma.FavoriteCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportCreateNestedManyWithoutReporterInput
 }
 
@@ -514,6 +558,8 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistUncheckedCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutReporterInput
 }
 
@@ -545,6 +591,8 @@ export type UserUpdateWithoutAccountsInput = {
   favorites?: Prisma.FavoriteUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUpdateManyWithoutReporterNestedInput
 }
 
@@ -560,6 +608,8 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUncheckedUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedUpdateManyWithoutReporterNestedInput
 }
 
@@ -575,6 +625,8 @@ export type UserCreateWithoutSessionsInput = {
   favorites?: Prisma.FavoriteCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportCreateNestedManyWithoutReporterInput
 }
 
@@ -590,6 +642,8 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistUncheckedCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutReporterInput
 }
 
@@ -621,6 +675,8 @@ export type UserUpdateWithoutSessionsInput = {
   favorites?: Prisma.FavoriteUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUpdateManyWithoutReporterNestedInput
 }
 
@@ -636,6 +692,8 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUncheckedUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedUpdateManyWithoutReporterNestedInput
 }
 
@@ -651,6 +709,8 @@ export type UserCreateWithoutFavoritesInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportCreateNestedManyWithoutReporterInput
 }
 
@@ -666,6 +726,8 @@ export type UserUncheckedCreateWithoutFavoritesInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistUncheckedCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutReporterInput
 }
 
@@ -697,6 +759,8 @@ export type UserUpdateWithoutFavoritesInput = {
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUpdateManyWithoutReporterNestedInput
 }
 
@@ -712,6 +776,8 @@ export type UserUncheckedUpdateWithoutFavoritesInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUncheckedUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedUpdateManyWithoutReporterNestedInput
 }
 
@@ -727,6 +793,8 @@ export type UserCreateWithoutPlaylistsInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   favorites?: Prisma.FavoriteCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportCreateNestedManyWithoutReporterInput
 }
 
@@ -742,6 +810,8 @@ export type UserUncheckedCreateWithoutPlaylistsInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutReporterInput
 }
 
@@ -773,6 +843,8 @@ export type UserUpdateWithoutPlaylistsInput = {
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   favorites?: Prisma.FavoriteUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUpdateManyWithoutReporterNestedInput
 }
 
@@ -788,6 +860,8 @@ export type UserUncheckedUpdateWithoutPlaylistsInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedUpdateManyWithoutReporterNestedInput
 }
 
@@ -804,6 +878,8 @@ export type UserCreateWithoutReportsSubmittedInput = {
   favorites?: Prisma.FavoriteCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutReportsSubmittedInput = {
@@ -819,6 +895,8 @@ export type UserUncheckedCreateWithoutReportsSubmittedInput = {
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistUncheckedCreateNestedManyWithoutUserInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutReportsSubmittedInput = {
@@ -850,6 +928,8 @@ export type UserUpdateWithoutReportsSubmittedInput = {
   favorites?: Prisma.FavoriteUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReportsSubmittedInput = {
@@ -865,6 +945,8 @@ export type UserUncheckedUpdateWithoutReportsSubmittedInput = {
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUncheckedUpdateManyWithoutUserNestedInput
   collaborations?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCollaborationsInput = {
@@ -879,6 +961,8 @@ export type UserCreateWithoutCollaborationsInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   favorites?: Prisma.FavoriteCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportCreateNestedManyWithoutReporterInput
 }
 
@@ -894,6 +978,8 @@ export type UserUncheckedCreateWithoutCollaborationsInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutUserInput
   playlists?: Prisma.PlaylistUncheckedCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedCreateNestedOneWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedCreateNestedManyWithoutUserInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutReporterInput
 }
 
@@ -925,6 +1011,8 @@ export type UserUpdateWithoutCollaborationsInput = {
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   favorites?: Prisma.FavoriteUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUpdateManyWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUpdateManyWithoutReporterNestedInput
 }
 
@@ -940,6 +1028,176 @@ export type UserUncheckedUpdateWithoutCollaborationsInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutUserNestedInput
   playlists?: Prisma.PlaylistUncheckedUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedUpdateOneWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedUpdateManyWithoutUserNestedInput
+  reportsSubmitted?: Prisma.PlaylistReportUncheckedUpdateManyWithoutReporterNestedInput
+}
+
+export type UserCreateWithoutDiscoveryProfileInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: Date | string | null
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutUserInput
+  playlists?: Prisma.PlaylistCreateNestedManyWithoutUserInput
+  collaborations?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotCreateNestedManyWithoutUserInput
+  reportsSubmitted?: Prisma.PlaylistReportCreateNestedManyWithoutReporterInput
+}
+
+export type UserUncheckedCreateWithoutDiscoveryProfileInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: Date | string | null
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutUserInput
+  playlists?: Prisma.PlaylistUncheckedCreateNestedManyWithoutUserInput
+  collaborations?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutUserInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedCreateNestedManyWithoutUserInput
+  reportsSubmitted?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutReporterInput
+}
+
+export type UserCreateOrConnectWithoutDiscoveryProfileInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutDiscoveryProfileInput, Prisma.UserUncheckedCreateWithoutDiscoveryProfileInput>
+}
+
+export type UserUpsertWithoutDiscoveryProfileInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutDiscoveryProfileInput, Prisma.UserUncheckedUpdateWithoutDiscoveryProfileInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutDiscoveryProfileInput, Prisma.UserUncheckedCreateWithoutDiscoveryProfileInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutDiscoveryProfileInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutDiscoveryProfileInput, Prisma.UserUncheckedUpdateWithoutDiscoveryProfileInput>
+}
+
+export type UserUpdateWithoutDiscoveryProfileInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutUserNestedInput
+  playlists?: Prisma.PlaylistUpdateManyWithoutUserNestedInput
+  collaborations?: Prisma.PlaylistCollaboratorUpdateManyWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUpdateManyWithoutUserNestedInput
+  reportsSubmitted?: Prisma.PlaylistReportUpdateManyWithoutReporterNestedInput
+}
+
+export type UserUncheckedUpdateWithoutDiscoveryProfileInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutUserNestedInput
+  playlists?: Prisma.PlaylistUncheckedUpdateManyWithoutUserNestedInput
+  collaborations?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutUserNestedInput
+  discoverySnapshots?: Prisma.DiscoverySnapshotUncheckedUpdateManyWithoutUserNestedInput
+  reportsSubmitted?: Prisma.PlaylistReportUncheckedUpdateManyWithoutReporterNestedInput
+}
+
+export type UserCreateWithoutDiscoverySnapshotsInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: Date | string | null
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutUserInput
+  playlists?: Prisma.PlaylistCreateNestedManyWithoutUserInput
+  collaborations?: Prisma.PlaylistCollaboratorCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileCreateNestedOneWithoutUserInput
+  reportsSubmitted?: Prisma.PlaylistReportCreateNestedManyWithoutReporterInput
+}
+
+export type UserUncheckedCreateWithoutDiscoverySnapshotsInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: Date | string | null
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutUserInput
+  playlists?: Prisma.PlaylistUncheckedCreateNestedManyWithoutUserInput
+  collaborations?: Prisma.PlaylistCollaboratorUncheckedCreateNestedManyWithoutUserInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedCreateNestedOneWithoutUserInput
+  reportsSubmitted?: Prisma.PlaylistReportUncheckedCreateNestedManyWithoutReporterInput
+}
+
+export type UserCreateOrConnectWithoutDiscoverySnapshotsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutDiscoverySnapshotsInput, Prisma.UserUncheckedCreateWithoutDiscoverySnapshotsInput>
+}
+
+export type UserUpsertWithoutDiscoverySnapshotsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutDiscoverySnapshotsInput, Prisma.UserUncheckedUpdateWithoutDiscoverySnapshotsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutDiscoverySnapshotsInput, Prisma.UserUncheckedCreateWithoutDiscoverySnapshotsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutDiscoverySnapshotsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutDiscoverySnapshotsInput, Prisma.UserUncheckedUpdateWithoutDiscoverySnapshotsInput>
+}
+
+export type UserUpdateWithoutDiscoverySnapshotsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutUserNestedInput
+  playlists?: Prisma.PlaylistUpdateManyWithoutUserNestedInput
+  collaborations?: Prisma.PlaylistCollaboratorUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUpdateOneWithoutUserNestedInput
+  reportsSubmitted?: Prisma.PlaylistReportUpdateManyWithoutReporterNestedInput
+}
+
+export type UserUncheckedUpdateWithoutDiscoverySnapshotsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutUserNestedInput
+  playlists?: Prisma.PlaylistUncheckedUpdateManyWithoutUserNestedInput
+  collaborations?: Prisma.PlaylistCollaboratorUncheckedUpdateManyWithoutUserNestedInput
+  discoveryProfile?: Prisma.DiscoveryProfileUncheckedUpdateOneWithoutUserNestedInput
   reportsSubmitted?: Prisma.PlaylistReportUncheckedUpdateManyWithoutReporterNestedInput
 }
 
@@ -954,6 +1212,7 @@ export type UserCountOutputType = {
   favorites: number
   playlists: number
   collaborations: number
+  discoverySnapshots: number
   reportsSubmitted: number
 }
 
@@ -963,6 +1222,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   favorites?: boolean | UserCountOutputTypeCountFavoritesArgs
   playlists?: boolean | UserCountOutputTypeCountPlaylistsArgs
   collaborations?: boolean | UserCountOutputTypeCountCollaborationsArgs
+  discoverySnapshots?: boolean | UserCountOutputTypeCountDiscoverySnapshotsArgs
   reportsSubmitted?: boolean | UserCountOutputTypeCountReportsSubmittedArgs
 }
 
@@ -1014,6 +1274,13 @@ export type UserCountOutputTypeCountCollaborationsArgs<ExtArgs extends runtime.T
 /**
  * UserCountOutputType without action
  */
+export type UserCountOutputTypeCountDiscoverySnapshotsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DiscoverySnapshotWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
 export type UserCountOutputTypeCountReportsSubmittedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PlaylistReportWhereInput
 }
@@ -1032,6 +1299,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   favorites?: boolean | Prisma.User$favoritesArgs<ExtArgs>
   playlists?: boolean | Prisma.User$playlistsArgs<ExtArgs>
   collaborations?: boolean | Prisma.User$collaborationsArgs<ExtArgs>
+  discoveryProfile?: boolean | Prisma.User$discoveryProfileArgs<ExtArgs>
+  discoverySnapshots?: boolean | Prisma.User$discoverySnapshotsArgs<ExtArgs>
   reportsSubmitted?: boolean | Prisma.User$reportsSubmittedArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
@@ -1073,6 +1342,8 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   favorites?: boolean | Prisma.User$favoritesArgs<ExtArgs>
   playlists?: boolean | Prisma.User$playlistsArgs<ExtArgs>
   collaborations?: boolean | Prisma.User$collaborationsArgs<ExtArgs>
+  discoveryProfile?: boolean | Prisma.User$discoveryProfileArgs<ExtArgs>
+  discoverySnapshots?: boolean | Prisma.User$discoverySnapshotsArgs<ExtArgs>
   reportsSubmitted?: boolean | Prisma.User$reportsSubmittedArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -1087,6 +1358,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     favorites: Prisma.$FavoritePayload<ExtArgs>[]
     playlists: Prisma.$PlaylistPayload<ExtArgs>[]
     collaborations: Prisma.$PlaylistCollaboratorPayload<ExtArgs>[]
+    discoveryProfile: Prisma.$DiscoveryProfilePayload<ExtArgs> | null
+    discoverySnapshots: Prisma.$DiscoverySnapshotPayload<ExtArgs>[]
     reportsSubmitted: Prisma.$PlaylistReportPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1496,6 +1769,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   favorites<T extends Prisma.User$favoritesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$favoritesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FavoritePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   playlists<T extends Prisma.User$playlistsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$playlistsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaylistPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   collaborations<T extends Prisma.User$collaborationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$collaborationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaylistCollaboratorPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  discoveryProfile<T extends Prisma.User$discoveryProfileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$discoveryProfileArgs<ExtArgs>>): Prisma.Prisma__DiscoveryProfileClient<runtime.Types.Result.GetResult<Prisma.$DiscoveryProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  discoverySnapshots<T extends Prisma.User$discoverySnapshotsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$discoverySnapshotsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DiscoverySnapshotPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   reportsSubmitted<T extends Prisma.User$reportsSubmittedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$reportsSubmittedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaylistReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -2043,6 +2318,49 @@ export type User$collaborationsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.PlaylistCollaboratorScalarFieldEnum | Prisma.PlaylistCollaboratorScalarFieldEnum[]
+}
+
+/**
+ * User.discoveryProfile
+ */
+export type User$discoveryProfileArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DiscoveryProfile
+   */
+  select?: Prisma.DiscoveryProfileSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DiscoveryProfile
+   */
+  omit?: Prisma.DiscoveryProfileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DiscoveryProfileInclude<ExtArgs> | null
+  where?: Prisma.DiscoveryProfileWhereInput
+}
+
+/**
+ * User.discoverySnapshots
+ */
+export type User$discoverySnapshotsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DiscoverySnapshot
+   */
+  select?: Prisma.DiscoverySnapshotSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DiscoverySnapshot
+   */
+  omit?: Prisma.DiscoverySnapshotOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DiscoverySnapshotInclude<ExtArgs> | null
+  where?: Prisma.DiscoverySnapshotWhereInput
+  orderBy?: Prisma.DiscoverySnapshotOrderByWithRelationInput | Prisma.DiscoverySnapshotOrderByWithRelationInput[]
+  cursor?: Prisma.DiscoverySnapshotWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DiscoverySnapshotScalarFieldEnum | Prisma.DiscoverySnapshotScalarFieldEnum[]
 }
 
 /**

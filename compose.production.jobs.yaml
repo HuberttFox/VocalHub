@@ -11,6 +11,8 @@ services:
       VOCADB_SETTLEMENT_LAG_MS: ${VOCADB_SETTLEMENT_LAG_MS:-120000}
       VOCADB_ARTIST_REFRESH_INTERVAL_MS: ${VOCADB_ARTIST_REFRESH_INTERVAL_MS:-604800000}
       VOCADB_SYNC_CONCURRENCY: ${VOCADB_SYNC_CONCURRENCY:-2}
+      DISCOVERY_MATERIALIZER_BUILD_TIMEOUT_MS: ${DISCOVERY_MATERIALIZER_BUILD_TIMEOUT_MS:-300000}
+      DISCOVERY_MATERIALIZER_BATCH_BUDGET_MS: ${DISCOVERY_MATERIALIZER_BATCH_BUDGET_MS:-1440000}
     restart: "no"
     stop_grace_period: 60s
 
@@ -19,6 +21,26 @@ services:
     image: ${VOCALHUB_MAINTENANCE_IMAGE:?VOCALHUB_MAINTENANCE_IMAGE is required}
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    restart: "no"
+
+  discovery-materializer:
+    profiles: ["maintenance"]
+    image: ${VOCALHUB_MAINTENANCE_IMAGE:?VOCALHUB_MAINTENANCE_IMAGE is required}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DISCOVERY_MATERIALIZER_BUILD_TIMEOUT_MS: ${DISCOVERY_MATERIALIZER_BUILD_TIMEOUT_MS:-300000}
+      DISCOVERY_MATERIALIZER_BATCH_BUDGET_MS: ${DISCOVERY_MATERIALIZER_BATCH_BUDGET_MS:-1440000}
+    entrypoint: ["node", "/app/build/maintenance/materialize-discovery.mjs"]
+    command: []
+    restart: "no"
+
+  discovery-snapshot-cleanup:
+    profiles: ["maintenance"]
+    image: ${VOCALHUB_MAINTENANCE_IMAGE:?VOCALHUB_MAINTENANCE_IMAGE is required}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    entrypoint: ["node", "/app/build/maintenance/cleanup-discovery-snapshots.mjs"]
+    command: []
     restart: "no"
 
   playlist-report-cleanup:

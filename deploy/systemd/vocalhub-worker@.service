@@ -8,6 +8,6 @@ Type=oneshot
 WorkingDirectory=/opt/vocalhub/current
 EnvironmentFile=/etc/vocalhub/vocalhub.env
 ExecStart=/usr/bin/docker compose -f /opt/vocalhub/current/compose.production.jobs.yaml --profile worker run --rm --no-deps worker auto %i
-TimeoutStartSec=2h
+TimeoutStartSec=150m
 StandardOutput=journal
 StandardError=journal
