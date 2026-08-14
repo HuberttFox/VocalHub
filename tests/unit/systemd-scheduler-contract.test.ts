@@ -47,6 +47,7 @@ describe("systemd scheduler contract", () => {
     expect(unit("vocalhub.env.example")).toContain("DISCOVERY_MATERIALIZER_BUILD_TIMEOUT_MS=300000");
     expect(unit("vocalhub.env.example")).toContain("DISCOVERY_MATERIALIZER_BATCH_BUDGET_MS=1440000");
     expect(unit("vocalhub-maintenance@.service")).toContain("TimeoutStartSec=30m");
+    expect(unit("vocalhub-worker@.service")).toContain("TimeoutStartSec=150m");
     expect(unit("vocalhub.env.example")).not.toMatch(/^AUTH_/m);
     expect(unit("vocalhub.env.example")).not.toMatch(/^OPERATIONAL_STATUS_TOKEN=/m);
     expect(unit("vocalhub.env.example")).not.toMatch(/^VOCALHUB_(APP|MIGRATE)_IMAGE=/m);
