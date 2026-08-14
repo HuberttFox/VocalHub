@@ -46,6 +46,7 @@ export type DurableRunResult = {
   status: (typeof SyncRunStatus)[keyof typeof SyncRunStatus];
   successCount: number;
   failureCount: number;
+  catalogChanged?: boolean;
 };
 
 export type DurableRunnerOptions = {
@@ -65,6 +66,15 @@ export type DurableRunnerOptions = {
     tx: TransactionDb,
     run: DurableRunRecord,
     finishedAt: Date,
+  ) => Promise<void>;
+  finalizeRun?: (
+    tx: TransactionDb,
+    run: DurableRunRecord,
+    status: DurableRunResult["status"],
+  ) => Promise<boolean>;
+  interruptRun?: (
+    tx: TransactionDb,
+    run: DurableRunRecord,
   ) => Promise<void>;
 };
 
@@ -179,10 +189,16 @@ export async function runDurableSync(
       run,
       options.now(),
       options.advanceState,
+      options.finalizeRun,
       options.signal,
     );
   } catch (error) {
-    await recordRunInterruption(options.db, run.id, error);
+    await recordRunInterruption(
+      options.db,
+      run.id,
+      error,
+      options.interruptRun ? (tx) => options.interruptRun!(tx, run) : undefined,
+    );
     throw error;
   } finally {
     heartbeat.stop();
@@ -399,6 +415,7 @@ async function finalizeRun(
   run: DurableRunRecord,
   finishedAt: Date,
   advanceState: DurableRunnerOptions["advanceState"],
+  finalizeCallback: DurableRunnerOptions["finalizeRun"],
   signal?: AbortSignal,
 ): Promise<DurableRunResult> {
   throwIfVocaDbCancelled(signal);
@@ -423,11 +440,14 @@ async function finalizeRun(
       : SyncRunStatus.PARTIAL;
 
   throwIfVocaDbCancelled(signal);
+  let catalogChanged = false;
   await db.$transaction(async (tx) => {
     throwIfVocaDbCancelled(signal);
     if (failureCount === 0 && advanceState) {
       await advanceState(tx, run, finishedAt);
     }
+    throwIfVocaDbCancelled(signal);
+    if (finalizeCallback) catalogChanged = await finalizeCallback(tx, run, status);
     throwIfVocaDbCancelled(signal);
     await tx.syncRun.update({
       where: { id: run.id },
@@ -441,18 +461,22 @@ async function finalizeRun(
       },
     });
   });
-  return { runId: run.id, status, successCount, failureCount };
+  return { runId: run.id, status, successCount, failureCount, catalogChanged };
 }
 
 async function recordRunInterruption(
   db: PrismaClient,
   runId: string,
   error: unknown,
+  interruptCallback?: (tx: TransactionDb) => Promise<void>,
 ): Promise<void> {
   const details = safeRunError(error);
-  await db.syncRun.updateMany({
-    where: { id: runId, status: SyncRunStatus.RUNNING },
-    data: { errorCode: details.code, errorMessage: details.message },
+  await db.$transaction(async (tx) => {
+    if (interruptCallback) await interruptCallback(tx);
+    await tx.syncRun.updateMany({
+      where: { id: runId, status: SyncRunStatus.RUNNING },
+      data: { errorCode: details.code, errorMessage: details.message },
+    });
   });
 }
 
