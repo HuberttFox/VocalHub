@@ -30,6 +30,13 @@ export default async function DiscoverPage({
     <main id="main-content">
       <PageContainer className="py-12 sm:py-16">
         <PageIntro eyebrow="Discover" title={title} description={description} />
+        {discovery.freshness !== "FRESH" ? (
+          <p className="state-panel mt-6">
+            {discovery.freshness === "PENDING"
+              ? "正在生成个性化推荐，暂时展示热门歌曲。"
+              : "推荐结果正在更新，当前展示最近一次完整结果。"}
+          </p>
+        ) : null}
         {discovery.items.length > 0 ? (
           <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {discovery.items.map((song) => <SongCard key={song.id} song={song} />)}

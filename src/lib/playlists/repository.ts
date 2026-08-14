@@ -3,6 +3,10 @@ import { Prisma } from "@/generated/prisma/client";
 import { PlaylistVisibility } from "@/generated/prisma/enums";
 import { PUBLIC_SONG_WHERE } from "@/lib/catalog/visibility";
 import { getDb } from "@/lib/db";
+import {
+  invalidateDiscoveryProfile,
+  invalidateDiscoveryProfiles,
+} from "@/lib/discover/materializer";
 import type { PlaylistDetailDto, PlaylistRole, PlaylistSummaryDto, PublicPlaylistDto } from "@/lib/playlists/dto";
 import {
   PLAYLIST_COLLABORATOR_LIMIT,
@@ -272,6 +276,7 @@ export async function addPlaylistCollaborator(
     if (await tx.playlistCollaborator.findUnique({ where: { playlistId_userId: { playlistId, userId: target.id } } })) return "ALREADY_EXISTS";
     if (await tx.playlistCollaborator.count({ where: { playlistId } }) >= PLAYLIST_COLLABORATOR_LIMIT) return "LIMIT_REACHED";
     await tx.playlistCollaborator.create({ data: { playlistId, userId: target.id } });
+    await invalidateDiscoveryProfiles(tx, [userId, target.id]);
     return "ADDED";
   });
 }
@@ -280,12 +285,18 @@ export async function removePlaylistCollaborator(userId: string, playlistId: str
   return getDb().$transaction(async (tx) => {
     const playlist = await lockPlaylist(tx, userId, playlistId);
     if (!playlist || playlist.userId !== userId) return false;
-    return (await tx.playlistCollaborator.deleteMany({ where: { playlistId, userId: collaboratorId } })).count === 1;
+    const deleted = await tx.playlistCollaborator.deleteMany({ where: { playlistId, userId: collaboratorId } });
+    if (deleted.count === 1) await invalidateDiscoveryProfiles(tx, [userId, collaboratorId]);
+    return deleted.count === 1;
   });
 }
 
 export async function leavePlaylist(userId: string, playlistId: string): Promise<boolean> {
-  return (await getDb().playlistCollaborator.deleteMany({ where: { playlistId, userId } })).count === 1;
+  return getDb().$transaction(async (tx) => {
+    const deleted = await tx.playlistCollaborator.deleteMany({ where: { playlistId, userId } });
+    if (deleted.count === 1) await invalidateDiscoveryProfile(tx, userId);
+    return deleted.count === 1;
+  });
 }
 
 function createShareToken(): string {
@@ -308,7 +319,10 @@ export async function deletePlaylist(userId: string, playlistId: string): Promis
   return getDb().$transaction(async (tx) => {
     const playlist = await lockPlaylist(tx, userId, playlistId);
     if (!playlist || playlist.userId !== userId) return false;
-    return (await tx.playlist.deleteMany({ where: { id: playlistId } })).count === 1;
+    const affectedUsers = await getDiscoveryUsersForPlaylist(tx, playlistId);
+    const deleted = await tx.playlist.deleteMany({ where: { id: playlistId } });
+    if (deleted.count > 0) await invalidateDiscoveryProfiles(tx, affectedUsers);
+    return deleted.count === 1;
   });
 }
 
@@ -341,6 +355,7 @@ export async function addPlaylistSong(
       data: { playlistId, songId, position: (maximum._max.position ?? -1) + 1 },
     });
     await touchPlaylist(tx, playlistId);
+    await invalidateDiscoveryProfiles(tx, await getDiscoveryUsersForPlaylist(tx, playlistId));
     return "UPDATED";
   });
 }
@@ -354,7 +369,10 @@ export async function removePlaylistSong(
     const playlist = await lockPlaylist(tx, userId, playlistId);
     if (!playlist) return false;
     const removed = await tx.playlistSong.deleteMany({ where: { playlistId, songId } });
-    if (removed.count > 0) await touchPlaylist(tx, playlistId);
+    if (removed.count > 0) {
+      await touchPlaylist(tx, playlistId);
+      await invalidateDiscoveryProfiles(tx, await getDiscoveryUsersForPlaylist(tx, playlistId));
+    }
     return true;
   });
 }
@@ -399,6 +417,17 @@ export async function movePlaylistSong(
     await touchPlaylist(tx, playlistId);
     return true;
   });
+}
+
+async function getDiscoveryUsersForPlaylist(
+  tx: Prisma.TransactionClient,
+  playlistId: string,
+): Promise<string[]> {
+  const playlist = await tx.playlist.findUniqueOrThrow({
+    where: { id: playlistId },
+    select: { userId: true, collaborators: { select: { userId: true } } },
+  });
+  return [playlist.userId, ...playlist.collaborators.map((collaborator) => collaborator.userId)];
 }
 
 async function mapEntries(

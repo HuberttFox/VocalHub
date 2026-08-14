@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { PUBLIC_SONG_WHERE } from "@/lib/catalog/visibility";
 import { getDb } from "@/lib/db";
+import { invalidateDiscoveryProfile } from "@/lib/discover/materializer";
 import type { FavoriteListDto } from "@/lib/favorites/dto";
 import type { FavoriteListQuery } from "@/lib/favorites/query";
 import { mapSongListItem, SONG_LIST_SELECT } from "@/lib/songs/repository";
@@ -51,8 +52,11 @@ export async function setFavorite(
 ): Promise<"UPDATED" | "NOT_FOUND"> {
   const db = getDb();
   if (!desired) {
-    await db.favorite.deleteMany({ where: { userId, songId } });
-    return "UPDATED";
+    return db.$transaction(async (tx) => {
+      const deleted = await tx.favorite.deleteMany({ where: { userId, songId } });
+      if (deleted.count > 0) await invalidateDiscoveryProfile(tx, userId);
+      return "UPDATED" as const;
+    });
   }
 
   return db.$transaction(async (tx) => {
@@ -70,6 +74,7 @@ export async function setFavorite(
       create: { userId, songId },
       update: {},
     });
+    await invalidateDiscoveryProfile(tx, userId);
     return "UPDATED";
   });
 }

@@ -358,6 +358,23 @@ export type EnumPlaylistCollaboratorRoleWithAggregatesFilter<$PrismaModel = neve
   _max?: Prisma.NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel>
 }
 
+export type EnumDiscoverySnapshotStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.DiscoverySnapshotStatus | Prisma.EnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.DiscoverySnapshotStatus[] | Prisma.ListEnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.DiscoverySnapshotStatus[] | Prisma.ListEnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumDiscoverySnapshotStatusFilter<$PrismaModel> | $Enums.DiscoverySnapshotStatus
+}
+
+export type EnumDiscoverySnapshotStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.DiscoverySnapshotStatus | Prisma.EnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.DiscoverySnapshotStatus[] | Prisma.ListEnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.DiscoverySnapshotStatus[] | Prisma.ListEnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumDiscoverySnapshotStatusWithAggregatesFilter<$PrismaModel> | $Enums.DiscoverySnapshotStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumDiscoverySnapshotStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumDiscoverySnapshotStatusFilter<$PrismaModel>
+}
+
 export type BigIntFilter<$PrismaModel = never> = {
   equals?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
   in?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
@@ -800,6 +817,23 @@ export type NestedEnumPlaylistCollaboratorRoleWithAggregatesFilter<$PrismaModel 
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPlaylistCollaboratorRoleFilter<$PrismaModel>
+}
+
+export type NestedEnumDiscoverySnapshotStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.DiscoverySnapshotStatus | Prisma.EnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.DiscoverySnapshotStatus[] | Prisma.ListEnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.DiscoverySnapshotStatus[] | Prisma.ListEnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumDiscoverySnapshotStatusFilter<$PrismaModel> | $Enums.DiscoverySnapshotStatus
+}
+
+export type NestedEnumDiscoverySnapshotStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.DiscoverySnapshotStatus | Prisma.EnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.DiscoverySnapshotStatus[] | Prisma.ListEnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.DiscoverySnapshotStatus[] | Prisma.ListEnumDiscoverySnapshotStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumDiscoverySnapshotStatusWithAggregatesFilter<$PrismaModel> | $Enums.DiscoverySnapshotStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumDiscoverySnapshotStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumDiscoverySnapshotStatusFilter<$PrismaModel>
 }
 
 export type NestedBigIntFilter<$PrismaModel = never> = {

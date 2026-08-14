@@ -1,16 +1,27 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaClient } from "@/generated/prisma/client";
 import { PlaylistVisibility, SyncStatus } from "@/generated/prisma/enums";
 import { DISCOVERY_ALGORITHM_VERSION } from "@/lib/discover/dto";
+import {
+  invalidateDiscoveryCatalog,
+  materializeDiscoverySnapshots,
+} from "@/lib/discover/materializer";
+import { deleteExpiredDiscoverySnapshots } from "@/lib/discover/snapshot-cleanup";
 import { getDiscovery } from "@/lib/discover/repository";
+import { setFavorite } from "@/lib/favorites/repository";
 
 const connectionString = process.env.TEST_DATABASE_URL ?? "postgresql://vocalhub:vocalhub@localhost:5433/vocalhub_test";
 process.env.DATABASE_URL = connectionString;
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+const initialSnapshotReadsEnabled = process.env.DISCOVERY_SNAPSHOT_READS_ENABLED;
 
 beforeAll(async () => db.$connect());
 beforeEach(async () => {
+  await db.discoverySnapshotItem.deleteMany();
+  await db.discoveryProfile.deleteMany();
+  await db.discoverySnapshot.deleteMany();
+  await db.discoveryCatalogState.deleteMany();
   await db.playlistReport.deleteMany();
   await db.playlistCollaborator.deleteMany();
   await db.playlistSong.deleteMany();
@@ -22,6 +33,10 @@ beforeEach(async () => {
   await db.artist.deleteMany();
   await db.user.deleteMany();
   await db.song.deleteMany();
+});
+afterEach(() => {
+  if (initialSnapshotReadsEnabled === undefined) delete process.env.DISCOVERY_SNAPSHOT_READS_ENABLED;
+  else process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = initialSnapshotReadsEnabled;
 });
 afterAll(async () => db.$disconnect());
 
@@ -250,5 +265,484 @@ describe("discovery repository", () => {
     expect(result.mode).toBe("POPULAR");
     // The popular fallback lists all public songs; the seed is public too.
     expect(result.items.map((item) => item.id)).toEqual([popular.id, seed.id]);
+  });
+
+  it("uses a current ready snapshot authoritatively with rank pagination", async () => {
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
+    const viewer = await user("snapshot-fresh@example.com");
+    const first = await song(800, "First snapshot result");
+    const second = await song(801, "Second snapshot result");
+    const third = await song(802, "Third snapshot result");
+    await song(803, "More popular fallback", 1_000);
+    const snapshot = await db.discoverySnapshot.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 3,
+        catalogVersion: 5,
+        status: "READY",
+        totalItems: 3,
+        finishedAt: new Date(),
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 3,
+        requiredCatalogVersion: 5,
+        currentSnapshotId: snapshot.id,
+      },
+    });
+    await db.discoverySnapshotItem.createMany({
+      data: [
+        { snapshotId: snapshot.id, rank: 0, songId: first.id, score: 30 },
+        { snapshotId: snapshot.id, rank: 1, songId: second.id, score: 20 },
+        { snapshotId: snapshot.id, rank: 2, songId: third.id, score: 10 },
+      ],
+    });
+
+    const firstPage = await getDiscovery(viewer.id, { page: 1, pageSize: 2 });
+    const secondPage = await getDiscovery(viewer.id, { page: 2, pageSize: 2 });
+
+    expect(firstPage.mode).toBe("PERSONALIZED");
+    expect(firstPage.freshness).toBe("FRESH");
+    expect(firstPage.items.map((item) => item.id)).toEqual([first.id, second.id]);
+    expect(secondPage.items.map((item) => item.id)).toEqual([third.id]);
+    expect(secondPage.pagination).toMatchObject({ totalItems: 3, totalPages: 2 });
+  });
+
+  it("keeps a stale ready snapshot personalized", async () => {
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
+    const viewer = await user("snapshot-stale@example.com");
+    const staleResult = await song(810, "Stale snapshot result");
+    const snapshot = await db.discoverySnapshot.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 2,
+        catalogVersion: 4,
+        status: "READY",
+        totalItems: 1,
+        finishedAt: new Date(),
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 3,
+        requiredCatalogVersion: 5,
+        currentSnapshotId: snapshot.id,
+      },
+    });
+    await db.discoverySnapshotItem.create({
+      data: { snapshotId: snapshot.id, rank: 0, songId: staleResult.id, score: 10 },
+    });
+
+    const result = await getDiscovery(viewer.id, { page: 1, pageSize: 24 });
+
+    expect(result.mode).toBe("PERSONALIZED");
+    expect(result.freshness).toBe("STALE");
+    expect(result.items.map((item) => item.id)).toEqual([staleResult.id]);
+  });
+
+  it("returns popular pending while favorite seeds have no usable snapshot", async () => {
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
+    const viewer = await user("snapshot-pending@example.com");
+    const seed = await song(820, "Favorite seed", 1);
+    const popular = await song(821, "Popular fallback", 100);
+    const snapshot = await db.discoverySnapshot.create({
+      data: { userId: viewer.id, libraryVersion: 1, catalogVersion: 1, status: "BUILDING" },
+    });
+    await db.discoveryProfile.create({
+      data: { userId: viewer.id, libraryVersion: 1, requiredCatalogVersion: 1, currentSnapshotId: snapshot.id },
+    });
+    await db.favorite.create({ data: { userId: viewer.id, songId: seed.id } });
+
+    const result = await getDiscovery(viewer.id, { page: 1, pageSize: 24 });
+
+    expect(result.mode).toBe("POPULAR");
+    expect(result.freshness).toBe("PENDING");
+    expect(result.items.map((item) => item.id)).toEqual([popular.id, seed.id]);
+  });
+
+  it("filters hidden fresh snapshot items before pagination", async () => {
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
+    const viewer = await user("snapshot-fresh-hidden-item@example.com");
+    const removed = await song(835, "Deleted fresh snapshot result");
+    const hidden = await song(836, "Hidden fresh snapshot result");
+    const visible = await song(837, "Visible fresh snapshot result");
+    const snapshot = await db.discoverySnapshot.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: "READY",
+        totalItems: 3,
+        finishedAt: new Date(),
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        requiredCatalogVersion: 1,
+        currentSnapshotId: snapshot.id,
+      },
+    });
+    await db.discoverySnapshotItem.createMany({
+      data: [
+        { snapshotId: snapshot.id, rank: 0, songId: removed.id, score: 30 },
+        { snapshotId: snapshot.id, rank: 1, songId: hidden.id, score: 20 },
+        { snapshotId: snapshot.id, rank: 2, songId: visible.id, score: 10 },
+      ],
+    });
+    await db.song.update({ where: { id: removed.id }, data: { sourceDeleted: true } });
+    await db.song.update({ where: { id: hidden.id }, data: { syncStatus: SyncStatus.PENDING } });
+
+    const firstPage = await getDiscovery(viewer.id, { page: 1, pageSize: 1 });
+    const secondPage = await getDiscovery(viewer.id, { page: 2, pageSize: 1 });
+
+    expect(firstPage.mode).toBe("PERSONALIZED");
+    expect(firstPage.freshness).toBe("FRESH");
+    expect(firstPage.items.map((item) => item.id)).toEqual([visible.id]);
+    expect(firstPage.pagination).toMatchObject({ totalItems: 1, totalPages: 1 });
+    expect(secondPage.items).toEqual([]);
+    expect(secondPage.pagination).toMatchObject({ totalItems: 1, totalPages: 1 });
+  });
+
+  it("omits deleted stale snapshot items before pagination", async () => {
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
+    const viewer = await user("snapshot-hidden-item@example.com");
+    const first = await song(840, "Visible stale snapshot result");
+    const removed = await song(841, "Deleted stale snapshot result");
+    const snapshot = await db.discoverySnapshot.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: "READY",
+        totalItems: 2,
+        finishedAt: new Date(),
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 2,
+        requiredCatalogVersion: 2,
+        currentSnapshotId: snapshot.id,
+      },
+    });
+    await db.discoverySnapshotItem.createMany({
+      data: [
+        { snapshotId: snapshot.id, rank: 0, songId: removed.id, score: 20 },
+        { snapshotId: snapshot.id, rank: 1, songId: first.id, score: 10 },
+      ],
+    });
+    await db.song.update({ where: { id: removed.id }, data: { sourceDeleted: true } });
+
+    const result = await getDiscovery(viewer.id, { page: 1, pageSize: 1 });
+
+    expect(result.items.map((item) => item.id)).toEqual([first.id]);
+    expect(result.pagination).toMatchObject({ totalItems: 1, totalPages: 1 });
+  });
+
+  it("marks a ready snapshot stale after catalog invalidation without rewriting profiles", async () => {
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
+    const viewer = await user("catalog-stale@example.com");
+    const result = await song(830, "Catalog stale snapshot result");
+    const snapshot = await db.discoverySnapshot.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: "READY",
+        totalItems: 1,
+        finishedAt: new Date(),
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        requiredCatalogVersion: 1,
+        currentSnapshotId: snapshot.id,
+      },
+    });
+    await db.discoverySnapshotItem.create({
+      data: { snapshotId: snapshot.id, rank: 0, songId: result.id, score: 10 },
+    });
+    await db.discoveryCatalogState.create({
+      data: { id: "catalog", version: 1 },
+    });
+    await db.$transaction(async (tx) => {
+      await invalidateDiscoveryCatalog(tx);
+    });
+
+    const profile = await db.discoveryProfile.findUniqueOrThrow({
+      where: { userId: viewer.id },
+    });
+    const discovery = await getDiscovery(viewer.id, { page: 1, pageSize: 24 });
+
+    expect(profile.requiredCatalogVersion).toBe(1);
+    expect(discovery).toMatchObject({ mode: "PERSONALIZED", freshness: "STALE" });
+  });
+
+  it("serves a fresh personalized candidate from a materialized snapshot", async () => {
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
+    const viewer = await user("materialized-fresh@example.com");
+    const tag = await db.tag.create({ data: { vocadbId: 90, name: "Rock", additionalNames: [] } });
+    const seed = await song(900, "Materialized favorite seed");
+    const candidate = await song(901, "Materialized shared-tag candidate");
+    await db.songTag.createMany({ data: [
+      { songId: seed.id, tagId: tag.id, count: 1, position: 0 },
+      { songId: candidate.id, tagId: tag.id, count: 1, position: 0 },
+    ] });
+    await setFavorite(viewer.id, seed.id, true);
+
+    expect(await materializeDiscoverySnapshots(1, db)).toEqual({
+      selectedCount: 1,
+      attemptedCount: 1,
+      publishedCount: 1,
+      failedCount: 0,
+      deferredCount: 0,
+      stopReason: "LIMIT_REACHED",
+      batchBudgetMs: null,
+      attemptReservationMs: null,
+    });
+
+    const result = await getDiscovery(viewer.id, { page: 1, pageSize: 24 });
+
+    expect(result.mode).toBe("PERSONALIZED");
+    expect(result.freshness).toBe("FRESH");
+    expect(result.items.map((item) => item.id)).toEqual([candidate.id]);
+  });
+
+  it("admits a profile when exactly one batch reservation remains", async () => {
+    const viewer = await user("budget-exact@example.com");
+    await db.discoveryProfile.create({ data: { userId: viewer.id } });
+    const timing = {
+      buildTimeoutMs: 30_000,
+      statementTimeoutMs: 20_000,
+      buildLeaseMs: 90_000,
+      batchBudgetMs: 150_000,
+      attemptReservationMs: 150_000,
+    };
+
+    expect(await materializeDiscoverySnapshots(1, db, {
+      batchTiming: timing,
+      now: () => 0,
+    })).toMatchObject({
+      selectedCount: 1,
+      attemptedCount: 1,
+      publishedCount: 1,
+      failedCount: 0,
+      deferredCount: 0,
+      stopReason: "LIMIT_REACHED",
+    });
+  });
+
+  it("defers unclaimed stale profiles when batch budget has no reservation remaining", async () => {
+    const first = await user("budget-first@example.com");
+    const second = await user("budget-second@example.com");
+    await db.discoveryProfile.createMany({
+      data: [{ userId: first.id }, { userId: second.id }],
+    });
+    let clockCalls = 0;
+    const timing = {
+      buildTimeoutMs: 30_000,
+      statementTimeoutMs: 20_000,
+      buildLeaseMs: 90_000,
+      batchBudgetMs: 150_000,
+      attemptReservationMs: 150_000,
+    };
+
+    const bounded = await materializeDiscoverySnapshots(2, db, {
+      batchTiming: timing,
+      now: () => (clockCalls++ === 0 ? 0 : 1),
+    });
+
+    expect(bounded).toMatchObject({
+      selectedCount: 2,
+      attemptedCount: 0,
+      publishedCount: 0,
+      failedCount: 0,
+      deferredCount: 2,
+      stopReason: "BUDGET_EXHAUSTED",
+      batchBudgetMs: 150_000,
+      attemptReservationMs: 150_000,
+    });
+    expect(await db.discoveryProfile.findMany({
+      where: { userId: { in: [first.id, second.id] } },
+      select: { refreshStartedAt: true, lastRefreshError: true },
+    })).toEqual([
+      { refreshStartedAt: null, lastRefreshError: null },
+      { refreshStartedAt: null, lastRefreshError: null },
+    ]);
+    expect(await db.discoverySnapshot.count()).toBe(0);
+
+    expect(await materializeDiscoverySnapshots(2, db)).toMatchObject({
+      selectedCount: 2,
+      attemptedCount: 2,
+      publishedCount: 2,
+      failedCount: 0,
+      deferredCount: 0,
+      stopReason: "LIMIT_REACHED",
+    });
+  });
+
+  it("terminates an expired build before publishing its replacement", async () => {
+    const viewer = await user("expired-build@example.com");
+    const seed = await song(915, "Expired build seed");
+    await db.favorite.create({ data: { userId: viewer.id, songId: seed.id } });
+    const expiredAt = new Date(Date.now() - 8 * 60_000);
+    const abandoned = await db.discoverySnapshot.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        catalogVersion: 0,
+        status: "BUILDING",
+        startedAt: expiredAt,
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        refreshStartedAt: expiredAt,
+      },
+    });
+
+    expect(await materializeDiscoverySnapshots(1, db)).toMatchObject({
+      attemptedCount: 1,
+      publishedCount: 1,
+      failedCount: 0,
+    });
+    expect(await db.discoverySnapshot.findUniqueOrThrow({ where: { id: abandoned.id } })).toMatchObject({
+      status: "FAILED",
+      errorCode: "BUILD_LEASE_EXPIRED",
+      finishedAt: expect.any(Date),
+    });
+  });
+
+  it("prunes only expired non-current terminal snapshots in deterministic batches", async () => {
+    const cutoff = new Date("2026-08-01T00:00:00.000Z");
+    const oldestUser = await user("cleanup-oldest@example.com");
+    const failedUser = await user("cleanup-failed@example.com");
+    const activeUser = await user("cleanup-active@example.com");
+    const buildingUser = await user("cleanup-building@example.com");
+    const unfinishedUser = await user("cleanup-unfinished@example.com");
+    const recentUser = await user("cleanup-recent@example.com");
+    const item = await song(920, "Expired snapshot item");
+    const oldReady = await db.discoverySnapshot.create({
+      data: {
+        userId: oldestUser.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: "READY",
+        finishedAt: new Date("2026-07-01T00:00:00.000Z"),
+      },
+    });
+    await db.discoverySnapshotItem.create({
+      data: { snapshotId: oldReady.id, rank: 0, songId: item.id, score: 1 },
+    });
+    const oldFailed = await db.discoverySnapshot.create({
+      data: {
+        userId: failedUser.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: "FAILED",
+        finishedAt: new Date("2026-07-02T00:00:00.000Z"),
+      },
+    });
+    const active = await db.discoverySnapshot.create({
+      data: {
+        userId: activeUser.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: "READY",
+        finishedAt: new Date("2026-07-01T00:00:00.000Z"),
+      },
+    });
+    await db.discoveryProfile.create({
+      data: { userId: activeUser.id, currentSnapshotId: active.id },
+    });
+    const building = await db.discoverySnapshot.create({
+      data: {
+        userId: buildingUser.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: "BUILDING",
+        startedAt: new Date("2026-07-01T00:00:00.000Z"),
+      },
+    });
+    const unfinished = await db.discoverySnapshot.create({
+      data: {
+        userId: unfinishedUser.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: "FAILED",
+      },
+    });
+    const recent = await db.discoverySnapshot.create({
+      data: {
+        userId: recentUser.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: "READY",
+        finishedAt: cutoff,
+      },
+    });
+
+    expect(await deleteExpiredDiscoverySnapshots(db, cutoff, 1)).toBe(1);
+    expect(await db.discoverySnapshot.findUnique({ where: { id: oldReady.id } })).toBeNull();
+    expect(await db.discoverySnapshotItem.count({ where: { snapshotId: oldReady.id } })).toBe(0);
+    expect(await db.discoverySnapshot.findUnique({ where: { id: oldFailed.id } })).not.toBeNull();
+
+    expect(await deleteExpiredDiscoverySnapshots(db, cutoff, 10)).toBe(1);
+    expect(await db.discoverySnapshot.findUnique({ where: { id: oldFailed.id } })).toBeNull();
+    expect(await db.discoverySnapshot.findMany({
+      where: { id: { in: [active.id, building.id, unfinished.id, recent.id] } },
+      select: { id: true },
+    })).toHaveLength(4);
+    expect(await db.discoveryProfile.findUniqueOrThrow({ where: { userId: activeUser.id } })).toMatchObject({
+      currentSnapshotId: active.id,
+    });
+  });
+
+  it("serves fresh popular results after rematerializing an empty favorite profile", async () => {
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
+    const viewer = await user("materialized-empty@example.com");
+    const tag = await db.tag.create({ data: { vocadbId: 91, name: "Rock", additionalNames: [] } });
+    const seed = await song(910, "Rematerialized favorite seed", 1);
+    const candidate = await song(911, "Old personalized candidate");
+    const popular = await song(912, "Fresh popular fallback", 100);
+    await db.songTag.createMany({ data: [
+      { songId: seed.id, tagId: tag.id, count: 1, position: 0 },
+      { songId: candidate.id, tagId: tag.id, count: 1, position: 0 },
+    ] });
+    await setFavorite(viewer.id, seed.id, true);
+    await materializeDiscoverySnapshots(1, db);
+
+    expect(await setFavorite(viewer.id, seed.id, false)).toBe("UPDATED");
+    expect(await materializeDiscoverySnapshots(1, db)).toEqual({
+      selectedCount: 1,
+      attemptedCount: 1,
+      publishedCount: 1,
+      failedCount: 0,
+      deferredCount: 0,
+      stopReason: "LIMIT_REACHED",
+      batchBudgetMs: null,
+      attemptReservationMs: null,
+    });
+    const profile = await db.discoveryProfile.findUniqueOrThrow({
+      where: { userId: viewer.id },
+      include: { currentSnapshot: true },
+    });
+    expect(profile.currentSnapshot).toMatchObject({ status: "READY", totalItems: 0 });
+
+    const result = await getDiscovery(viewer.id, { page: 1, pageSize: 24 });
+
+    expect(result.mode).toBe("POPULAR");
+    expect(result.freshness).toBe("FRESH");
+    expect(result.items.map((item) => item.id)).toEqual(expect.arrayContaining([popular.id, candidate.id, seed.id]));
   });
 });

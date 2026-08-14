@@ -1,0 +1,1 @@
+ALTER TABLE "SyncRun" ADD COLUMN "catalogChanged" BOOLEAN NOT NULL DEFAULT false;
