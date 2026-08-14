@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import {
@@ -22,9 +22,15 @@ const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 const now = new Date("2026-08-09T12:00:00.000Z");
 const staleAfterMs = 60 * 60 * 1_000;
+const initialSnapshotReadsEnabled = process.env.DISCOVERY_SNAPSHOT_READS_ENABLED;
 
 beforeAll(async () => db.$connect());
+afterAll(() => {
+  if (initialSnapshotReadsEnabled === undefined) delete process.env.DISCOVERY_SNAPSHOT_READS_ENABLED;
+  else process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = initialSnapshotReadsEnabled;
+});
 beforeEach(async () => {
+  process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "false";
   await db.discoverySnapshotItem.deleteMany();
   await db.discoveryProfile.deleteMany();
   await db.discoverySnapshot.deleteMany();
@@ -108,7 +114,12 @@ describe("operations status repository", () => {
 
     expect(status.classification).toBe("READY");
     expect(status.discovery).toEqual({
+      snapshotReadsEnabled: false,
+      catalogVersion: 0,
+      freshProfileCount: 0,
       staleProfileCount: 3,
+      unprovisionedCandidateCount: 3,
+      activeBuildCount: 0,
       failedProfileCount: 0,
       oldestPendingAt: null,
     });
@@ -204,6 +215,95 @@ describe("operations status repository", () => {
       });
   });
 
+  it("reports aggregate snapshot rollout coverage without exposing identities", async () => {
+    await seedFreshSongState();
+    await db.discoveryCatalogState.create({
+      data: { id: DISCOVERY_CATALOG_STATE_ID, version: 1 },
+    });
+
+    const freshUser = await discoveryUser("fresh-rollout@example.com");
+    const staleUser = await discoveryUser("stale-rollout@example.com");
+    const candidateUser = await discoveryUser("candidate-rollout@example.com");
+    const activeUser = await discoveryUser("active-rollout@example.com");
+    const song = await discoverySong(90_010);
+
+    const freshSnapshot = await db.discoverySnapshot.create({
+      data: {
+        userId: freshUser.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: DiscoverySnapshotStatus.READY,
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: freshUser.id,
+        libraryVersion: 1,
+        requiredCatalogVersion: 1,
+        currentSnapshotId: freshSnapshot.id,
+      },
+    });
+
+    const staleSnapshot = await db.discoverySnapshot.create({
+      data: {
+        userId: staleUser.id,
+        libraryVersion: 1,
+        catalogVersion: 0,
+        status: DiscoverySnapshotStatus.READY,
+      },
+    });
+    const expectedPendingAt = new Date("2026-08-09T10:00:00.000Z");
+    await db.discoveryProfile.create({
+      data: {
+        userId: staleUser.id,
+        libraryVersion: 1,
+        requiredCatalogVersion: 1,
+        currentSnapshotId: staleSnapshot.id,
+        updatedAt: expectedPendingAt,
+      },
+    });
+
+    await db.favorite.create({
+      data: { userId: candidateUser.id, songId: song.id },
+    });
+
+    const { buildLeaseMs } = getDiscoveryMaterializerTiming();
+    await db.discoveryProfile.create({
+      data: {
+        userId: activeUser.id,
+        libraryVersion: 1,
+        requiredCatalogVersion: 1,
+        refreshStartedAt: new Date(now.getTime() - buildLeaseMs + 60_000),
+      },
+    });
+
+    const status = await getOperationsStatus(db, { now: () => now, staleAfterMs });
+    const serialized = JSON.stringify(status);
+
+    expect(status.classification).toBe("READY");
+    expect(status.discovery).toEqual({
+      snapshotReadsEnabled: false,
+      catalogVersion: 1,
+      freshProfileCount: 1,
+      staleProfileCount: 2,
+      unprovisionedCandidateCount: 1,
+      activeBuildCount: 1,
+      failedProfileCount: 0,
+      oldestPendingAt: expectedPendingAt.toISOString(),
+    });
+    for (const value of [
+      freshUser.id,
+      staleUser.id,
+      candidateUser.id,
+      activeUser.id,
+      song.id,
+      freshSnapshot.id,
+      staleSnapshot.id,
+    ]) {
+      expect(serialized).not.toContain(value);
+    }
+  });
+
   it("reports stale discovery profiles without degrading an otherwise ready catalog", async () => {
     await seedFreshSongState();
     const viewer = await discoveryUser("stale-discovery@example.com");
@@ -221,7 +321,12 @@ describe("operations status repository", () => {
 
     expect(status.classification).toBe("READY");
     expect(status.discovery).toEqual({
+      snapshotReadsEnabled: false,
+      catalogVersion: 0,
+      freshProfileCount: 0,
       staleProfileCount: 1,
+      unprovisionedCandidateCount: 0,
+      activeBuildCount: 0,
       failedProfileCount: 0,
       oldestPendingAt: oldestPendingAt.toISOString(),
     });
@@ -294,13 +399,30 @@ describe("operations status repository", () => {
 
     expect(status.classification).toBe("DEGRADED");
     expect(status.discovery).toEqual({
+      snapshotReadsEnabled: false,
+      catalogVersion: 0,
+      freshProfileCount: 1,
       staleProfileCount: 0,
+      unprovisionedCandidateCount: 0,
+      activeBuildCount: 0,
       failedProfileCount: 1,
       oldestPendingAt: null,
     });
     expect(serialized).not.toContain(viewer.id);
     expect(serialized).not.toContain(snapshot.id);
     expect(serialized).not.toContain("private discovery failure");
+  });
+
+  it("reports snapshot read enablement with exact environment semantics", async () => {
+    await seedFreshSongState();
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
+
+    const enabled = await getOperationsStatus(db, { now: () => now, staleAfterMs });
+
+    expect(enabled.discovery.snapshotReadsEnabled).toBe(true);
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "TRUE";
+    await expect(getOperationsStatus(db, { now: () => now, staleAfterMs })).resolves
+      .toMatchObject({ discovery: { snapshotReadsEnabled: false } });
   });
 
   it("reports an unseeded catalog without a sync state", async () => {

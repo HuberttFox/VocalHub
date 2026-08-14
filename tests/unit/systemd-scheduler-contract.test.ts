@@ -38,6 +38,9 @@ describe("systemd scheduler contract", () => {
     expect(unit("vocalhub-worker@.service")).not.toMatch(/AUTH_/);
     expect(unit("vocalhub-maintenance@.service")).not.toMatch(/AUTH_/);
     expect(jobsCompose()).not.toMatch(/AUTH_/);
+    expect(jobsCompose()).not.toContain("DISCOVERY_SNAPSHOT_READS_ENABLED");
+    expect(unit("vocalhub-maintenance@.service")).not.toContain("DISCOVERY_SNAPSHOT_READS_ENABLED");
+    expect(unit("vocalhub.env.example")).not.toContain("DISCOVERY_SNAPSHOT_READS_ENABLED");
     expect(jobsCompose()).toContain("VOCALHUB_WORKER_IMAGE");
     expect(jobsCompose()).toContain("VOCALHUB_MAINTENANCE_IMAGE");
     expect(jobsCompose()).toContain("cleanup-discovery-snapshots.mjs");

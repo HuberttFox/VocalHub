@@ -22,7 +22,12 @@ export type OperationsStatusDto = {
 };
 
 export type OperationsDiscoveryStatusDto = {
+  snapshotReadsEnabled: boolean;
+  catalogVersion: number;
+  freshProfileCount: number;
   staleProfileCount: number;
+  unprovisionedCandidateCount: number;
+  activeBuildCount: number;
   failedProfileCount: number;
   oldestPendingAt: string | null;
 };

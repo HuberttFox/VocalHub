@@ -117,6 +117,18 @@ node build/maintenance/governance/moderate-playlist.js hide <playlist-uuid>
 
 ```
 
+**Discovery snapshot rollout gate.** Walk the staged procedure in order and do not enable snapshot reads before every gate passes:
+
+1. Deploy additive discovery migrations with reads still `false`.
+2. Run `discovery-materializer --limit=100` repeatedly. Capture each JSON batch result.
+3. Query authenticated `/api/ops/status`. Before enabling, require `staleProfileCount === 0`, `activeBuildCount === 0`, `failedProfileCount === 0`, and `oldestPendingAt === null`; review `freshProfileCount`, `unprovisionedCandidateCount`, and `catalogVersion` as coverage evidence.
+4. Run fresh snapshot parity integration coverage against an isolated test database and staging fixtures. Check first and deep pages plus popular fallback; do not treat stale snapshots as parity failures.
+5. In staging app deployment environment only, set `DISCOVERY_SNAPSHOT_READS_ENABLED=true` and redeploy `app`. Jobs environment and timers remain unchanged.
+6. Monitor JSON materializer results and `/api/ops/status`; promote production only after staging remains fresh and error-free for operator-defined observation window.
+7. Roll back reads immediately by setting `DISCOVERY_SNAPSHOT_READS_ENABLED=false` and redeploying only `app`. Keep tables, materializer, cleanup, and migrations in place; no schema rollback is needed.
+
+Batch success rule: continue after `LIMIT_REACHED`; accept `QUEUE_DRAINED` only with `failedCount === 0` and `deferredCount === 0`; investigate any nonzero failure before enabling. `BUDGET_EXHAUSTED` needs subsequent batches and cannot satisfy queue drain alone.
+
 Recommended cadence: incremental every 15 minutes, reconcile daily during low traffic, artist refresh daily at a separate time, session cleanup daily, discovery materialization every 30 minutes at offset seven minutes, and discovery snapshot cleanup every 15 minutes at a separate offset. The 30-minute materializer cadence prevents systemd from skipping a timer activation while a 24-minute batch is still active. Capture exit status and JSON output. Alert on nonzero exit, missing daily success, multiple `RUNNING` runs, repeated `FAILED` items, any repeated materializer `failedCount > 0` (including timeout-driven failures), repeated `BUDGET_EXHAUSTED` materializer results or `deferredCount > 0` without backlog reduction, persistent `/api/ops/status` discovery `staleProfileCount`, or repeated cleanup results equal to its batch limit.
 
 Playlist report cleanup removes only `RESOLVED`/`DISMISSED` reports older than 180 days. It must not remove `OPEN` reports. Discovery snapshot cleanup removes only non-current `READY`/`FAILED` snapshots with `finishedAt` older than seven days; it never removes `BUILDING` snapshots, null-finished rows, or active snapshots. Both jobs are idempotent and report JSON counts. The moderation and triage commands are deployment-only and require operator shell/database access.

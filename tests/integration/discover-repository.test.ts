@@ -55,6 +55,19 @@ async function song(vocadbId: number, name: string, favoritedTimes = 1) {
   });
 }
 
+// Test-local projection of every observable discovery response field. Live and
+// snapshot reads must agree on ranking, mode, algorithm version, freshness, and
+// pagination before an operator can enable snapshot reads.
+function discoveryDigest(result: Awaited<ReturnType<typeof getDiscovery>>) {
+  return {
+    items: result.items.map((item) => item.id),
+    mode: result.mode,
+    algorithmVersion: result.algorithmVersion,
+    freshness: result.freshness,
+    pagination: result.pagination,
+  };
+}
+
 describe("discovery repository", () => {
   it("returns public popular songs for anonymous visitors", async () => {
     const popular = await song(100, "Popular", 50);
@@ -343,6 +356,48 @@ describe("discovery repository", () => {
     expect(result.items.map((item) => item.id)).toEqual([staleResult.id]);
   });
 
+  it("defaults snapshot reads off and honors an explicit read option", async () => {
+    delete process.env.DISCOVERY_SNAPSHOT_READS_ENABLED;
+    const viewer = await user("read-option-gate@example.com");
+    const snapshotOnly = await song(850, "Snapshot-only stale result");
+    for (let i = 0; i < 24; i += 1) await song(860 + i, `Popular ${i}`, 100);
+    const snapshotRow = await db.discoverySnapshot.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 2,
+        catalogVersion: 4,
+        status: "READY",
+        totalItems: 1,
+        finishedAt: new Date(),
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 3,
+        requiredCatalogVersion: 5,
+        currentSnapshotId: snapshotRow.id,
+      },
+    });
+    await db.discoverySnapshotItem.create({
+      data: { snapshotId: snapshotRow.id, rank: 0, songId: snapshotOnly.id, score: 10 },
+    });
+
+    const live = await getDiscovery(viewer.id, { page: 1, pageSize: 24 }, db, {
+      snapshotReadsEnabled: false,
+    });
+    const snapshot = await getDiscovery(viewer.id, { page: 1, pageSize: 24 }, db, {
+      snapshotReadsEnabled: true,
+    });
+    const defaults = await getDiscovery(viewer.id, { page: 1, pageSize: 24 }, db);
+
+    expect(live).toMatchObject({ freshness: "FRESH", mode: "POPULAR" });
+    expect(live.items.map((item) => item.id)).not.toContain(snapshotOnly.id);
+    expect(snapshot).toMatchObject({ freshness: "STALE", mode: "PERSONALIZED" });
+    expect(snapshot.items.map((item) => item.id)).toEqual([snapshotOnly.id]);
+    expect(defaults).toEqual(live);
+  });
+
   it("returns popular pending while favorite seeds have no usable snapshot", async () => {
     process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
     const viewer = await user("snapshot-pending@example.com");
@@ -514,6 +569,74 @@ describe("discovery repository", () => {
     expect(result.mode).toBe("PERSONALIZED");
     expect(result.freshness).toBe("FRESH");
     expect(result.items.map((item) => item.id)).toEqual([candidate.id]);
+  });
+
+  it("keeps fresh snapshot reads in parity with live ranking across deep pages", async () => {
+    const viewer = await user("parity-deep@example.com");
+    const tag = await db.tag.create({ data: { vocadbId: 92, name: "Parity", additionalNames: [] } });
+    const seed = await song(930, "Parity seed");
+    const candidates = [];
+    for (let index = 0; index < 26; index += 1) candidates.push(await song(940 + index, `Parity candidate ${index}`));
+    await db.songTag.createMany({
+      data: [
+        { songId: seed.id, tagId: tag.id, count: 1, position: 0 },
+        ...candidates.map((candidateSong) => ({ songId: candidateSong.id, tagId: tag.id, count: 1, position: 0 })),
+      ],
+    });
+    await setFavorite(viewer.id, seed.id, true);
+    expect(await materializeDiscoverySnapshots(1, db)).toMatchObject({
+      attemptedCount: 1,
+      publishedCount: 1,
+    });
+
+    for (const query of [
+      { page: 1, pageSize: 24 },
+      { page: 2, pageSize: 24 },
+    ]) {
+      const live = await getDiscovery(viewer.id, query, db, { snapshotReadsEnabled: false });
+      const snapshot = await getDiscovery(viewer.id, query, db, { snapshotReadsEnabled: true });
+      expect(discoveryDigest(snapshot)).toEqual(discoveryDigest(live));
+      expect(snapshot.freshness).toBe("FRESH");
+    }
+  });
+
+  it("walks snapshot freshness through invalidation, rebuild, and catalog invalidation", async () => {
+    const viewer = await user("parity-lifecycle@example.com");
+    const tag = await db.tag.create({ data: { vocadbId: 93, name: "Lifecycle", additionalNames: [] } });
+    const seed = await song(950, "Lifecycle seed");
+    const addedSeed = await song(951, "Added lifecycle seed");
+    const candidate = await song(952, "Lifecycle candidate");
+    await db.songTag.createMany({
+      data: [
+        { songId: seed.id, tagId: tag.id, count: 1, position: 0 },
+        { songId: addedSeed.id, tagId: tag.id, count: 1, position: 0 },
+        { songId: candidate.id, tagId: tag.id, count: 1, position: 0 },
+      ],
+    });
+    await setFavorite(viewer.id, seed.id, true);
+    await materializeDiscoverySnapshots(1, db);
+    const query = { page: 1, pageSize: 24 };
+
+    expect((await getDiscovery(viewer.id, query, db, { snapshotReadsEnabled: true })).freshness).toBe("FRESH");
+    await setFavorite(viewer.id, addedSeed.id, true);
+    expect((await getDiscovery(viewer.id, query, db, { snapshotReadsEnabled: true })).freshness).toBe("STALE");
+    await materializeDiscoverySnapshots(1, db);
+    expect((await getDiscovery(viewer.id, query, db, { snapshotReadsEnabled: true })).freshness).toBe("FRESH");
+    await db.$transaction((tx) => invalidateDiscoveryCatalog(tx));
+    expect((await getDiscovery(viewer.id, query, db, { snapshotReadsEnabled: true })).freshness).toBe("STALE");
+
+    // A separate viewer with a favorite seed but no usable current snapshot
+    // stays PENDING and falls back to the public popular list.
+    const pendingViewer = await user("parity-lifecycle-pending@example.com");
+    const pendingSeed = await song(953, "Pending lifecycle seed");
+    const popular = await song(954, "Pending popular fallback", 100);
+    await setFavorite(pendingViewer.id, pendingSeed.id, true);
+    const pending = await getDiscovery(pendingViewer.id, query, db, { snapshotReadsEnabled: true });
+    const pendingLive = await getDiscovery(pendingViewer.id, query, db, { snapshotReadsEnabled: false });
+    expect(pending.freshness).toBe("PENDING");
+    expect(pending.mode).toBe("POPULAR");
+    expect(pending.items.map((item) => item.id)).toEqual(pendingLive.items.map((item) => item.id));
+    expect(pending.items.map((item) => item.id)).toContain(popular.id);
   });
 
   it("admits a profile when exactly one batch reservation remains", async () => {
@@ -744,5 +867,48 @@ describe("discovery repository", () => {
     expect(result.mode).toBe("POPULAR");
     expect(result.freshness).toBe("FRESH");
     expect(result.items.map((item) => item.id)).toEqual(expect.arrayContaining([popular.id, candidate.id, seed.id]));
+  });
+
+  it("keeps fresh snapshot and live parity on a materialized zero-candidate profile", async () => {
+    const viewer = await user("parity-zero-candidate@example.com");
+    const tag = await db.tag.create({ data: { vocadbId: 94, name: "Zero", additionalNames: [] } });
+    const seed = await song(960, "Zero-candidate seed");
+    await song(961, "Zero-candidate popular", 100);
+    await db.songTag.create({ data: { songId: seed.id, tagId: tag.id, count: 1, position: 0 } });
+    await setFavorite(viewer.id, seed.id, true);
+    expect(await materializeDiscoverySnapshots(1, db)).toMatchObject({
+      attemptedCount: 1,
+      publishedCount: 1,
+    });
+    const profile = await db.discoveryProfile.findUniqueOrThrow({
+      where: { userId: viewer.id },
+      include: { currentSnapshot: true },
+    });
+    expect(profile.currentSnapshot).toMatchObject({ status: "READY", totalItems: 0 });
+
+    const query = { page: 1, pageSize: 24 };
+    const live = await getDiscovery(viewer.id, query, db, { snapshotReadsEnabled: false });
+    const snapshot = await getDiscovery(viewer.id, query, db, { snapshotReadsEnabled: true });
+
+    // Seed exists but has no matching candidates: materialized zero-item
+    // snapshot and live path both use POPULAR.
+    expect(discoveryDigest(snapshot)).toEqual(discoveryDigest(live));
+    expect(snapshot.freshness).toBe("FRESH");
+    expect(snapshot.mode).toBe("POPULAR");
+  });
+
+  it("keeps anonymous popular results in parity when snapshot reads are enabled", async () => {
+    const popular = await song(970, "Anonymous popular", 100);
+    const second = await song(971, "Anonymous second");
+    const query = { page: 1, pageSize: 24 };
+    const live = await getDiscovery(null, query, db, { snapshotReadsEnabled: false });
+    const snapshot = await getDiscovery(null, query, db, { snapshotReadsEnabled: true });
+
+    // Anonymous visitor never has a profile: read selection leaves the public
+    // POPULAR result unchanged.
+    expect(discoveryDigest(snapshot)).toEqual(discoveryDigest(live));
+    expect(snapshot.freshness).toBe("FRESH");
+    expect(snapshot.mode).toBe("POPULAR");
+    expect(snapshot.items.map((item) => item.id)).toEqual([popular.id, second.id]);
   });
 });
