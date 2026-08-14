@@ -873,7 +873,7 @@ describe("discovery repository", () => {
     const viewer = await user("parity-zero-candidate@example.com");
     const tag = await db.tag.create({ data: { vocadbId: 94, name: "Zero", additionalNames: [] } });
     const seed = await song(960, "Zero-candidate seed");
-    const popular = await song(961, "Zero-candidate popular", 100);
+    await song(961, "Zero-candidate popular", 100);
     await db.songTag.create({ data: { songId: seed.id, tagId: tag.id, count: 1, position: 0 } });
     await setFavorite(viewer.id, seed.id, true);
     expect(await materializeDiscoverySnapshots(1, db)).toMatchObject({
