@@ -6,7 +6,10 @@ import {
 } from "@/generated/prisma/enums";
 import { getDb } from "@/lib/db";
 import { getDiscoveryMaterializerTiming } from "@/lib/discover/materializer-timing";
-import { staleDiscoveryCandidatesQuery } from "@/lib/discover/stale-candidates";
+import {
+  DISCOVERY_CATALOG_STATE_ID,
+  staleDiscoveryCandidatesQuery,
+} from "@/lib/discover/stale-candidates";
 import type {
   OperationsEntityStatusDto,
   OperationsResumableManifestDto,
@@ -95,6 +98,8 @@ export async function getOperationsStatus(
   const heartbeatStaleAfterMs = validateHeartbeatStaleAfterMs(
     options.heartbeatStaleAfterMs ?? DEFAULT_HEARTBEAT_STALE_AFTER_MS,
   );
+  const snapshotReadsEnabled =
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED === "true";
 
   return database.$transaction(async (tx) => {
     const [state, latestSongRun, latestArtistRun, latestSongTerminalRun, latestArtistTerminalRun, resumableRuns, discovery] =
@@ -112,7 +117,11 @@ export async function getOperationsStatus(
           orderBy: [{ entity: "asc" }, { sequence: "asc" }],
           select: RESUMABLE_MANIFEST_SELECT,
         }),
-        discoveryStatus(tx, new Date(now.getTime() - getDiscoveryMaterializerTiming().buildLeaseMs)),
+        discoveryStatus(
+          tx,
+          new Date(now.getTime() - getDiscoveryMaterializerTiming().buildLeaseMs),
+          snapshotReadsEnabled,
+        ),
       ]);
 
     const allRuns = [latestSongRun, latestArtistRun, ...resumableRuns];
@@ -201,21 +210,47 @@ async function findLatestTerminalRun(
 async function discoveryStatus(
   tx: StatusTransaction,
   expiredLeaseAt: Date,
+  snapshotReadsEnabled: boolean,
 ): Promise<OperationsStatusDto["discovery"]> {
   const rows = await tx.$queryRaw<Array<{
+    freshProfileCount: number;
     staleProfileCount: number;
+    unprovisionedCandidateCount: number;
+    activeBuildCount: number;
     failedProfileCount: number;
+    catalogVersion: number;
     oldestPendingAt: Date | null;
   }>>(Prisma.sql`
     ${staleDiscoveryCandidatesQuery(expiredLeaseAt)}
     SELECT
+      (SELECT COUNT(*)::int FROM (
+        SELECT profile."userId"
+        FROM "DiscoveryProfile" profile
+        JOIN "DiscoverySnapshot" snapshot ON snapshot.id = profile."currentSnapshotId"
+        LEFT JOIN "DiscoveryCatalogState" catalog ON catalog.id = ${DISCOVERY_CATALOG_STATE_ID}
+        WHERE snapshot.status = 'READY'
+          AND snapshot."libraryVersion" = profile."libraryVersion"
+          AND snapshot."catalogVersion" >= GREATEST(
+            profile."requiredCatalogVersion", COALESCE(catalog.version, 0)
+          )
+      ) fresh_profiles) AS "freshProfileCount",
       (SELECT COUNT(*)::int FROM stale_candidates) AS "staleProfileCount",
+      (SELECT COUNT(*)::int FROM stale_candidates WHERE "profileUpdatedAt" IS NULL) AS "unprovisionedCandidateCount",
+      (SELECT COUNT(*)::int FROM "DiscoveryProfile"
+        WHERE "refreshStartedAt" IS NOT NULL AND "refreshStartedAt" >= ${expiredLeaseAt}) AS "activeBuildCount",
       (SELECT COUNT(*)::int FROM "DiscoveryProfile" WHERE "lastRefreshError" IS NOT NULL) AS "failedProfileCount",
+      (SELECT COALESCE(MAX(version), 0)::int FROM "DiscoveryCatalogState"
+        WHERE id = ${DISCOVERY_CATALOG_STATE_ID}) AS "catalogVersion",
       (SELECT MIN("profileUpdatedAt") FROM stale_candidates) AS "oldestPendingAt"
   `);
   const status = rows[0];
   return {
+    snapshotReadsEnabled,
+    catalogVersion: status?.catalogVersion ?? 0,
+    freshProfileCount: status?.freshProfileCount ?? 0,
     staleProfileCount: status?.staleProfileCount ?? 0,
+    unprovisionedCandidateCount: status?.unprovisionedCandidateCount ?? 0,
+    activeBuildCount: status?.activeBuildCount ?? 0,
     failedProfileCount: status?.failedProfileCount ?? 0,
     oldestPendingAt: status?.oldestPendingAt?.toISOString() ?? null,
   };
