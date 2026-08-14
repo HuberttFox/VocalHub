@@ -1,3 +1,5 @@
+> Historical benchmark evidence and index decisions. This file records measurements; use the [performance index](README.md) for policy, the [benchmark guide](../../benchmarks/catalog/README.md) for execution, and the [production runbook](../production-deployment-runbook.md) for rollout.
+
 # Catalog query benchmark baseline
 
 ## Scope
