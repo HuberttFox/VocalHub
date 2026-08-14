@@ -73,13 +73,19 @@ export async function runDiscoveryTransaction(
   }, DISCOVERY_TRANSACTION_OPTIONS);
 }
 
+export type DiscoveryReadOptions = {
+  snapshotReadsEnabled?: boolean;
+};
+
 export async function getDiscovery(
   viewerId: string | null,
   query: DiscoveryQuery,
   database: DiscoveryDb = getDb(),
+  options: DiscoveryReadOptions = {},
 ): Promise<DiscoveryDto> {
   return database.$transaction(async (tx) => {
-    const snapshotReadsEnabled = process.env.DISCOVERY_SNAPSHOT_READS_ENABLED === "true";
+    const snapshotReadsEnabled = options.snapshotReadsEnabled
+      ?? process.env.DISCOVERY_SNAPSHOT_READS_ENABLED === "true";
     const snapshot = snapshotReadsEnabled && viewerId
       ? await getSnapshotDiscovery(tx, viewerId, query)
       : null;

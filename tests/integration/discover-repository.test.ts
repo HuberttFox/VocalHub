@@ -343,6 +343,48 @@ describe("discovery repository", () => {
     expect(result.items.map((item) => item.id)).toEqual([staleResult.id]);
   });
 
+  it("defaults snapshot reads off and honors an explicit read option", async () => {
+    delete process.env.DISCOVERY_SNAPSHOT_READS_ENABLED;
+    const viewer = await user("read-option-gate@example.com");
+    const snapshotOnly = await song(850, "Snapshot-only stale result");
+    for (let i = 0; i < 24; i += 1) await song(860 + i, `Popular ${i}`, 100);
+    const snapshotRow = await db.discoverySnapshot.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 2,
+        catalogVersion: 4,
+        status: "READY",
+        totalItems: 1,
+        finishedAt: new Date(),
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 3,
+        requiredCatalogVersion: 5,
+        currentSnapshotId: snapshotRow.id,
+      },
+    });
+    await db.discoverySnapshotItem.create({
+      data: { snapshotId: snapshotRow.id, rank: 0, songId: snapshotOnly.id, score: 10 },
+    });
+
+    const live = await getDiscovery(viewer.id, { page: 1, pageSize: 24 }, db, {
+      snapshotReadsEnabled: false,
+    });
+    const snapshot = await getDiscovery(viewer.id, { page: 1, pageSize: 24 }, db, {
+      snapshotReadsEnabled: true,
+    });
+    const defaults = await getDiscovery(viewer.id, { page: 1, pageSize: 24 }, db);
+
+    expect(live).toMatchObject({ freshness: "FRESH", mode: "POPULAR" });
+    expect(live.items.map((item) => item.id)).not.toContain(snapshotOnly.id);
+    expect(snapshot).toMatchObject({ freshness: "STALE", mode: "PERSONALIZED" });
+    expect(snapshot.items.map((item) => item.id)).toEqual([snapshotOnly.id]);
+    expect(defaults).toEqual(live);
+  });
+
   it("returns popular pending while favorite seeds have no usable snapshot", async () => {
     process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
     const viewer = await user("snapshot-pending@example.com");
