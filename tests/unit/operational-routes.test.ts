@@ -82,6 +82,20 @@ describe("operational API routes", () => {
     expect(await response.json()).toEqual({ classification: "READY" });
   });
 
+  it("forwards discovery status unchanged for a valid bearer credential", async () => {
+    const discovery = {
+      staleProfileCount: 2,
+      failedProfileCount: 1,
+      oldestPendingAt: "2026-08-09T12:00:00.000Z",
+    };
+    getOperationsStatus.mockResolvedValue({ classification: "READY", discovery });
+
+    const response = await getOperationsStatusRoute(operationsRequest(`Bearer ${VALID_TOKEN}`));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ classification: "READY", discovery });
+  });
+
   it("returns unavailable status for a non-ready operations result", async () => {
     getOperationsStatus.mockResolvedValue({ classification: "STALE" });
 

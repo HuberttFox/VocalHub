@@ -17,7 +17,14 @@ export type OperationsStatusDto = {
   staleAfterMs: number;
   songs: OperationsSongStatusDto;
   artists: OperationsEntityStatusDto;
+  discovery: OperationsDiscoveryStatusDto;
   resumableManifests: OperationsResumableManifestDto[];
+};
+
+export type OperationsDiscoveryStatusDto = {
+  staleProfileCount: number;
+  failedProfileCount: number;
+  oldestPendingAt: string | null;
 };
 
 export type OperationsSongStatusDto = OperationsEntityStatusDto & {

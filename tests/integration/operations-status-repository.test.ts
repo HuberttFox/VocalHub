@@ -3,11 +3,14 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import {
+  DiscoverySnapshotStatus,
   SyncEntity,
   SyncRunMode,
   SyncRunStatus,
   SyncStatus,
 } from "@/generated/prisma/enums";
+import { getDiscoveryMaterializerTiming } from "@/lib/discover/materializer-timing";
+import { DISCOVERY_CATALOG_STATE_ID } from "@/lib/discover/stale-candidates";
 import { getOperationsStatus } from "@/lib/operations/status-repository";
 import { VOCADB_SONG_SYNC_STATE_ID } from "@/lib/vocadb/sync-runner";
 
@@ -22,6 +25,16 @@ const staleAfterMs = 60 * 60 * 1_000;
 
 beforeAll(async () => db.$connect());
 beforeEach(async () => {
+  await db.discoverySnapshotItem.deleteMany();
+  await db.discoveryProfile.deleteMany();
+  await db.discoverySnapshot.deleteMany();
+  await db.discoveryCatalogState.deleteMany();
+  await db.playlistCollaborator.deleteMany();
+  await db.playlistSong.deleteMany();
+  await db.favorite.deleteMany();
+  await db.playlist.deleteMany();
+  await db.user.deleteMany();
+  await db.song.deleteMany();
   await db.vocaDbSongSyncState.deleteMany();
   await db.syncItem.deleteMany();
   await db.syncRun.deleteMany();
@@ -38,7 +51,258 @@ async function seedFreshSongState() {
   });
 }
 
+async function discoveryUser(email: string) {
+  return db.user.create({ data: { email } });
+}
+
+async function discoverySong(vocadbId: number) {
+  return db.song.create({
+    data: {
+      vocadbId,
+      name: `Discovery ${vocadbId}`,
+      defaultName: `Discovery ${vocadbId}`,
+      defaultNameLanguage: "English",
+      artistString: "Artist",
+      songType: "Original",
+      sourceStatus: "Finished",
+      sourceCreatedAt: now,
+      durationSeconds: 180,
+      favoritedTimes: 0,
+      ratingScore: 0,
+      cultureCodes: [],
+      sourceVersion: 1,
+      lastSyncedAt: now,
+      syncStatus: SyncStatus.SYNCED,
+    },
+  });
+}
+
 describe("operations status repository", () => {
+  it("reports profile-less favorite and playlist candidates without private data", async () => {
+    await seedFreshSongState();
+    const favoriteUser = await discoveryUser("favorite-candidate@example.com");
+    const owner = await discoveryUser("playlist-owner-candidate@example.com");
+    const collaborator = await discoveryUser("playlist-collaborator-candidate@example.com");
+    const ignoredOwner = await discoveryUser("empty-playlist@example.com");
+    const song = await discoverySong(90_001);
+    const ownerPlaylist = await db.playlist.create({
+      data: { userId: owner.id, name: "Owner playlist" },
+    });
+    const collaboratorPlaylist = await db.playlist.create({
+      data: { userId: owner.id, name: "Collaborator playlist" },
+    });
+    await db.playlist.create({ data: { userId: ignoredOwner.id, name: "Empty" } });
+    await db.favorite.create({ data: { userId: favoriteUser.id, songId: song.id } });
+    await db.playlistSong.createMany({
+      data: [
+        { playlistId: ownerPlaylist.id, songId: song.id, position: 0 },
+        { playlistId: collaboratorPlaylist.id, songId: song.id, position: 0 },
+      ],
+    });
+    await db.playlistCollaborator.create({
+      data: { playlistId: collaboratorPlaylist.id, userId: collaborator.id },
+    });
+
+    const status = await getOperationsStatus(db, { now: () => now, staleAfterMs });
+    const serialized = JSON.stringify(status);
+
+    expect(status.classification).toBe("READY");
+    expect(status.discovery).toEqual({
+      staleProfileCount: 3,
+      failedProfileCount: 0,
+      oldestPendingAt: null,
+    });
+    for (const value of [
+      favoriteUser.id,
+      owner.id,
+      collaborator.id,
+      song.id,
+      ownerPlaylist.id,
+      collaboratorPlaylist.id,
+    ]) expect(serialized).not.toContain(value);
+  });
+
+  it("deduplicates candidate sources and excludes fresh snapshots", async () => {
+    await seedFreshSongState();
+    const viewer = await discoveryUser("deduplicated-candidate@example.com");
+    const freshViewer = await discoveryUser("fresh-candidate@example.com");
+    const firstSong = await discoverySong(90_002);
+    const secondSong = await discoverySong(90_003);
+    const playlist = await db.playlist.create({ data: { userId: viewer.id, name: "Mixed" } });
+    const freshPlaylist = await db.playlist.create({ data: { userId: freshViewer.id, name: "Fresh" } });
+    await db.favorite.createMany({
+      data: [
+        { userId: viewer.id, songId: firstSong.id },
+        { userId: viewer.id, songId: secondSong.id },
+        { userId: freshViewer.id, songId: firstSong.id },
+      ],
+    });
+    await db.playlistSong.createMany({
+      data: [
+        { playlistId: playlist.id, songId: firstSong.id, position: 0 },
+        { playlistId: freshPlaylist.id, songId: secondSong.id, position: 0 },
+      ],
+    });
+    await db.playlistCollaborator.create({ data: { playlistId: playlist.id, userId: viewer.id } });
+    const snapshot = await db.discoverySnapshot.create({
+      data: {
+        userId: freshViewer.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: DiscoverySnapshotStatus.READY,
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: freshViewer.id,
+        libraryVersion: 1,
+        requiredCatalogVersion: 1,
+        currentSnapshotId: snapshot.id,
+      },
+    });
+
+    await expect(getOperationsStatus(db, { now: () => now, staleAfterMs })).resolves
+      .toMatchObject({
+        classification: "READY",
+        discovery: {
+          staleProfileCount: 1,
+          failedProfileCount: 0,
+          oldestPendingAt: null,
+        },
+      });
+  });
+
+  it("excludes active discovery leases and restores expired profiles to queue", async () => {
+    await seedFreshSongState();
+    const active = await discoveryUser("active-discovery-lease@example.com");
+    const expired = await discoveryUser("expired-discovery-lease@example.com");
+    const { buildLeaseMs } = getDiscoveryMaterializerTiming();
+    const expiredPendingAt = new Date(now.getTime() - buildLeaseMs - 2 * 60_000);
+    await db.discoveryProfile.createMany({
+      data: [
+        {
+          userId: active.id,
+          refreshStartedAt: new Date(now.getTime() - buildLeaseMs + 60_000),
+          updatedAt: new Date(now.getTime() - buildLeaseMs - 3 * 60_000),
+        },
+        {
+          userId: expired.id,
+          refreshStartedAt: new Date(now.getTime() - buildLeaseMs - 60_000),
+          updatedAt: expiredPendingAt,
+        },
+      ],
+    });
+
+    await expect(getOperationsStatus(db, { now: () => now, staleAfterMs })).resolves
+      .toMatchObject({
+        classification: "READY",
+        discovery: {
+          staleProfileCount: 1,
+          failedProfileCount: 0,
+          oldestPendingAt: expiredPendingAt.toISOString(),
+        },
+      });
+  });
+
+  it("reports stale discovery profiles without degrading an otherwise ready catalog", async () => {
+    await seedFreshSongState();
+    const viewer = await discoveryUser("stale-discovery@example.com");
+    const oldestPendingAt = new Date("2026-08-09T10:00:00.000Z");
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        requiredCatalogVersion: 1,
+        updatedAt: oldestPendingAt,
+      },
+    });
+
+    const status = await getOperationsStatus(db, { now: () => now, staleAfterMs });
+
+    expect(status.classification).toBe("READY");
+    expect(status.discovery).toEqual({
+      staleProfileCount: 1,
+      failedProfileCount: 0,
+      oldestPendingAt: oldestPendingAt.toISOString(),
+    });
+  });
+
+  it("queues version-mismatched ready snapshots", async () => {
+    await seedFreshSongState();
+    const viewer = await discoveryUser("versioned-discovery@example.com");
+    const snapshot = await db.discoverySnapshot.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: DiscoverySnapshotStatus.READY,
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        requiredCatalogVersion: 1,
+        currentSnapshotId: snapshot.id,
+      },
+    });
+
+    await expect(getOperationsStatus(db, { now: () => now, staleAfterMs })).resolves
+      .toMatchObject({ discovery: { staleProfileCount: 0 } });
+
+    await db.discoveryProfile.update({
+      where: { userId: viewer.id },
+      data: { libraryVersion: 2 },
+    });
+    await expect(getOperationsStatus(db, { now: () => now, staleAfterMs })).resolves
+      .toMatchObject({ discovery: { staleProfileCount: 1 } });
+
+    await db.discoveryProfile.update({
+      where: { userId: viewer.id },
+      data: { libraryVersion: 1 },
+    });
+    await db.discoveryCatalogState.create({
+      data: { id: DISCOVERY_CATALOG_STATE_ID, version: 2 },
+    });
+    await expect(getOperationsStatus(db, { now: () => now, staleAfterMs })).resolves
+      .toMatchObject({ discovery: { staleProfileCount: 1 } });
+  });
+
+  it("reports discovery refresh failures as degraded without exposing private data", async () => {
+    await seedFreshSongState();
+    const viewer = await discoveryUser("failed-discovery@example.com");
+    const snapshot = await db.discoverySnapshot.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        catalogVersion: 1,
+        status: DiscoverySnapshotStatus.READY,
+      },
+    });
+    await db.discoveryProfile.create({
+      data: {
+        userId: viewer.id,
+        libraryVersion: 1,
+        requiredCatalogVersion: 1,
+        currentSnapshotId: snapshot.id,
+        lastRefreshError: "private discovery failure",
+      },
+    });
+
+    const status = await getOperationsStatus(db, { now: () => now, staleAfterMs });
+    const serialized = JSON.stringify(status);
+
+    expect(status.classification).toBe("DEGRADED");
+    expect(status.discovery).toEqual({
+      staleProfileCount: 0,
+      failedProfileCount: 1,
+      oldestPendingAt: null,
+    });
+    expect(serialized).not.toContain(viewer.id);
+    expect(serialized).not.toContain(snapshot.id);
+    expect(serialized).not.toContain("private discovery failure");
+  });
+
   it("reports an unseeded catalog without a sync state", async () => {
     await expect(getOperationsStatus(db, { now: () => now, staleAfterMs })).resolves
       .toMatchObject({
@@ -50,6 +314,11 @@ describe("operations status repository", () => {
           runningManifestCount: 0,
         },
         artists: { latestRun: null, runningManifestCount: 0 },
+        discovery: {
+          staleProfileCount: 0,
+          failedProfileCount: 0,
+          oldestPendingAt: null,
+        },
         resumableManifests: [],
       });
   });
