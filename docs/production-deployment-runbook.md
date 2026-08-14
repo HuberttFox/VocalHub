@@ -4,8 +4,8 @@ This runbook covers deployment against an operator-managed PostgreSQL instance. 
 
 ## Preflight
 
-1. Confirm release commit, image digests, database target, maintenance window, and rollback owner. Pin immutable image digests for `app`, `migrate`, `worker`, and `maintenance`; do not rebuild from a dirty tree.
-2. Pause VocaDB incremental, reconcile, artist refresh, session-cleanup, and playlist-report-cleanup schedulers. For systemd reference timers, use `systemctl disable --now vocalhub-worker-incremental.timer vocalhub-worker-reconcile.timer vocalhub-worker-artists-refresh.timer vocalhub-session-cleanup.timer vocalhub-playlist-report-cleanup.timer`.
+1. Confirm release commit, image digests, database target, maintenance window, and rollback owner. Pin immutable image digests for `app`, `migrate`, `worker`, and `maintenance`; do not rebuild from a dirty tree. Keep `DISCOVERY_SNAPSHOT_READS_ENABLED=false` until the discovery snapshot migration, backfill, and parity checks complete.
+2. Pause VocaDB incremental, reconcile, artist refresh, session-cleanup, playlist-report-cleanup, discovery-materializer, and discovery-snapshot-cleanup schedulers. For systemd reference timers, use `systemctl disable --now vocalhub-worker-incremental.timer vocalhub-worker-reconcile.timer vocalhub-worker-artists-refresh.timer vocalhub-session-cleanup.timer vocalhub-playlist-report-cleanup.timer vocalhub-discovery-materializer.timer vocalhub-discovery-snapshot-cleanup.timer`.
 3. Wait for active worker and maintenance containers to exit. Check `SyncRun` and `SyncItem` for `RUNNING` ambiguity before proceeding.
 4. Verify a current PostgreSQL backup and a tested restore path. Confirm free disk space for additive indexes.
 5. Confirm production secrets are separated by target: app Compose receives `DATABASE_URL`, `AUTH_*`, `OPERATIONAL_STATUS_TOKEN`, `VOCALHUB_APP_IMAGE`, and `VOCALHUB_MIGRATE_IMAGE` from its dedicated deployment environment; the jobs-only systemd environment receives `DATABASE_URL`, `VOCADB_*`, `VOCALHUB_WORKER_IMAGE`, and `VOCALHUB_MAINTENANCE_IMAGE`. `DIRECT_URL` is optional for `migrate`.
@@ -75,10 +75,10 @@ sudo install -m 0644 deploy/systemd/*.service deploy/systemd/*.timer /etc/system
 sudo install -m 0600 /path/to/edited/vocalhub.env /etc/vocalhub/vocalhub.env
 sudo systemctl daemon-reload
 sudo systemctl enable --now vocalhub-worker-incremental.timer vocalhub-worker-reconcile.timer
-sudo systemctl enable --now vocalhub-worker-artists-refresh.timer vocalhub-session-cleanup.timer vocalhub-playlist-report-cleanup.timer
+sudo systemctl enable --now vocalhub-worker-artists-refresh.timer vocalhub-session-cleanup.timer vocalhub-playlist-report-cleanup.timer vocalhub-discovery-materializer.timer vocalhub-discovery-snapshot-cleanup.timer
 ```
 
-Use `systemctl status <unit>` and `journalctl -u <unit>` to inspect execution. Nonzero service exits remain visible and alertable. Before any migration or release, pause all five timers with `systemctl disable --now`; re-enable only after migration, app health, and smoke checks pass. Never activate these timers against an unseeded database. Edit the jobs-only environment file with real values; never install the placeholder example directly. Validate no `db.example`, `user:password`, `replace-with-digest`, or `replace-with-operator-contact` remains. `compose.production.yaml` requires pinned app/migrate image digests and app secrets from a separate deployment environment; `compose.production.jobs.yaml` and its systemd template exclude app, migration, and Auth interpolation and require pinned worker/maintenance image digests.
+Use `systemctl status <unit>` and `journalctl -u <unit>` to inspect execution. Nonzero service exits remain visible and alertable. Before any migration or release, pause all seven timers with `systemctl disable --now`; re-enable only after migration, app health, and smoke checks pass. Never activate these timers against an unseeded database. Edit the jobs-only environment file with real values; never install the placeholder example directly. Validate no `db.example`, `user:password`, `replace-with-digest`, or `replace-with-operator-contact` remains. `compose.production.yaml` requires pinned app/migrate image digests and app secrets from a separate deployment environment; `compose.production.jobs.yaml` and its systemd template exclude app, migration, and Auth interpolation and require pinned worker/maintenance image digests.
 ```bash
 docker compose -f compose.production.jobs.yaml --profile worker run --rm --no-deps worker auto incremental
 docker compose -f compose.production.jobs.yaml --profile worker run --rm --no-deps worker auto reconcile
@@ -86,6 +86,23 @@ docker compose -f compose.production.jobs.yaml --profile worker run --rm --no-de
 docker compose -f compose.production.jobs.yaml --profile maintenance run --rm --no-deps session-cleanup
 # After governance migration is deployed:
 docker compose -f compose.production.jobs.yaml --profile maintenance run --rm --no-deps playlist-report-cleanup
+# After discovery snapshot migration is deployed, backfill before enabling snapshot reads:
+docker compose -f compose.production.jobs.yaml --profile maintenance run --rm --no-deps discovery-materializer --limit=100
+# Per-profile exact-V1 build timeout defaults to 300000ms and cannot exceed
+# 20 minutes. The maintenance batch budget defaults to 24 minutes, leaving
+# six minutes before the 30-minute systemd service deadline:
+# DISCOVERY_MATERIALIZER_BUILD_TIMEOUT_MS=300000
+# DISCOVERY_MATERIALIZER_BATCH_BUDGET_MS=1440000
+# A successful BUDGET_EXHAUSTED result defers untouched stale profiles; its
+# JSON/journal output is the batch report. /api/ops/status reports immediately
+# claimable queue state: staleProfileCount includes profile-less favorite and
+# non-empty playlist candidates, while oldestPendingAt is null when only such
+# candidates remain. Fresh active build leases are in-flight work and omitted
+# until their lease expires.
+# Enable DISCOVERY_SNAPSHOT_READS_ENABLED=true only after snapshot parity and freshness checks.
+# Prune non-current terminal snapshots older than seven days; BUILDING and active snapshots are retained:
+docker compose -f compose.production.jobs.yaml --profile maintenance run --rm --no-deps discovery-snapshot-cleanup --limit=100
+
 # Operator-only, explicit report queue/disposition:
 node build/maintenance/governance/moderate-playlist.js list-reports --limit=50
 node build/maintenance/governance/moderate-playlist.js resolve-report <report-uuid> <resolution-code>
@@ -94,9 +111,9 @@ node build/maintenance/governance/moderate-playlist.js hide <playlist-uuid>
 
 ```
 
-Recommended cadence: incremental every 15 minutes, reconcile daily during low traffic, artist refresh daily at a separate time, and session cleanup daily. Capture exit status and JSON output. Alert on nonzero exit, missing daily success, multiple `RUNNING` runs, or repeated `FAILED` items.
+Recommended cadence: incremental every 15 minutes, reconcile daily during low traffic, artist refresh daily at a separate time, session cleanup daily, discovery materialization every 30 minutes at offset seven minutes, and discovery snapshot cleanup every 15 minutes at a separate offset. The 30-minute materializer cadence prevents systemd from skipping a timer activation while a 24-minute batch is still active. Capture exit status and JSON output. Alert on nonzero exit, missing daily success, multiple `RUNNING` runs, repeated `FAILED` items, any repeated materializer `failedCount > 0` (including timeout-driven failures), repeated `BUDGET_EXHAUSTED` materializer results or `deferredCount > 0` without backlog reduction, persistent `/api/ops/status` discovery `staleProfileCount`, or repeated cleanup results equal to its batch limit.
 
-Playlist report cleanup removes only `RESOLVED`/`DISMISSED` reports older than 180 days. It must not remove `OPEN` reports. The moderation and triage commands are deployment-only and require operator shell/database access.
+Playlist report cleanup removes only `RESOLVED`/`DISMISSED` reports older than 180 days. It must not remove `OPEN` reports. Discovery snapshot cleanup removes only non-current `READY`/`FAILED` snapshots with `finishedAt` older than seven days; it never removes `BUILDING` snapshots, null-finished rows, or active snapshots. Both jobs are idempotent and report JSON counts. The moderation and triage commands are deployment-only and require operator shell/database access.
 
 
 
