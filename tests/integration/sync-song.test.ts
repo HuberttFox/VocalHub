@@ -141,6 +141,27 @@ describe("syncVocaDbSong", () => {
     expect(await catalogVersion()).toBe(3);
   });
 
+  it("does not bump for favorites or ratings above discovery score caps", async () => {
+    const input = normalizeVocaDbSong(
+      vocaDbSongSchema.parse(vocaDbSongFixture),
+    );
+    const capped = {
+      ...input,
+      favoritedTimes: 1_000,
+      ratingScore: 100,
+    };
+
+    await syncVocaDbSong(db, capped);
+    expect(await catalogVersion()).toBe(1);
+
+    await syncVocaDbSong(db, {
+      ...capped,
+      favoritedTimes: capped.favoritedTimes + 1,
+      ratingScore: capped.ratingScore + 1,
+    });
+    expect(await catalogVersion()).toBe(1);
+  });
+
   it("bumps for tag and artist ID set changes but not tag or credit metadata", async () => {
     const input = normalizeVocaDbSong(
       vocaDbSongSchema.parse(vocaDbSongFixture),

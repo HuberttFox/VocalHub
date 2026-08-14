@@ -18,6 +18,9 @@ type SongSyncOptions = {
   syncRunId?: string;
 };
 
+const DISCOVERY_FAVORITED_TIMES_CAP = 1_000;
+const DISCOVERY_RATING_SCORE_CAP = 100;
+
 type SongDiscoveryProjection = {
   publicVisible: boolean;
   favoritedTimes: number;
@@ -146,8 +149,8 @@ async function readDiscoveryProjection(
       !song.sourceDeleted &&
       song.lastSyncedAt !== null &&
       (song.syncStatus === SyncStatus.SYNCED || song.syncStatus === SyncStatus.FAILED),
-    favoritedTimes: song.favoritedTimes,
-    ratingScore: song.ratingScore,
+    favoritedTimes: Math.min(song.favoritedTimes, DISCOVERY_FAVORITED_TIMES_CAP),
+    ratingScore: Math.min(song.ratingScore, DISCOVERY_RATING_SCORE_CAP),
     tagIds: [...new Set(song.tags.map((tag) => tag.tagId))].sort(),
     artistIds: [...new Set(
       song.artistCredits
