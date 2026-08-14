@@ -1,6 +1,12 @@
 # Production deployment runbook
 
+> Canonical operator procedure. See [product onboarding](../README.md), [architecture](architecture.md), [development](development.md), [worker modes](../worker/README.md), and [performance evidence](performance/README.md).
+
 This runbook covers deployment against an operator-managed PostgreSQL instance. It does not provision PostgreSQL, schedule jobs, or run production commands automatically.
+
+`compose.production.yaml` runs only `app` and `migrate`.
+`compose.production.jobs.yaml` runs worker and maintenance services.
+All scheduler activation remains an operator action through the included systemd units.
 
 ## Preflight
 
