@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import {
@@ -22,9 +22,15 @@ const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 const now = new Date("2026-08-09T12:00:00.000Z");
 const staleAfterMs = 60 * 60 * 1_000;
+const initialSnapshotReadsEnabled = process.env.DISCOVERY_SNAPSHOT_READS_ENABLED;
 
 beforeAll(async () => db.$connect());
+afterAll(() => {
+  if (initialSnapshotReadsEnabled === undefined) delete process.env.DISCOVERY_SNAPSHOT_READS_ENABLED;
+  else process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = initialSnapshotReadsEnabled;
+});
 beforeEach(async () => {
+  process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "false";
   await db.discoverySnapshotItem.deleteMany();
   await db.discoveryProfile.deleteMany();
   await db.discoverySnapshot.deleteMany();
@@ -405,6 +411,18 @@ describe("operations status repository", () => {
     expect(serialized).not.toContain(viewer.id);
     expect(serialized).not.toContain(snapshot.id);
     expect(serialized).not.toContain("private discovery failure");
+  });
+
+  it("reports snapshot read enablement with exact environment semantics", async () => {
+    await seedFreshSongState();
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "true";
+
+    const enabled = await getOperationsStatus(db, { now: () => now, staleAfterMs });
+
+    expect(enabled.discovery.snapshotReadsEnabled).toBe(true);
+    process.env.DISCOVERY_SNAPSHOT_READS_ENABLED = "TRUE";
+    await expect(getOperationsStatus(db, { now: () => now, staleAfterMs })).resolves
+      .toMatchObject({ discovery: { snapshotReadsEnabled: false } });
   });
 
   it("reports an unseeded catalog without a sync state", async () => {
