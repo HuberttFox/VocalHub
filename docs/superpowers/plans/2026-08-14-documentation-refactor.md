@@ -581,7 +581,7 @@ Manually follow links from root README and `docs/README.md` for these readers: v
 
 Expected: each reader reaches a first relevant page in one click.
 
-- [ ] **Step 3: Request documentation review**
+- [x] **Step 3: Request documentation review**
 
 Ask a reviewer to check this diff against `/home/hubert/.claude/plans/squishy-zooming-hopcroft.md`, focusing on command correctness, archival integrity, ownership duplication, language scope, and Mermaid syntax.
 

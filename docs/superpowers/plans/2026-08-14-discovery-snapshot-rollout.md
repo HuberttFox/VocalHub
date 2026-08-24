@@ -455,7 +455,7 @@ git status --short
 
 Expected: typecheck, scoped lint, build, and whitespace check pass. Report unrelated pre-existing worktree changes separately; do not alter them.
 
-- [ ] **Step 4: Verify runtime API surface against isolated database**
+- [x] **Step 4: Verify runtime API surface against isolated database**
 
 Start the app with `DISCOVERY_SNAPSHOT_READS_ENABLED=false`, a generated non-placeholder `OPERATIONAL_STATUS_TOKEN`, and isolated `vocalhub_test` connection variables. Seed only test fixtures through existing tests or local database fixtures; never contact VocaDB. Request:
 
@@ -465,7 +465,7 @@ curl -s -H "Authorization: Bearer $OPERATIONAL_STATUS_TOKEN" http://127.0.0.1:<p
 
 Expected: response includes aggregate `discovery.snapshotReadsEnabled: false`, scalar coverage fields, and no fixture IDs or error text. Restart app with `DISCOVERY_SNAPSHOT_READS_ENABLED=true` only against the same isolated database and confirm `snapshotReadsEnabled: true`; then stop it. This proves environment pass-through, endpoint serialization, and rollback selection without a deployment.
 
-- [ ] **Step 5: Request whole-branch review and record rollout limits**
+- [x] **Step 5: Request whole-branch review and record rollout limits**
 
 Request review of complete branch diff. Confirm review specifically covers:
 
