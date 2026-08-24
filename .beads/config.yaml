@@ -71,4 +71,4 @@ repos:
     additional:
         - "/home/hubert/.beads-planning"
 export:
-    auto: true
+    auto: false
